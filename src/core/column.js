@@ -42,39 +42,22 @@ export class Column {
     const juggernaut = this.slots[fromPos];
     const displaced = this.slots[toPos];
 
-    // Juggernaut moves forward, others shift back
+    // Simple swap - Juggernaut goes to new position, displaced card (if any) goes to old position
     this.slots[toPos] = juggernaut;
+    this.slots[fromPos] = displaced; // This might be null, which is fine
+
+    // Update position properties
     juggernaut.position = toPos;
-
     if (displaced) {
-      // Find the empty slot or push to back
-      if (fromPos === 0 && toPos === 1) {
-        // Moving from back to middle
-        this.slots[0] = displaced;
-        displaced.position = 0;
-      } else if (fromPos === 1 && toPos === 2) {
-        // Moving from middle to front
-        this.slots[1] = displaced;
-        displaced.position = 1;
-      } else if (fromPos === 2 && toPos === 0) {
-        // Wrapping from front to back
-        // Shift everyone forward
-        const middle = this.slots[1];
-        if (displaced) {
-          this.slots[1] = displaced;
-          displaced.position = 1;
-        }
-        if (middle) {
-          this.slots[2] = middle;
-          middle.position = 2;
-        }
-      }
+      displaced.position = fromPos;
+      console.log(
+        `${displaced.name} displaced from position ${toPos} to position ${fromPos}`
+      );
     }
-
-    this.slots[fromPos] = null;
 
     // Increment Juggernaut's move counter
     juggernaut.moveCount = (juggernaut.moveCount || 0) + 1;
+    console.log(`Juggernaut move count: ${juggernaut.moveCount}`);
 
     // Check for third move effect
     if (juggernaut.moveCount === 3) {

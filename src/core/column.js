@@ -67,17 +67,36 @@ export class Column {
         );
       }
     } else {
-      // Normal case: simple swap
-      const displaced = this.slots[toPos];
+      // Normal forward movement (0→1 or 1→2)
+      // Find the nearest card in front of Juggernaut
+      let nearestCard = null;
+      let nearestPos = -1;
 
+      // Check positions in front of Juggernaut
+      for (let pos = fromPos + 1; pos <= 2; pos++) {
+        if (this.slots[pos]) {
+          nearestCard = this.slots[pos];
+          nearestPos = pos;
+          break; // Found the nearest one
+        }
+      }
+
+      // Clear the original positions
+      this.slots[fromPos] = null;
+      if (nearestPos !== -1) {
+        this.slots[nearestPos] = null;
+      }
+
+      // Place Juggernaut in new position
       this.slots[toPos] = juggernaut;
-      this.slots[fromPos] = displaced;
-
       juggernaut.position = toPos;
-      if (displaced) {
-        displaced.position = fromPos;
+
+      // Place the nearest card (if any) where Juggernaut came from
+      if (nearestCard) {
+        this.slots[fromPos] = nearestCard;
+        nearestCard.position = fromPos;
         console.log(
-          `${displaced.name} displaced from position ${toPos} to position ${fromPos}`
+          `${nearestCard.name} moved from position ${nearestPos} to position ${fromPos}`
         );
       }
     }

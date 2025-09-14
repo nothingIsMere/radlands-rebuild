@@ -1,3 +1,5 @@
+import { CardRegistry } from "../cards/card-registry.js";
+
 export class CommandSystem {
   constructor(gameState) {
     this.state = gameState;
@@ -6,6 +8,257 @@ export class CommandSystem {
     this.handlers = new Map();
 
     this.registerHandlers();
+  }
+
+  handleUseCampAbility(payload) {
+    const { playerId, columnIndex } = payload;
+    const camp = this.state.getCard(playerId, columnIndex, 0);
+
+    if (!camp || camp.isDestroyed) return false;
+
+    console.log(`Camp ability used: ${camp.name}`);
+    if (camp.abilities && camp.abilities.length > 0) {
+      camp.isReady = false;
+    }
+
+    return true;
+  }
+
+  resolveDamage(targetPlayer, targetColumn, targetPosition) {
+    const pending = this.state.pending;
+    if (targetPlayer === pending.sourcePlayerId) {
+      console.log("Cannot damage own cards");
+      return false;
+    }
+
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target) return false;
+
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    if (column.isProtected(targetPosition)) {
+      console.log("Cannot damage protected target");
+      return false;
+    }
+
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+    } else {
+      target.isDamaged = true;
+      target.isReady = false;
+    }
+
+    this.state.pending = null;
+    return true;
+  }
+
+  resolveInjure(targetPlayer, targetColumn, targetPosition) {
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target || target.type !== "person") return false;
+    return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+  }
+
+  resolveRestore(targetPlayer, targetColumn, targetPosition) {
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target || !target.isDamaged) return false;
+
+    target.isDamaged = false;
+    target.isReady = false;
+    this.state.pending = null;
+    return true;
+  }
+
+  resolvePlacePunk(targetColumn, targetPosition) {
+    const player = this.state.players[this.state.currentPlayer];
+    const column = player.columns[targetColumn];
+
+    if (!column.canPlaceCard(targetPosition, { type: "person" })) return false;
+
+    const punk = {
+      id: `punk_${Date.now()}`,
+      name: "Punk",
+      type: "person",
+      isPunk: true,
+      isReady: false,
+      isDamaged: false,
+    };
+
+    column.setCard(targetPosition, punk);
+    this.state.pending = null;
+    return true;
+  }
+
+  handleJunkCard(payload) {
+    const { playerId, cardIndex } = payload;
+    const player = this.state.players[playerId];
+    const card = player.hand[cardIndex];
+
+    if (!card) return false;
+
+    player.hand.splice(cardIndex, 1);
+    this.state.discard.push(card);
+    return true;
+  }
+
+  handleDamage(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // This is for direct damage commands, not ability-based damage
+    // For now, just apply damage directly
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target) return false;
+
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+      console.log(`${target.name} destroyed!`);
+    } else {
+      target.isDamaged = true;
+      target.isReady = false;
+      console.log(`${target.name} damaged!`);
+    }
+
+    return true;
+  }
+
+  handleDrawCard() {
+    const player = this.state.players[this.state.currentPlayer];
+
+    if (player.water < 2) {
+      console.log("Not enough water");
+      return false;
+    }
+
+    player.water -= 2;
+    if (this.state.deck.length > 0) {
+      player.hand.push(this.state.deck.shift());
+    }
+    return true;
+  }
+
+  triggerEntryEffects(person, playerId) {
+    console.log(`${person.name} entered play`);
+  }
+
+  resolveDamage(targetPlayer, targetColumn, targetPosition) {
+    const pending = this.state.pending;
+    if (targetPlayer === pending.sourcePlayerId) {
+      console.log("Cannot damage own cards");
+      return false;
+    }
+
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target) return false;
+
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    if (column.isProtected(targetPosition)) {
+      console.log("Cannot damage protected target");
+      return false;
+    }
+
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+    } else {
+      target.isDamaged = true;
+      target.isReady = false;
+    }
+
+    this.state.pending = null;
+    return true;
+  }
+
+  resolveInjure(targetPlayer, targetColumn, targetPosition) {
+    // Same as damage but only for people
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target || target.type !== "person") return false;
+    return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+  }
+
+  resolveRestore(targetPlayer, targetColumn, targetPosition) {
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target || !target.isDamaged) return false;
+
+    target.isDamaged = false;
+    target.isReady = false;
+    this.state.pending = null;
+    return true;
+  }
+
+  resolvePlacePunk(targetColumn, targetPosition) {
+    const player = this.state.players[this.state.currentPlayer];
+    const column = player.columns[targetColumn];
+
+    if (!column.canPlaceCard(targetPosition, { type: "person" })) return false;
+
+    const punk = {
+      id: `punk_${Date.now()}`,
+      name: "Punk",
+      type: "person",
+      isPunk: true,
+      isReady: false,
+      isDamaged: false,
+    };
+
+    column.setCard(targetPosition, punk);
+    this.state.pending = null;
+    return true;
+  }
+
+  handleJunkCard(payload) {
+    const { playerId, cardIndex } = payload;
+    const player = this.state.players[playerId];
+    const card = player.hand[cardIndex];
+
+    if (!card) return false;
+
+    player.hand.splice(cardIndex, 1);
+    this.state.discard.push(card);
+    return true;
+  }
+
+  handleDrawCard() {
+    const player = this.state.players[this.state.currentPlayer];
+
+    if (player.water < 2) {
+      console.log("Not enough water");
+      return false;
+    }
+
+    player.water -= 2;
+    if (this.state.deck.length > 0) {
+      player.hand.push(this.state.deck.shift());
+    }
+    return true;
+  }
+
+  triggerEntryEffects(person, playerId) {
+    console.log(`${person.name} entered play`);
   }
 
   registerHandlers() {

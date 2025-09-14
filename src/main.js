@@ -1,19 +1,109 @@
 import { GameState } from "./core/game-state.js";
-import { GameUI } from "./ui/game-ui.js";
 import { CommandSystem } from "./core/command-system.js";
-import "./styles/main.css";
+import { UIRenderer } from "./ui/ui-renderer.js";
 
-// Initialize game
-const gameState = new GameState();
-const commandSystem = new CommandSystem(gameState);
-const ui = new GameUI(commandSystem);
+class RadlandsGame {
+  constructor() {
+    this.state = new GameState();
+    this.commands = new CommandSystem(this.state);
+    this.ui = new UIRenderer(this.state, this.commands);
 
-// Make available globally for debugging
-window.game = {
-  state: gameState,
-  commands: commandSystem,
-  ui: ui,
-};
+    this.init();
+  }
 
-// Start the game
-ui.init();
+  init() {
+    console.log("Initializing Radlands...");
+
+    // Set up the basic game state for testing
+    this.setupTestGame();
+
+    // Initial render
+    this.ui.render();
+
+    // Listen for state changes
+    window.addEventListener("gameStateChanged", (e) => {
+      this.ui.render();
+    });
+  }
+
+  setupTestGame() {
+    // Create a simple test setup
+    // For now, just set up the basic structure
+
+    // Give each player some test camps (we'll replace with proper camp selection later)
+    const leftCamps = [
+      { id: "camp_l1", name: "Test Camp 1", type: "camp", isDestroyed: false },
+      { id: "camp_l2", name: "Test Camp 2", type: "camp", isDestroyed: false },
+      { id: "camp_l3", name: "Test Camp 3", type: "camp", isDestroyed: false },
+    ];
+
+    const rightCamps = [
+      { id: "camp_r1", name: "Test Camp A", type: "camp", isDestroyed: false },
+      { id: "camp_r2", name: "Test Camp B", type: "camp", isDestroyed: false },
+      { id: "camp_r3", name: "Test Camp C", type: "camp", isDestroyed: false },
+    ];
+
+    // Place camps in position 0 of each column
+    leftCamps.forEach((camp, i) => {
+      this.state.players.left.columns[i].setCard(0, camp);
+    });
+
+    rightCamps.forEach((camp, i) => {
+      this.state.players.right.columns[i].setCard(0, camp);
+    });
+
+    // Give each player a starting hand of simple test cards
+    this.state.players.left.hand = [
+      { id: "card1", name: "Test Person", type: "person", cost: 1 },
+      {
+        id: "card2",
+        name: "Test Event",
+        type: "event",
+        cost: 2,
+        queueNumber: 2,
+      },
+      { id: "card3", name: "Another Person", type: "person", cost: 2 },
+    ];
+
+    this.state.players.right.hand = [
+      { id: "card4", name: "Test Person", type: "person", cost: 1 },
+      {
+        id: "card5",
+        name: "Test Event",
+        type: "event",
+        cost: 2,
+        queueNumber: 2,
+      },
+      { id: "card6", name: "Another Person", type: "person", cost: 2 },
+    ];
+
+    // Set initial water
+    this.state.players.left.water = 3;
+    this.state.players.right.water = 3;
+
+    // Start in actions phase for testing
+    this.state.phase = "actions";
+
+    console.log("Test game setup complete");
+  }
+}
+
+// Start the game when DOM is ready
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    window.game = new RadlandsGame();
+  });
+} else {
+  window.game = new RadlandsGame();
+}
+
+// Create test deck
+this.state.deck = Array(20)
+  .fill(null)
+  .map((_, i) => ({
+    id: `deck_card_${i}`,
+    name: `Test Card ${i}`,
+    type: "person",
+    cost: Math.floor(Math.random() * 3) + 1,
+    junkEffect: "draw",
+  }));

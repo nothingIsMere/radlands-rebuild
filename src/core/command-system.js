@@ -381,46 +381,81 @@ export class CommandSystem {
 
     // Check if we can place at the requested position
     const existingCard = column.getCard(position);
+    let pushToPosition = -1; // Declare it here so it's in scope for the whole function
 
     if (existingCard) {
-      // Position is occupied - check if we can push forward
-      if (position >= 2) {
-        console.log("Cannot push from front position");
+      console.log(`Position ${position} is occupied by ${existingCard.name}`);
+
+      // Find where Juggernaut is (if anywhere)
+      let juggernautPos = -1;
+      for (let i = 0; i < 3; i++) {
+        const card = column.getCard(i);
+        if (card?.name === "Juggernaut") {
+          juggernautPos = i;
+          console.log(`Found Juggernaut at position ${i}`);
+          break;
+        }
+      }
+
+      if (juggernautPos === -1) {
+        // No Juggernaut - normal push forward
+        if (position < 2 && !column.getCard(position + 1)) {
+          pushToPosition = position + 1;
+        }
+      } else {
+        // Juggernaut present - find the other non-Juggernaut position
+        const nonJuggernautPositions = [0, 1, 2].filter(
+          (p) => p !== juggernautPos
+        );
+        console.log(`Non-Juggernaut positions: ${nonJuggernautPositions}`);
+
+        // The other position is the one that's not the requested position
+        const otherPosition = nonJuggernautPositions.find(
+          (p) => p !== position
+        );
+        console.log(`Other non-Juggernaut position: ${otherPosition}`);
+
+        // Check if that position is empty
+        const cardAtOther = column.getCard(otherPosition);
+        console.log(
+          `Card at position ${otherPosition}: ${
+            cardAtOther ? cardAtOther.name : "empty"
+          }`
+        );
+
+        if (otherPosition !== undefined && !cardAtOther) {
+          pushToPosition = otherPosition;
+          console.log(`Can push to position ${otherPosition}`);
+        }
+      }
+
+      if (pushToPosition === -1) {
+        console.log("Cannot push - no empty position available");
         return false;
       }
 
-      const frontPosition = position + 1;
-      if (column.getCard(frontPosition)) {
-        console.log("Cannot push - front position also occupied");
-        return false;
-      }
-
-      // Push the existing card forward
-      column.setCard(frontPosition, existingCard);
-      column.setCard(position, null); // Clear the original position
+      // Push the existing card
+      column.setCard(pushToPosition, existingCard);
+      column.setCard(position, null);
       console.log(
-        `Pushed ${existingCard.name} from position ${position} to ${frontPosition}`
+        `Pushed ${existingCard.name} from position ${position} to ${pushToPosition}`
       );
     }
 
-    // Pay cost
+    // Rest of the method...
     const cost = this.getAdjustedCost(card, columnIndex, playerId);
     if (player.water < cost) {
       console.log("Not enough water!");
-      // If we pushed a card, we need to undo it
-      if (existingCard) {
+      if (existingCard && pushToPosition !== -1) {
         column.setCard(position, existingCard);
-        column.setCard(position + 1, null);
+        column.setCard(pushToPosition, null);
       }
       return false;
     }
 
     player.water -= cost;
-
-    // Remove from hand
     player.hand.splice(cardIndex, 1);
 
-    // Create person state
     const person = {
       ...card,
       isReady: false,
@@ -429,13 +464,8 @@ export class CommandSystem {
       columnIndex,
     };
 
-    // Place the new card in the requested position
     column.setCard(position, person);
-
-    // Trigger entry effects
     this.triggerEntryEffects(person, playerId);
-
-    // Update counters
     this.state.turnEvents.peoplePlayedThisTurn++;
 
     console.log(`Played ${card.name} to position ${position}`);
@@ -797,7 +827,7 @@ export class CommandSystem {
     // Set water
     // First turn of the game (turn 1) gets only 1 water
     if (this.state.turnNumber === 1) {
-      player.water = 1;
+      player.water = 100;
     } else {
       player.water = 3;
     }

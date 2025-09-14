@@ -279,15 +279,18 @@ export class UIRenderer {
         cardDiv.appendChild(abilities);
       }
 
-      // Make cards clickable for targeting (when there's a pending action)
+      // Make cards clickable for multiple purposes
       cardDiv.addEventListener("click", () => {
+        // First priority: handle pending targeting
         if (this.state.pending) {
           this.handleCardTargetClick(playerId, columnIndex, position);
-        } else if (
-          position !== 0 &&
-          this.selectedCard?.card?.type === "person"
+        }
+        // Second priority: handle card placement if we have a person selected
+        else if (
+          this.selectedCard?.card?.type === "person" &&
+          playerId === this.state.currentPlayer
         ) {
-          // Also handle clicking on occupied slots for placement
+          // Allow clicking on ANY position (empty or occupied) in your own tableau
           this.handleCardSlotClick(playerId, columnIndex, position);
         }
       });

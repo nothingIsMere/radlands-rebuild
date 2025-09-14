@@ -321,11 +321,20 @@ export class UIRenderer {
         cardDiv.appendChild(junk);
       }
 
-      // Click to select for playing
+      // Click to select/deselect for playing
       cardDiv.addEventListener("click", () => {
         if (this.state.currentPlayer === playerId) {
-          this.selectedCard = { playerId, index, card };
-          this.render(); // Re-render to show selection
+          // If this card is already selected, deselect it
+          if (
+            this.selectedCard?.playerId === playerId &&
+            this.selectedCard?.index === index
+          ) {
+            this.selectedCard = null;
+          } else {
+            // Otherwise, select this card
+            this.selectedCard = { playerId, index, card };
+          }
+          this.render(); // Re-render to show selection change
         }
       });
 

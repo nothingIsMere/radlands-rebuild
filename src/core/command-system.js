@@ -589,8 +589,20 @@ export class CommandSystem {
   }
 
   executeAbility(ability, context) {
-    // Get ability handler
-    const handler = this.getAbilityHandler(context.source.name, ability.effect);
+    const cardName = context.source.name.toLowerCase();
+    const effectName = ability.effect.toLowerCase();
+
+    // Check camp abilities first
+    if (context.source.type === "camp") {
+      const campAbility =
+        window.cardRegistry?.campAbilities?.[cardName]?.[effectName];
+      if (campAbility?.handler) {
+        return campAbility.handler(this.state, context);
+      }
+    }
+
+    // Then check person abilities
+    const handler = this.getAbilityHandler(cardName, effectName);
 
     if (handler) {
       handler(this.state, context);

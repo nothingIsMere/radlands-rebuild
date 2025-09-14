@@ -12,6 +12,10 @@ export class CardRegistry {
   }
 
   registerAllCards() {
+    // Store the ability objects directly
+    this.campAbilities = campAbilities;
+    this.personAbilities = personAbilities;
+
     // Register person abilities
     Object.entries(personAbilities).forEach(([name, handler]) => {
       this.abilities.set(name.toLowerCase(), handler);

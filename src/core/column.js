@@ -40,19 +40,46 @@ export class Column {
 
   moveJuggernaut(fromPos, toPos) {
     const juggernaut = this.slots[fromPos];
-    const displaced = this.slots[toPos];
 
-    // Simple swap - Juggernaut goes to new position, displaced card (if any) goes to old position
-    this.slots[toPos] = juggernaut;
-    this.slots[fromPos] = displaced; // This might be null, which is fine
+    // Special case: wrapping from position 2 back to position 0
+    if (fromPos === 2 && toPos === 0) {
+      // Everyone shifts forward to make room
+      const cardAt0 = this.slots[0];
+      const cardAt1 = this.slots[1];
 
-    // Update position properties
-    juggernaut.position = toPos;
-    if (displaced) {
-      displaced.position = fromPos;
-      console.log(
-        `${displaced.name} displaced from position ${toPos} to position ${fromPos}`
-      );
+      // Move everyone forward
+      this.slots[0] = juggernaut;
+      this.slots[1] = cardAt0;
+      this.slots[2] = cardAt1;
+
+      // Update positions
+      juggernaut.position = 0;
+      if (cardAt0) {
+        cardAt0.position = 1;
+        console.log(
+          `${cardAt0.name} pushed forward from position 0 to position 1`
+        );
+      }
+      if (cardAt1) {
+        cardAt1.position = 2;
+        console.log(
+          `${cardAt1.name} pushed forward from position 1 to position 2`
+        );
+      }
+    } else {
+      // Normal case: simple swap
+      const displaced = this.slots[toPos];
+
+      this.slots[toPos] = juggernaut;
+      this.slots[fromPos] = displaced;
+
+      juggernaut.position = toPos;
+      if (displaced) {
+        displaced.position = fromPos;
+        console.log(
+          `${displaced.name} displaced from position ${toPos} to position ${fromPos}`
+        );
+      }
     }
 
     // Increment Juggernaut's move counter

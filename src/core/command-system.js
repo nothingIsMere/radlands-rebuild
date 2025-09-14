@@ -829,7 +829,7 @@ export class CommandSystem {
     if (this.state.turnNumber === 1) {
       player.water = 100;
     } else {
-      player.water = 3;
+      player.water = 100;
     }
 
     // Ready all undamaged cards

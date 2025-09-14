@@ -314,29 +314,30 @@ export class UIRenderer {
       // Card name and cost
       cardDiv.textContent = `${card.name} (${card.cost}💧)`;
 
-      // Add junk effect indicator
+      // Junk effect indicator
       if (card.junkEffect) {
         const junk = this.createElement("span", "junk-label");
         junk.textContent = ` [Junk: ${card.junkEffect}]`;
         cardDiv.appendChild(junk);
       }
 
-      // Click to select/deselect for playing
       cardDiv.addEventListener("click", () => {
         if (this.state.currentPlayer === playerId) {
           // If this card is already selected, deselect it
-          if (
-            this.selectedCard?.playerId === playerId &&
-            this.selectedCard?.index === index
-          ) {
+          if (this.selectedCard?.card?.id === card.id) {
             this.selectedCard = null;
           } else {
-            // Otherwise, select this card
-            this.selectedCard = { playerId, index, card };
+            // Select by card ID, not index
+            this.selectedCard = { playerId, card, cardId: card.id };
           }
-          this.render(); // Re-render to show selection change
+          this.render();
         }
       });
+
+      // Check if selected
+      if (this.selectedCard?.card?.id === card.id) {
+        cardDiv.classList.add("selected");
+      }
 
       // Right-click to junk
       cardDiv.addEventListener("contextmenu", (e) => {

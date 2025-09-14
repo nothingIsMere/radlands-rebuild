@@ -192,18 +192,41 @@ h1 {
   cursor: not-allowed;
 }
 
+/* Update the camps grid to reverse the visual order */
 .camps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
   margin-bottom: 15px;
 }
+
 .camp-column {
   background: white;
   border: 1px solid #ddd;
   border-radius: 5px;
   padding: 8px;
+  display: flex;
+  flex-direction: column-reverse; /* This flips it so position 0 is at bottom */
 }
+
+/* Remove the old ::before rule and add this instead */
+.slot-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  background: red;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
 .card {
   background: #fff;
   border: 2px solid #333;
@@ -215,7 +238,9 @@ h1 {
   transition: all 0.2s;
   position: relative;
   font-size: 12px;
+  min-height: 60px; /* Add minimum height so badges don't overlap content */
 }
+
 .card:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
@@ -308,19 +333,24 @@ button:disabled {
   font-size: 12px;
 }
 .phase-indicator {
-  padding: 5px 10px;
+  padding: 8px 15px;
   border-radius: 5px;
   font-weight: bold;
   text-transform: uppercase;
+  font-size: 14px;
+  animation: pulse 1s infinite;
 }
+
 .phase-events {
   background: #ff9800;
   color: white;
 }
+
 .phase-replenish {
   background: #2196f3;
   color: white;
 }
+
 .phase-actions {
   background: #4caf50;
   color: white;

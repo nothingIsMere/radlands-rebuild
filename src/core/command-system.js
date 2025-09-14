@@ -327,6 +327,8 @@ export class CommandSystem {
   }
 
   handlePlayCard(payload) {
+    if (!payload) payload = {}; // Safety check
+
     const { playerId, cardId, targetColumn, targetPosition } = payload;
     const player = this.state.players[playerId];
 
@@ -338,6 +340,7 @@ export class CommandSystem {
 
     // Check cost
     if (player.water < this.getAdjustedCost(card, targetColumn)) {
+      console.log("Not enough water!");
       return false;
     }
 
@@ -613,43 +616,71 @@ export class CommandSystem {
 
     // Start new turn with events phase
     this.state.phase = "events";
+    this.notifyUI("PHASE_CHANGE", "events");
 
-    // Process events phase
-    this.processEventsPhase();
+    // Process events phase after a short delay so it's visible
+    setTimeout(() => {
+      this.processEventsPhase();
+    }, 1000);
 
     return true;
   }
 
   processEventsPhase() {
-    // Process event queue
     const player = this.state.players[this.state.currentPlayer];
 
-    // Resolve slot 1 event
-    // Advance other events
-    // Then move to replenish phase
+    // Resolve event in slot 1 (index 0)
+    if (player.eventQueue[0]) {
+      console.log(`Resolving event: ${player.eventQueue[0].name}`);
+      // TODO: Actually resolve the event effect
+      this.state.discard.push(player.eventQueue[0]);
+      player.eventQueue[0] = null;
+    }
 
+    // Advance events forward
+    for (let i = 0; i < 2; i++) {
+      player.eventQueue[i] = player.eventQueue[i + 1];
+    }
+    player.eventQueue[2] = null;
+
+    // Update UI to show event changes
+    this.notifyUI("EVENTS_PROCESSED", null);
+
+    // Move to replenish phase after a delay
     setTimeout(() => {
       this.state.phase = "replenish";
-      this.processReplenishPhase();
+      this.notifyUI("PHASE_CHANGE", "replenish");
+
+      // Process replenish after another short delay
+      setTimeout(() => {
+        this.processReplenishPhase();
+      }, 1000);
     }, 1000);
   }
 
   processReplenishPhase() {
     const player = this.state.players[this.state.currentPlayer];
 
-    // Draw card
+    // Draw a card
     if (this.state.deck.length > 0) {
-      player.hand.push(this.state.deck.shift());
+      const drawnCard = this.state.deck.shift();
+      player.hand.push(drawnCard);
+      console.log(`${this.state.currentPlayer} drew: ${drawnCard.name}`);
     }
 
-    // Reset water
-    player.water = 3;
+    // Set water
+    // First turn of the game (turn 1) gets only 1 water
+    if (this.state.turnNumber === 1) {
+      player.water = 1;
+    } else {
+      player.water = 3;
+    }
 
     // Ready all undamaged cards
     for (let col = 0; col < 3; col++) {
       for (let pos = 0; pos < 3; pos++) {
         const card = player.columns[col].getCard(pos);
-        if (card && !card.isDamaged) {
+        if (card && !card.isDamaged && !card.isDestroyed) {
           card.isReady = true;
         }
       }
@@ -657,6 +688,8 @@ export class CommandSystem {
 
     // Move to actions phase
     this.state.phase = "actions";
-    this.notifyUI("PHASE_CHANGE", "actions");
+
+    // Notify UI of all the changes
+    this.notifyUI("PHASE_CHANGE", this.state.phase);
   }
 }

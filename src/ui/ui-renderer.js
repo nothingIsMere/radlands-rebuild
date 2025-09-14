@@ -190,7 +190,7 @@ export class UIRenderer {
       const column = player.columns[col];
       const columnDiv = this.createElement("div", "camp-column");
 
-      // Render each position in the column (back to front)
+      // Still iterate 0 to 2, but CSS will flip the visual display
       for (let pos = 0; pos < 3; pos++) {
         const card = column.getCard(pos);
         const cardDiv = this.renderCard(card, playerId, col, pos);
@@ -206,9 +206,17 @@ export class UIRenderer {
   renderCard(card, playerId, columnIndex, position) {
     const cardDiv = this.createElement("div", "card");
 
+    // Add a slot index badge
+    const slotBadge = this.createElement("div", "slot-badge");
+    const globalSlotIndex = columnIndex * 3 + position;
+    slotBadge.textContent = globalSlotIndex;
+    cardDiv.appendChild(slotBadge);
+
     if (!card) {
       cardDiv.classList.add("empty");
-      cardDiv.textContent = position === 0 ? "Camp Slot" : "Empty";
+      const label = this.createElement("div");
+      label.textContent = position === 0 ? "Camp Slot" : "Empty";
+      cardDiv.appendChild(label);
 
       // Make empty slots clickable for placing cards
       cardDiv.addEventListener("click", () => {
@@ -218,41 +226,7 @@ export class UIRenderer {
       // Add card type class
       cardDiv.classList.add(card.type);
 
-      // Add state classes
-      if (card.isDamaged) cardDiv.classList.add("damaged");
-      if (card.isDestroyed) cardDiv.classList.add("destroyed");
-      if (card.isReady === false) cardDiv.classList.add("not-ready");
-
-      // Card content
-      const name = this.createElement("div", "card-name");
-      name.textContent = card.name;
-      cardDiv.appendChild(name);
-
-      // Add abilities if any
-      if (card.abilities && card.abilities.length > 0) {
-        const abilities = this.createElement("div", "ability-info");
-        card.abilities.forEach((ability, index) => {
-          if (card.isReady && !card.isDamaged) {
-            const btn = this.createElement("button", "ability-btn");
-            btn.textContent = `${ability.effect} (${ability.cost}💧)`;
-            btn.addEventListener("click", (e) => {
-              e.stopPropagation();
-              this.handleAbilityClick(playerId, columnIndex, position, index);
-            });
-            abilities.appendChild(btn);
-          } else {
-            const text = this.createElement("span", "ability-text");
-            text.textContent = `${ability.effect} (${ability.cost}💧)`;
-            abilities.appendChild(text);
-          }
-        });
-        cardDiv.appendChild(abilities);
-      }
-
-      // Make cards clickable for targeting
-      cardDiv.addEventListener("click", () => {
-        this.handleCardTargetClick(playerId, columnIndex, position);
-      });
+      // ... rest of existing card rendering code
     }
 
     return cardDiv;
@@ -406,7 +380,8 @@ export class UIRenderer {
     // Handle placing a selected card
     if (
       this.selectedCard &&
-      this.selectedCard.playerId === this.state.currentPlayer
+      this.selectedCard.playerId === this.state.currentPlayer &&
+      playerId === this.state.currentPlayer // Can only play to your own tableau
     ) {
       const card = this.selectedCard.card;
 
@@ -414,9 +389,23 @@ export class UIRenderer {
         this.commands.execute({
           type: "PLAY_CARD",
           playerId: this.state.currentPlayer,
-          cardId: card.id,
-          targetColumn: columnIndex,
-          targetPosition: position,
+          payload: {
+            playerId: this.state.currentPlayer,
+            cardId: card.id,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          },
+        });
+        this.selectedCard = null;
+      } else if (card.type === "event") {
+        // Events don't go to tableau slots, they go to event queue
+        this.commands.execute({
+          type: "PLAY_CARD",
+          playerId: this.state.currentPlayer,
+          payload: {
+            playerId: this.state.currentPlayer,
+            cardId: card.id,
+          },
         });
         this.selectedCard = null;
       }

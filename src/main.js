@@ -77,12 +77,24 @@ class RadlandsGame {
       { id: "card6", name: "Another Person", type: "person", cost: 2 },
     ];
 
-    // Set initial water
-    this.state.players.left.water = 3;
-    this.state.players.right.water = 3;
+    // Create test deck - MOVE THIS HERE
+    this.state.deck = Array(20)
+      .fill(null)
+      .map((_, i) => ({
+        id: `deck_card_${i}`,
+        name: `Test Card ${i}`,
+        type: "person",
+        cost: Math.floor(Math.random() * 3) + 1,
+        junkEffect: "draw",
+      }));
 
-    // Start in actions phase for testing
-    this.state.phase = "actions";
+    // Start in events phase (not actions)
+    this.state.phase = "events";
+
+    // Process the first turn's phases
+    setTimeout(() => {
+      this.commands.processEventsPhase();
+    }, 500);
 
     console.log("Test game setup complete");
   }
@@ -96,14 +108,3 @@ if (document.readyState === "loading") {
 } else {
   window.game = new RadlandsGame();
 }
-
-// Create test deck
-this.state.deck = Array(20)
-  .fill(null)
-  .map((_, i) => ({
-    id: `deck_card_${i}`,
-    name: `Test Card ${i}`,
-    type: "person",
-    cost: Math.floor(Math.random() * 3) + 1,
-    junkEffect: "draw",
-  }));

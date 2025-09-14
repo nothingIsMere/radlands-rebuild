@@ -339,7 +339,7 @@ export class CommandSystem {
     const card = player.hand[cardIndex];
 
     // Check cost
-    if (player.water < this.getAdjustedCost(card, targetColumn)) {
+    if (player.water < this.getAdjustedCost(card, targetColumn, playerId)) {
       console.log("Not enough water!");
       return false;
     }
@@ -360,19 +360,61 @@ export class CommandSystem {
     return false;
   }
 
+  checkAllSlotsFull(playerId) {
+    const player = this.state.players[playerId];
+    let emptySlots = 0;
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        if (!player.columns[col].getCard(pos)) {
+          emptySlots++;
+        }
+      }
+    }
+
+    return emptySlots === 0; // All 9 slots occupied
+  }
+
   playPerson(playerId, card, cardIndex, columnIndex, position) {
     const player = this.state.players[playerId];
     const column = player.columns[columnIndex];
 
-    // Apply column placement rules
-    let actualPosition = this.determinePosition(column, position);
+    // Check if we can place at the requested position
+    const existingCard = column.getCard(position);
 
-    if (!column.canPlaceCard(actualPosition, card)) {
-      return false;
+    if (existingCard) {
+      // Position is occupied - check if we can push forward
+      if (position >= 2) {
+        console.log("Cannot push from front position");
+        return false;
+      }
+
+      const frontPosition = position + 1;
+      if (column.getCard(frontPosition)) {
+        console.log("Cannot push - front position also occupied");
+        return false;
+      }
+
+      // Push the existing card forward
+      column.setCard(frontPosition, existingCard);
+      column.setCard(position, null); // Clear the original position
+      console.log(
+        `Pushed ${existingCard.name} from position ${position} to ${frontPosition}`
+      );
     }
 
     // Pay cost
-    const cost = this.getAdjustedCost(card, columnIndex);
+    const cost = this.getAdjustedCost(card, columnIndex, playerId);
+    if (player.water < cost) {
+      console.log("Not enough water!");
+      // If we pushed a card, we need to undo it
+      if (existingCard) {
+        column.setCard(position, existingCard);
+        column.setCard(position + 1, null);
+      }
+      return false;
+    }
+
     player.water -= cost;
 
     // Remove from hand
@@ -383,12 +425,12 @@ export class CommandSystem {
       ...card,
       isReady: false,
       isDamaged: false,
-      position: actualPosition,
+      position: position,
       columnIndex,
     };
 
-    // Place the card
-    column.setCard(actualPosition, person);
+    // Place the new card in the requested position
+    column.setCard(position, person);
 
     // Trigger entry effects
     this.triggerEntryEffects(person, playerId);
@@ -396,6 +438,57 @@ export class CommandSystem {
     // Update counters
     this.state.turnEvents.peoplePlayedThisTurn++;
 
+    console.log(`Played ${card.name} to position ${position}`);
+    return true;
+  }
+
+  playEvent(playerId, card, cardIndex) {
+    const player = this.state.players[playerId];
+
+    // Check event queue for available slot
+    const queueNumber = card.queueNumber || 0;
+
+    if (queueNumber === 0) {
+      // Instant event - resolve immediately
+      console.log(`Playing instant event: ${card.name}`);
+      // TODO: Resolve event effect
+      player.hand.splice(cardIndex, 1);
+      this.state.discard.push(card);
+      return true;
+    }
+
+    // Find appropriate slot in event queue
+    // Events want to go in slot matching their queue number (1, 2, or 3)
+    // In array terms that's index 0, 1, or 2
+    const desiredSlot = queueNumber - 1;
+
+    if (!player.eventQueue[desiredSlot]) {
+      // Desired slot is empty
+      player.eventQueue[desiredSlot] = card;
+    } else {
+      // Desired slot is occupied, find next available slot
+      let placed = false;
+      for (let i = desiredSlot + 1; i < 3; i++) {
+        if (!player.eventQueue[i]) {
+          player.eventQueue[i] = card;
+          placed = true;
+          break;
+        }
+      }
+
+      if (!placed) {
+        console.log("Event queue is full!");
+        return false;
+      }
+    }
+
+    // Pay cost
+    player.water -= card.cost;
+
+    // Remove from hand
+    player.hand.splice(cardIndex, 1);
+
+    console.log(`Placed ${card.name} in event queue`);
     return true;
   }
 
@@ -417,12 +510,17 @@ export class CommandSystem {
     return emptySlots[0];
   }
 
-  getAdjustedCost(card, columnIndex) {
-    let cost = card.cost;
+  getAdjustedCost(card, columnIndex, playerId) {
+    let cost = card.cost || 0;
 
     // Check for cost modifiers (Holdout, Oasis, etc)
-    const column =
-      this.state.players[this.state.currentPlayer].columns[columnIndex];
+    // Use the playerId passed in, not this.state.currentPlayer
+    const player = this.state.players[playerId];
+    if (!player || !player.columns || !player.columns[columnIndex]) {
+      return cost;
+    }
+
+    const column = player.columns[columnIndex];
     const camp = column.getCard(0);
 
     // Holdout discount
@@ -442,22 +540,38 @@ export class CommandSystem {
   }
 
   handleUseAbility(payload) {
+    if (!payload) return false;
+
     const { playerId, columnIndex, position, abilityIndex } = payload;
     const card = this.state.getCard(playerId, columnIndex, position);
 
-    if (!card || !card.abilities?.[abilityIndex]) return false;
+    if (!card || !card.abilities?.[abilityIndex]) {
+      console.log("Card or ability not found");
+      return false;
+    }
 
     const ability = card.abilities[abilityIndex];
 
     // Check if ready
-    if (!card.isReady || card.isDamaged) return false;
+    if (!card.isReady || card.isDamaged || card.isDestroyed) {
+      console.log("Card is not ready to use abilities");
+      return false;
+    }
 
     // Check cost
     const player = this.state.players[playerId];
-    if (player.water < ability.cost) return false;
+    if (player.water < ability.cost) {
+      console.log(
+        `Not enough water! Need ${ability.cost}, have ${player.water}`
+      );
+      return false;
+    }
 
     // Pay cost
     player.water -= ability.cost;
+    console.log(
+      `Paid ${ability.cost} water for ${card.name}'s ${ability.effect} ability`
+    );
 
     // Execute ability
     this.executeAbility(ability, {
@@ -467,7 +581,7 @@ export class CommandSystem {
       position,
     });
 
-    // Mark as used
+    // Mark as used (not ready)
     card.isReady = false;
     this.state.turnEvents.abilityUsedThisTurn = true;
 

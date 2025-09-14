@@ -226,12 +226,75 @@ export class UIRenderer {
       // Add card type class
       cardDiv.classList.add(card.type);
 
-      // ... rest of existing card rendering code
+      // Add state classes
+      if (card.isDamaged) cardDiv.classList.add("damaged");
+      if (card.isDestroyed) cardDiv.classList.add("destroyed");
+      if (card.isReady === false) cardDiv.classList.add("not-ready");
+
+      // Card name
+      const name = this.createElement("div", "card-name");
+      name.textContent = card.name;
+      cardDiv.appendChild(name);
+
+      // Add abilities if any
+      if (card.abilities && card.abilities.length > 0) {
+        const abilities = this.createElement("div", "ability-info");
+
+        card.abilities.forEach((ability, index) => {
+          // Only show ability button if card is ready and belongs to current player
+          if (
+            card.isReady &&
+            !card.isDamaged &&
+            !card.isDestroyed &&
+            playerId === this.state.currentPlayer
+          ) {
+            const btn = this.createElement("button", "ability-btn");
+            btn.textContent = `${ability.effect} (${ability.cost}💧)`;
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              this.commands.execute({
+                type: "USE_ABILITY",
+                playerId: playerId,
+                payload: {
+                  playerId: playerId,
+                  columnIndex: columnIndex,
+                  position: position,
+                  abilityIndex: index,
+                },
+              });
+            });
+            abilities.appendChild(btn);
+          } else {
+            // Show disabled ability text if not usable
+            const text = this.createElement("span", "ability-text-disabled");
+            text.textContent = `${ability.effect} (${ability.cost}💧)`;
+            if (!card.isReady) text.textContent += " [Not Ready]";
+            if (card.isDamaged) text.textContent += " [Damaged]";
+            if (playerId !== this.state.currentPlayer)
+              text.textContent += " [Not Your Turn]";
+            abilities.appendChild(text);
+          }
+        });
+
+        cardDiv.appendChild(abilities);
+      }
+
+      // Make cards clickable for targeting (when there's a pending action)
+      cardDiv.addEventListener("click", () => {
+        if (this.state.pending) {
+          this.handleCardTargetClick(playerId, columnIndex, position);
+        } else if (
+          position !== 0 &&
+          this.selectedCard?.card?.type === "person"
+        ) {
+          // Also handle clicking on occupied slots for placement
+          this.handleCardSlotClick(playerId, columnIndex, position);
+        }
+      });
     }
 
     return cardDiv;
   }
-
   renderHand(player, playerId) {
     const hand = this.createElement("div", "hand");
 
@@ -385,7 +448,7 @@ export class UIRenderer {
     ) {
       const card = this.selectedCard.card;
 
-      if (card.type === "person" && position !== 0) {
+      if (card.type === "person") {
         this.commands.execute({
           type: "PLAY_CARD",
           playerId: this.state.currentPlayer,
@@ -393,18 +456,7 @@ export class UIRenderer {
             playerId: this.state.currentPlayer,
             cardId: card.id,
             targetColumn: columnIndex,
-            targetPosition: position,
-          },
-        });
-        this.selectedCard = null;
-      } else if (card.type === "event") {
-        // Events don't go to tableau slots, they go to event queue
-        this.commands.execute({
-          type: "PLAY_CARD",
-          playerId: this.state.currentPlayer,
-          payload: {
-            playerId: this.state.currentPlayer,
-            cardId: card.id,
+            targetPosition: position, // Use the CLICKED position, not an empty one
           },
         });
         this.selectedCard = null;

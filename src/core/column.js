@@ -86,25 +86,8 @@ export class Column {
   }
 
   canPlaceCard(position, card) {
-    // Check if position is empty
-    if (this.slots[position] !== null) return false;
-
-    // Check column-specific rules
-    const hasJuggernaut = this.slots.some((c) => c?.name === "Juggernaut");
-    if (hasJuggernaut) {
-      // In Juggernaut column, only 2 non-Juggernaut cards allowed
-      const nonJuggernautCount = this.slots.filter(
-        (c) => c && c.name !== "Juggernaut"
-      ).length;
-      return nonJuggernautCount < 2;
-    }
-
-    // Normal column - camps in position 0, people in 1-2
-    if (position === 0) {
-      return card.type === "camp";
-    } else {
-      return card.type === "person";
-    }
+    // Simply check if position is empty
+    return this.slots[position] === null;
   }
 
   isProtected(position) {

@@ -52,42 +52,48 @@ class RadlandsGame {
       this.state.players.right.columns[i].setCard(0, camp);
     });
 
-    // Give each player a starting hand of simple test cards
+    // Give each player a starting hand of ONLY person cards
     this.state.players.left.hand = [
-      { id: "card1", name: "Test Person", type: "person", cost: 1 },
-      {
-        id: "card2",
-        name: "Test Event",
-        type: "event",
-        cost: 2,
-        queueNumber: 2,
-      },
-      { id: "card3", name: "Another Person", type: "person", cost: 2 },
+      { id: "card1", name: "Test Person 1", type: "person", cost: 1 },
+      { id: "card2", name: "Test Person 2", type: "person", cost: 2 },
+      { id: "card3", name: "Test Person 3", type: "person", cost: 1 },
     ];
 
     this.state.players.right.hand = [
-      { id: "card4", name: "Test Person", type: "person", cost: 1 },
-      {
-        id: "card5",
-        name: "Test Event",
-        type: "event",
-        cost: 2,
-        queueNumber: 2,
-      },
-      { id: "card6", name: "Another Person", type: "person", cost: 2 },
+      { id: "card4", name: "Test Person 4", type: "person", cost: 1 },
+      { id: "card5", name: "Test Person 5", type: "person", cost: 2 },
+      { id: "card6", name: "Test Person 6", type: "person", cost: 1 },
     ];
 
-    // Create test deck - MOVE THIS HERE
+    // Don't set water here - let the replenish phase handle it
+    this.state.players.left.water = 0;
+    this.state.players.right.water = 0;
+
+    // Create test deck with ONLY person cards
     this.state.deck = Array(20)
       .fill(null)
       .map((_, i) => ({
         id: `deck_card_${i}`,
-        name: `Test Card ${i}`,
+        name: `Person ${i}`,
         type: "person",
         cost: Math.floor(Math.random() * 3) + 1,
-        junkEffect: "draw",
       }));
 
+    // Add one Juggernaut camp for testing
+    this.state.players.left.columns[1].setCard(0, {
+      id: "juggernaut_camp",
+      name: "Juggernaut",
+      type: "camp",
+      isDestroyed: false,
+      isReady: true,
+      moveCount: 0,
+      abilities: [
+        {
+          effect: "move",
+          cost: 1,
+        },
+      ],
+    });
     // Start in events phase (not actions)
     this.state.phase = "events";
 

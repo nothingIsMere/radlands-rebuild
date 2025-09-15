@@ -74,6 +74,17 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "raiders_select_camp":
+          // Show which player needs to act
+          if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
+            message.textContent =
+              "⚔️ RAIDERS ATTACK! Choose one of YOUR camps to damage";
+            overlay.classList.add("raiders-attack-self");
+          } else {
+            message.textContent = `⏳ Waiting for ${this.state.pending.targetPlayerId.toUpperCase()} to choose a camp...`;
+            overlay.classList.add("raiders-waiting");
+          }
+          break;
         case "place_punk":
           message.textContent = "📍 Click any slot to place a PUNK";
           overlay.classList.add("punk-placement");
@@ -268,6 +279,18 @@ export class UIRenderer {
       );
       if (isValidMimicTarget) {
         cardDiv.classList.add("mimic-target");
+      }
+    }
+
+    if (this.state.pending?.type === "raiders_select_camp") {
+      // Highlight camps that belong to the target player
+      if (
+        playerId === this.state.pending.targetPlayerId &&
+        position === 0 &&
+        card?.type === "camp" &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("raiders-target-camp");
       }
     }
 

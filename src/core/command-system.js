@@ -866,8 +866,30 @@ export class CommandSystem {
 
       console.log(`Raid: Found Raiders at slot ${raidersIndex + 1}`);
 
-      if (raidersIndex > 0) {
-        // Can advance (move to lower index = closer to slot 1)
+      if (raidersIndex === 0) {
+        // Raiders in slot 1 - resolve it!
+        console.log("Raid: Advancing Raiders off slot 1 - resolving effect!");
+
+        // Remove from queue
+        player.eventQueue[0] = null;
+
+        // Return to available
+        player.raiders = "available";
+
+        // Set up opponent camp selection
+        const opponentId = playerId === "left" ? "right" : "left";
+        this.state.pending = {
+          type: "raiders_select_camp",
+          sourcePlayerId: playerId,
+          targetPlayerId: opponentId,
+        };
+
+        console.log(
+          `Raiders: ${opponentId} player must choose a camp to damage`
+        );
+        return true;
+      } else if (raidersIndex > 0) {
+        // Can advance toward slot 1
         const newIndex = raidersIndex - 1;
         if (!player.eventQueue[newIndex]) {
           player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
@@ -884,11 +906,8 @@ export class CommandSystem {
           );
           return false;
         }
-      } else if (raidersIndex === 0) {
-        console.log("Raid: Raiders already in slot 1, cannot advance further");
-        return false;
       } else {
-        console.log("Raid: Raiders not found in queue (this shouldn't happen)");
+        console.log("Raid: Raiders not found in queue");
         return false;
       }
     } else {
@@ -963,6 +982,61 @@ export class CommandSystem {
         console.log(`${target.name} restored by junk effect!`);
 
         this.state.pending = null;
+        return true;
+      }
+
+      case "raiders_select_camp": {
+        // Verify it's the target player selecting their own camp
+        if (targetPlayer !== this.state.pending.targetPlayerId) {
+          console.log("You must select your own camp");
+          return false;
+        }
+
+        // Verify it's a camp (position 0)
+        if (targetPosition !== 0) {
+          console.log("Must select a camp");
+          return false;
+        }
+
+        const camp = this.state.getCard(targetPlayer, targetColumn, 0);
+        if (!camp || camp.type !== "camp") {
+          console.log("Invalid camp selection");
+          return false;
+        }
+
+        if (camp.isDestroyed) {
+          console.log("Camp is already destroyed");
+          return false;
+        }
+
+        // Apply damage to the selected camp
+        if (camp.isDamaged) {
+          camp.isDestroyed = true;
+          console.log(`Raiders destroyed ${camp.name}!`);
+        } else {
+          camp.isDamaged = true;
+          console.log(`Raiders damaged ${camp.name}!`);
+        }
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Check for game end
+        this.checkGameEnd();
+
+        // If we're in events phase, continue with the phase progression
+        if (this.state.phase === "events") {
+          // Advance remaining events
+          const player = this.state.players[this.state.currentPlayer];
+          for (let i = 0; i < 2; i++) {
+            player.eventQueue[i] = player.eventQueue[i + 1];
+          }
+          player.eventQueue[2] = null;
+
+          // Continue to replenish
+          this.continueToReplenishPhase();
+        }
+
         return true;
       }
 
@@ -1465,18 +1539,59 @@ export class CommandSystem {
 
     // Resolve event in slot 1 (index 0)
     if (player.eventQueue[0]) {
-      console.log(`Resolving event: ${player.eventQueue[0].name}`);
-      // TODO: Actually resolve the event effect
-      this.state.discard.push(player.eventQueue[0]);
-      player.eventQueue[0] = null;
+      const event = player.eventQueue[0];
+      console.log(`Resolving event: ${event.name}`);
+
+      // Handle Raiders specially
+      if (event.isRaiders) {
+        console.log("Raiders event resolving!");
+
+        // Remove from queue
+        player.eventQueue[0] = null;
+
+        // Return to available
+        player.raiders = "available";
+
+        // Set up opponent camp selection
+        const opponentId =
+          this.state.currentPlayer === "left" ? "right" : "left";
+        this.state.pending = {
+          type: "raiders_select_camp",
+          sourcePlayerId: this.state.currentPlayer,
+          targetPlayerId: opponentId,
+        };
+
+        console.log(
+          `Raiders: ${opponentId} player must choose a camp to damage`
+        );
+
+        // Update UI immediately to show the selection state
+        this.notifyUI("RAIDERS_RESOLVING", null);
+
+        // Don't continue with normal phase progression - wait for selection
+        return;
+      } else {
+        // Normal event resolution
+        // TODO: Handle other event types
+        this.state.discard.push(event);
+        player.eventQueue[0] = null;
+      }
     }
 
-    // Advance events forward
-    for (let i = 0; i < 2; i++) {
-      player.eventQueue[i] = player.eventQueue[i + 1];
-    }
-    player.eventQueue[2] = null;
+    // Only advance events and continue if no pending selection
+    if (!this.state.pending) {
+      // Advance events forward
+      for (let i = 0; i < 2; i++) {
+        player.eventQueue[i] = player.eventQueue[i + 1];
+      }
+      player.eventQueue[2] = null;
 
+      // Continue to replenish phase
+      this.continueToReplenishPhase();
+    }
+  }
+
+  continueToReplenishPhase() {
     // Update UI to show event changes
     this.notifyUI("EVENTS_PROCESSED", null);
 

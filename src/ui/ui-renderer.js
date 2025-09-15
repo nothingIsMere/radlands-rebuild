@@ -239,9 +239,17 @@ export class UIRenderer {
       cardDiv.classList.add(card.type);
 
       // Add state classes
-      if (card.isDamaged) cardDiv.classList.add("damaged");
-      if (card.isDestroyed) cardDiv.classList.add("destroyed");
-      if (card.isReady === false) cardDiv.classList.add("not-ready");
+      if (card.type === "camp") {
+        cardDiv.classList.add("camp");
+        if (card.isDamaged) cardDiv.classList.add("damaged");
+        if (card.isDestroyed) cardDiv.classList.add("destroyed");
+        // DON'T add "not-ready" class for camps, even if isReady is false
+      } else {
+        // Only person cards get the not-ready class
+        if (card.isDamaged) cardDiv.classList.add("damaged");
+        if (card.isDestroyed) cardDiv.classList.add("destroyed");
+        if (!card.isReady) cardDiv.classList.add("not-ready");
+      }
 
       // Card name
       const name = this.createElement("div", "card-name");

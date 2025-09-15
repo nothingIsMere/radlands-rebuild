@@ -731,6 +731,14 @@ export class CommandSystem {
         // Save this BEFORE calling resolveDamage (which clears pending)
         const sourcePlayerId = this.state.pending.sourcePlayerId;
 
+        // Get the target to check if it's a camp
+        const targetCard = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        const isTargetCamp = targetCard?.type === "camp";
+
         // Special handling for Looter's camp bonus
         const damaged = this.resolveDamage(
           targetPlayer,
@@ -738,8 +746,8 @@ export class CommandSystem {
           targetPosition
         );
 
-        if (damaged && targetPosition === 0) {
-          // Hit a camp - use the saved sourcePlayerId, not this.state.pending
+        if (damaged && isTargetCamp) {
+          // Hit a camp - draw a card
           const player = this.state.players[sourcePlayerId];
           if (this.state.deck.length > 0) {
             const drawnCard = this.state.deck.shift();

@@ -120,16 +120,14 @@ export class Column {
   }
 
   isProtected(position) {
-    // Check if card at position is protected
+    // A card is protected if there's another card in front of it
+    // This works regardless of what type of cards they are
     if (position === 0) {
-      // Camps are protected if there's anyone in front
       return this.slots[1] !== null || this.slots[2] !== null;
     } else if (position === 1) {
-      // Middle position is protected if there's someone in front
       return this.slots[2] !== null;
     } else {
-      // Front position (2) is never protected
-      return false;
+      return false; // Position 2 is never protected
     }
   }
 

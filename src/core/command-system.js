@@ -68,12 +68,19 @@ export class CommandSystem {
         // Remove from column
         column.setCard(targetPosition, null);
 
-        // Move any person in front back
-        if (targetPosition === 1 && column.getCard(2)) {
-          const frontCard = column.getCard(2);
-          column.setCard(1, frontCard);
-          column.setCard(2, null);
-          console.log(`${frontCard.name} moved back to position 1`);
+        // Move any card in front back (regardless of type)
+        // Don't assume positions - just check if there's a card in the next position
+        if (targetPosition < 2) {
+          // If not in the frontmost position
+          const nextPosition = targetPosition + 1;
+          const cardInFront = column.getCard(nextPosition);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(nextPosition, null);
+            console.log(
+              `${cardInFront.name} moved back to position ${targetPosition}`
+            );
+          }
         }
       } else if (target.type === "camp") {
         // Camps stay in place when destroyed, just marked as destroyed
@@ -730,6 +737,7 @@ export class CommandSystem {
       case "looter_damage":
         // Save this BEFORE calling resolveDamage (which clears pending)
         const sourcePlayerId = this.state.pending.sourcePlayerId;
+        console.log(`Looter damage - sourcePlayerId: ${sourcePlayerId}`);
 
         // Get the target to check if it's a camp
         const targetCard = this.state.getCard(
@@ -738,6 +746,9 @@ export class CommandSystem {
           targetPosition
         );
         const isTargetCamp = targetCard?.type === "camp";
+        console.log(
+          `Target card: ${targetCard?.name}, type: ${targetCard?.type}, is camp: ${isTargetCamp}`
+        );
 
         // Special handling for Looter's camp bonus
         const damaged = this.resolveDamage(
@@ -745,17 +756,28 @@ export class CommandSystem {
           targetColumn,
           targetPosition
         );
+        console.log(`Damage successful: ${damaged}`);
 
         if (damaged && isTargetCamp) {
+          console.log("Should draw card for hitting camp!");
           // Hit a camp - draw a card
           const player = this.state.players[sourcePlayerId];
+          console.log(
+            `Player ${sourcePlayerId} deck size before: ${this.state.deck.length}`
+          );
           if (this.state.deck.length > 0) {
             const drawnCard = this.state.deck.shift();
             player.hand.push(drawnCard);
             console.log(
               `Looter bonus: Drew ${drawnCard.name} for hitting camp`
             );
+          } else {
+            console.log("No cards in deck to draw!");
           }
+        } else {
+          console.log(
+            `No bonus - damaged: ${damaged}, isTargetCamp: ${isTargetCamp}`
+          );
         }
         return damaged;
 

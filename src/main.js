@@ -69,10 +69,13 @@ function setupTestGame() {
     ],
   });
 
-  // Create a small test deck
+  // Create a test deck with more cards
   gameState.deck = [
     { id: "test_1", name: "Scout", type: "person", cost: 1 },
     { id: "test_2", name: "Muse", type: "person", cost: 1 },
+    { id: "test_3", name: "Gunner", type: "person", cost: 1 },
+    { id: "test_4", name: "Vigilante", type: "person", cost: 1 },
+    { id: "test_5", name: "Sniper", type: "person", cost: 1 },
   ];
 
   // Start in actions phase

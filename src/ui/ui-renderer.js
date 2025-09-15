@@ -227,7 +227,8 @@ export class UIRenderer {
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");
-      label.textContent = position === 0 ? "Camp Slot" : "Empty";
+      // Don't assume position 0 is always a camp slot!
+      label.textContent = "Empty";
       cardDiv.appendChild(label);
 
       // Make empty slots clickable for placing cards
@@ -235,21 +236,23 @@ export class UIRenderer {
         this.handleCardSlotClick(playerId, columnIndex, position);
       });
     } else {
-      // Add card type class
-      cardDiv.classList.add(card.type);
-
-      // Add state classes
+      // Add type-based classes properly
       if (card.type === "camp") {
         cardDiv.classList.add("camp");
-        if (card.isDamaged) cardDiv.classList.add("damaged");
-        if (card.isDestroyed) cardDiv.classList.add("destroyed");
-        // DON'T add "not-ready" class for camps, even if isReady is false
-      } else {
-        // Only person cards get the not-ready class
-        if (card.isDamaged) cardDiv.classList.add("damaged");
-        if (card.isDestroyed) cardDiv.classList.add("destroyed");
-        if (!card.isReady) cardDiv.classList.add("not-ready");
+      } else if (card.type === "person") {
+        cardDiv.classList.add("person");
       }
+
+      // Add state classes - handle them separately by type
+      if (card.isDamaged) cardDiv.classList.add("damaged");
+      if (card.isDestroyed) cardDiv.classList.add("destroyed");
+
+      // Only person cards can be not-ready from damage
+      // Camps can be not-ready from using abilities, but that's different
+      if (card.type === "person" && !card.isReady) {
+        cardDiv.classList.add("not-ready");
+      }
+      // Camps should NEVER get the visual not-ready class even if isReady is false
 
       // Card name
       const name = this.createElement("div", "card-name");
@@ -267,7 +270,7 @@ export class UIRenderer {
             !card.isDamaged &&
             !card.isDestroyed &&
             playerId === this.state.currentPlayer &&
-            !this.state.pending // ADD THIS LINE - Don't show ability buttons while pending
+            !this.state.pending
           ) {
             const btn = this.createElement("button", "ability-btn");
             btn.textContent = `${ability.effect} (${ability.cost}💧)`;
@@ -289,9 +292,13 @@ export class UIRenderer {
             // Show disabled ability text if not usable
             const text = this.createElement("span", "ability-text-disabled");
             text.textContent = `${ability.effect} (${ability.cost}💧)`;
-            if (!card.isReady) text.textContent += " [Not Ready]";
+            if (card.type === "person" && !card.isReady) {
+              text.textContent += " [Not Ready]";
+            } else if (card.type === "camp" && !card.isReady) {
+              text.textContent += " [Used]";
+            }
             if (card.isDamaged) text.textContent += " [Damaged]";
-            if (this.state.pending) text.textContent += " [Targeting]"; // ADD THIS LINE
+            if (this.state.pending) text.textContent += " [Targeting]";
             if (playerId !== this.state.currentPlayer)
               text.textContent += " [Not Your Turn]";
             abilities.appendChild(text);
@@ -303,12 +310,12 @@ export class UIRenderer {
 
       // Make cards clickable for multiple purposes
       cardDiv.addEventListener("click", (e) => {
-        e.stopPropagation(); // STOP THE EVENT FROM BUBBLING UP!
+        e.stopPropagation();
 
         // First priority: handle pending targeting
         if (this.state.pending) {
           this.handleCardTargetClick(playerId, columnIndex, position);
-          return; // And return early so we don't process anything else
+          return;
         }
         // Second priority: handle card placement if we have a person selected
         else if (

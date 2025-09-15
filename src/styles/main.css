@@ -605,3 +605,8 @@ button:disabled {
   cursor: pointer;
   animation: pulse-purple 1s infinite;
 }
+
+.card.mimic-target {
+  box-shadow: 0 0 10px 2px purple;
+  cursor: pointer;
+}

@@ -224,6 +224,18 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "mimic_select_target") {
+      const isValidMimicTarget = this.state.pending.validTargets.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidMimicTarget) {
+        cardDiv.classList.add("mimic-target");
+      }
+    }
+
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");

@@ -677,8 +677,14 @@ export class CommandSystem {
   }
 
   executeAbility(ability, context) {
-    const cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
+    let cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
     const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
+
+    // CRITICAL: If this is Mimic copying another card, use THAT card's handler
+    if (context.fromMimic && context.copiedFrom) {
+      cardName = context.copiedFrom.toLowerCase().replace(/\s+/g, "");
+      console.log(`Mimic executing as ${cardName}`);
+    }
 
     // Check camp abilities first
     if (context.source.type === "camp") {
@@ -689,14 +695,18 @@ export class CommandSystem {
       }
     }
 
-    // Then check person abilities
+    // Check person abilities - now using the correct cardName
     const personAbility =
       window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
     if (personAbility?.handler) {
+      console.log(`Found handler for ${cardName}.${effectName}`);
       return personAbility.handler(this.state, context);
     }
 
     // Fall back to generic ability handling
+    console.log(
+      `No specific handler found for ${cardName}.${effectName}, using generic`
+    );
     this.handleGenericAbility(ability, context);
   }
 
@@ -716,9 +726,12 @@ export class CommandSystem {
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
 
       case "looter_damage": {
-        // Save BOTH of these BEFORE calling resolveDamage
+        console.log("=== Processing looter_damage target ===");
+        console.log("Source player:", this.state.pending.sourcePlayerId);
+        console.log("Target:", targetPlayer, targetColumn, targetPosition);
+
         const sourcePlayerId = this.state.pending.sourcePlayerId;
-        const parachuteBaseDamage = this.state.pending.parachuteBaseDamage; // SAVE THIS!
+        const parachuteBaseDamage = this.state.pending.parachuteBaseDamage;
 
         // Get the target to check if it's a camp
         const targetCard = this.state.getCard(
@@ -939,6 +952,95 @@ export class CommandSystem {
         return true; // ADD THIS
       } // This closes the parachute_place_person case
 
+      // In handleSelectTarget method, add this case:
+      case "mimic_select_target": {
+        const pending = this.state.pending;
+
+        // Find if this is a valid target
+        const isValidTarget = pending.validTargets.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Mimic");
+          return false;
+        }
+
+        const targetCard = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!targetCard || !targetCard.abilities?.length) {
+          console.log("Target has no abilities");
+          return false;
+        }
+
+        // For now, use the first ability
+        const targetAbility = targetCard.abilities[0];
+
+        // Check if player can afford the ability
+        const player = this.state.players[pending.sourcePlayerId];
+        if (player.water < targetAbility.cost) {
+          console.log(
+            `Not enough water for ${targetCard.name}'s ability (need ${targetAbility.cost})`
+          );
+          // Mark Mimic as ready again since we couldn't complete
+          pending.source.isReady = true;
+          this.state.pending = null;
+          return false;
+        }
+
+        // Pay the cost
+        player.water -= targetAbility.cost;
+        console.log(
+          `Mimic: Paid ${targetAbility.cost} water to copy ${targetCard.name}'s ${targetAbility.effect}`
+        );
+
+        // Mark Mimic as not ready
+        pending.source.isReady = false;
+
+        // Store Parachute Base damage if needed
+        const parachuteBaseDamage = pending.parachuteBaseDamage;
+
+        // Clear the mimic pending state
+        this.state.pending = null;
+
+        // Execute the copied ability with Mimic as the source
+        const mimicContext = {
+          source: pending.source,
+          playerId: pending.sourcePlayerId,
+          columnIndex: pending.sourceContext.columnIndex,
+          position: pending.sourceContext.position,
+          copiedFrom: targetCard.name,
+          fromMimic: true,
+        };
+
+        // Execute the ability
+        this.executeAbility(targetAbility, mimicContext);
+
+        console.log(
+          `Mimic used ${targetCard.name}'s ${targetAbility.effect} ability`
+        );
+
+        // Restore Parachute Base damage if it was present
+        if (parachuteBaseDamage) {
+          if (!this.state.pending) {
+            // Ability completed immediately, apply damage now
+            this.state.pending = { parachuteBaseDamage };
+            this.checkAndApplyParachuteBaseDamage();
+          } else {
+            // Ability set up new pending, add parachute damage to it
+            this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+          }
+        }
+
+        return true;
+      }
+
       default:
         console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;
@@ -1016,6 +1118,12 @@ export class CommandSystem {
   }
 
   handleGenericAbility(ability, context) {
+    console.log("=== handleGenericAbility called ===");
+    console.log("Effect:", ability.effect);
+    console.log("Source:", context.source.name);
+    console.log("From Mimic?", context.fromMimic);
+    console.log("Copied from:", context.copiedFrom);
+
     switch (ability.effect) {
       case "damage":
         this.state.pending = {

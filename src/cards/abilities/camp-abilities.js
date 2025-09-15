@@ -39,19 +39,30 @@ export const campAbilities = {
     },
   },
 
-  // camp-abilities.js
+  // In camp-abilities.js
   parachutebase: {
     paradrop: {
-      cost: 0, // Special - pays when selecting person
+      cost: 0,
       handler: (state, context) => {
-        // Set up multi-step process
+        const player = state.players[context.playerId];
+        const validPeople = player.hand.filter(
+          (card) => card.type === "person"
+        );
+
+        if (validPeople.length === 0) {
+          console.log("No person cards in hand for Parachute Base");
+          return false;
+        }
+
+        // Set up selection state
         state.pending = {
           type: "parachute_select_person",
           source: context.source,
           sourcePlayerId: context.playerId,
-          columnIndex: context.columnIndex,
-          step: 1, // Track which step we're on
+          campIndex: context.columnIndex,
+          validPeople: validPeople.map((c) => c.id), // Store just IDs
         };
+
         console.log("Parachute Base: Select person from hand to paradrop");
         return true;
       },

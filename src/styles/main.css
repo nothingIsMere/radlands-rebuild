@@ -598,3 +598,10 @@ button:disabled {
   font-size: 0.9em;
   font-style: italic;
 }
+
+.hand-card.parachute-target {
+  border: 2px solid #9c27b0;
+  background: #f3e5f5;
+  cursor: pointer;
+  animation: pulse-purple 1s infinite;
+}

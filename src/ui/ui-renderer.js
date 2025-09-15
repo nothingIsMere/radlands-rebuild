@@ -227,16 +227,30 @@ export class UIRenderer {
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");
-      // Don't assume position 0 is always a camp slot!
       label.textContent = "Empty";
       cardDiv.appendChild(label);
 
       // Make empty slots clickable for placing cards
       cardDiv.addEventListener("click", () => {
-        this.handleCardSlotClick(playerId, columnIndex, position);
+        // Handle Parachute Base placement
+        if (
+          this.state.pending?.type === "parachute_place_person" &&
+          playerId === this.state.pending.sourcePlayerId
+        ) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetType: "slot",
+            playerId: playerId,
+            columnIndex: columnIndex,
+            position: position,
+          });
+        } else {
+          // Normal slot click handling
+          this.handleCardSlotClick(playerId, columnIndex, position);
+        }
       });
     } else {
-      // Add type-based classes properly
+      // THIS is where card type checking should be - when card EXISTS
       if (card.type === "camp") {
         cardDiv.classList.add("camp");
       } else if (card.type === "person") {
@@ -362,6 +376,37 @@ export class UIRenderer {
         cardDiv.classList.add("selected");
       }
 
+      // Handle Parachute Base selection - use cardDiv, not cardEl
+      if (
+        this.state.pending?.type === "parachute_select_person" &&
+        this.state.pending.validPeople.includes(card.id) &&
+        playerId === this.state.pending.sourcePlayerId
+      ) {
+        cardDiv.classList.add("parachute-target");
+        cardDiv.onclick = () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetType: "hand_card",
+            cardId: card.id,
+            playerId: playerId,
+          });
+        };
+      } else {
+        // Normal card click handling (only if not in Parachute Base mode)
+        cardDiv.addEventListener("click", () => {
+          if (this.state.currentPlayer === playerId) {
+            // If this card is already selected, deselect it
+            if (this.selectedCard?.card?.id === card.id) {
+              this.selectedCard = null;
+            } else {
+              // Select by card ID, not index
+              this.selectedCard = { playerId, card, cardId: card.id };
+            }
+            this.render();
+          }
+        });
+      }
+
       // Card name and cost
       cardDiv.textContent = `${card.name} (${card.cost}💧)`;
 
@@ -371,19 +416,6 @@ export class UIRenderer {
         junk.textContent = ` [Junk: ${card.junkEffect}]`;
         cardDiv.appendChild(junk);
       }
-
-      cardDiv.addEventListener("click", () => {
-        if (this.state.currentPlayer === playerId) {
-          // If this card is already selected, deselect it
-          if (this.selectedCard?.card?.id === card.id) {
-            this.selectedCard = null;
-          } else {
-            // Select by card ID, not index
-            this.selectedCard = { playerId, card, cardId: card.id };
-          }
-          this.render();
-        }
-      });
 
       // Check if selected
       if (this.selectedCard?.card?.id === card.id) {

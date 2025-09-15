@@ -15,14 +15,14 @@ function setupTestGame() {
 
   // Place test camps - using actual camps from the game
   gameState.players.left.columns[0].setCard(0, {
-    id: "camp_left_0",
-    name: "Railgun",
+    id: "camp_left_1",
+    name: "Parachute Base",
     type: "camp",
-    campDraw: 0,
+    campDraw: 1,
     abilities: [
       {
-        effect: "damage",
-        cost: 2,
+        effect: "paradrop",
+        cost: 0,
       },
     ],
     isReady: true,

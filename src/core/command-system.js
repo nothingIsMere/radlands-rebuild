@@ -32,8 +32,11 @@ export class CommandSystem {
       return false;
     }
 
-    // Can't damage own cards
-    if (targetPlayer === pending.sourcePlayerId) {
+    // Only check once - allow self-damage for Parachute Base
+    if (
+      targetPlayer === pending.sourcePlayerId &&
+      pending.type !== "parachute_damage_self"
+    ) {
       console.log("Cannot damage own cards");
       return false;
     }
@@ -783,14 +786,162 @@ export class CommandSystem {
 
       case "injure":
         return this.resolveInjure(targetPlayer, targetColumn, targetPosition);
+
       case "restore":
         return this.resolveRestore(targetPlayer, targetColumn, targetPosition);
+
       case "place_punk":
         return this.resolvePlacePunk(targetColumn, targetPosition);
+
+      case "parachute_select_person": {
+        // This case is triggered when a card is selected from hand
+        if (payload.targetType !== "hand_card") return false;
+
+        const pending = this.state.pending;
+        const player = this.state.players[pending.sourcePlayerId];
+        const selectedCard = player.hand.find((c) => c.id === payload.cardId);
+
+        if (!selectedCard) {
+          console.log("Card not found in hand");
+          return false;
+        }
+
+        // Check total cost
+        const totalCost =
+          selectedCard.cost + (selectedCard.abilities?.[0]?.cost || 0);
+        if (player.water < totalCost) {
+          console.log(
+            `Need ${totalCost} water for Parachute Base (${
+              selectedCard.cost
+            } for card, ${selectedCard.abilities?.[0]?.cost || 0} for ability)`
+          );
+          this.state.pending = null;
+          return false;
+        }
+
+        // Move to placement phase
+        this.state.pending = {
+          type: "parachute_place_person",
+          source: pending.source,
+          sourcePlayerId: pending.sourcePlayerId,
+          selectedPerson: selectedCard,
+          campIndex: pending.campIndex,
+        };
+
+        console.log(`Parachute Base: Now place ${selectedCard.name}`);
+        return true;
+      }
+
+      case "parachute_place_person": {
+        // Check if this is a slot selection
+        if (payload.targetType !== "slot") return false;
+
+        const pb = this.state.pending;
+
+        // Use the CLICKED position from payload
+        const targetColumn = payload.columnIndex;
+        const targetSlot = payload.position;
+
+        // Validate it's not the camp slot
+        if (targetSlot === 0) {
+          console.log("Cannot place person in camp slot");
+          return false;
+        }
+
+        const column =
+          this.state.players[pb.sourcePlayerId].columns[targetColumn];
+        const existingCard = column.getCard(targetSlot);
+
+        // Handle pushing if slot is occupied
+        if (existingCard) {
+          // Find where to push the existing card
+          const otherSlot = targetSlot === 1 ? 2 : 1;
+          if (column.getCard(otherSlot)) {
+            console.log("Column is full, cannot place");
+            return false;
+          }
+          // Push the existing card
+          column.setCard(otherSlot, existingCard);
+          column.setCard(targetSlot, null);
+          console.log(`Pushed ${existingCard.name} to position ${otherSlot}`);
+        }
+
+        // Now place the person at the clicked position
+        const player = this.state.players[pb.sourcePlayerId];
+        player.water -= pb.selectedPerson.cost;
+        console.log(
+          `Parachute Base: Paid ${pb.selectedPerson.cost} for ${pb.selectedPerson.name}`
+        );
+
+        // Remove from hand
+        const cardIndex = player.hand.findIndex(
+          (c) => c.id === pb.selectedPerson.id
+        );
+        player.hand.splice(cardIndex, 1);
+
+        // Create the person object
+        const person = {
+          ...pb.selectedPerson,
+          isReady: false, // Normal not-ready state
+          isDamaged: false,
+          position: targetSlot,
+          columnIndex: targetColumn,
+        };
+
+        // Place in column
+        column.setCard(targetSlot, person);
+        console.log(
+          `Parachute Base: Placed ${person.name} at column ${targetColumn}, position ${targetSlot}`
+        );
+
+        // Use their first ability if they have one
+        if (person.abilities?.length > 0) {
+          const ability = person.abilities[0];
+
+          // Pay for the ability
+          player.water -= ability.cost;
+          console.log(
+            `Parachute Base: Paid ${ability.cost} for ${person.name}'s ability`
+          );
+
+          // Execute the ability (bypass ready check)
+          this.executeAbility(ability, {
+            source: person,
+            playerId: pb.sourcePlayerId,
+            columnIndex: targetColumn,
+            position: targetSlot,
+          });
+
+          console.log(
+            `Parachute Base: Used ${person.name}'s ${ability.effect} ability`
+          );
+        }
+
+        // Set up self-damage
+        this.state.pending = {
+          type: "parachute_damage_self",
+          sourcePlayerId: pb.sourcePlayerId,
+        };
+
+        // Apply damage immediately
+        const damaged = this.resolveDamage(
+          pb.sourcePlayerId,
+          targetColumn,
+          targetSlot
+        );
+
+        if (damaged) {
+          console.log(`Parachute Base: Damaged ${person.name}`);
+        }
+
+        this.state.pending = null;
+        return true;
+      } // THIS CLOSING BRACE WAS MISSING
+
       default:
         console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;
-    }
+    } // This closes the switch statement
   }
 
   checkGameEnd() {

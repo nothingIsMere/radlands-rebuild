@@ -160,42 +160,6 @@ export class CommandSystem {
     return true;
   }
 
-  handleJunkCard(payload) {
-    const { playerId, cardIndex } = payload;
-    const player = this.state.players[playerId];
-    const card = player.hand[cardIndex];
-
-    if (!card) return false;
-
-    player.hand.splice(cardIndex, 1);
-    this.state.discard.push(card);
-    return true;
-  }
-
-  handleDamage(payload) {
-    const { targetPlayer, targetColumn, targetPosition } = payload;
-
-    // This is for direct damage commands, not ability-based damage
-    // For now, just apply damage directly
-    const target = this.state.getCard(
-      targetPlayer,
-      targetColumn,
-      targetPosition
-    );
-    if (!target) return false;
-
-    if (target.isDamaged) {
-      target.isDestroyed = true;
-      console.log(`${target.name} destroyed!`);
-    } else {
-      target.isDamaged = true;
-      target.isReady = false;
-      console.log(`${target.name} damaged!`);
-    }
-
-    return true;
-  }
-
   handleDrawCard() {
     const player = this.state.players[this.state.currentPlayer];
 
@@ -261,14 +225,133 @@ export class CommandSystem {
   }
 
   handleJunkCard(payload) {
+    console.log("=== handleJunkCard called ===");
+    console.log("Payload:", payload);
+
     const { playerId, cardIndex } = payload;
     const player = this.state.players[playerId];
     const card = player.hand[cardIndex];
 
-    if (!card) return false;
+    if (!card) {
+      console.log("ERROR: Card not found");
+      return false;
+    }
 
+    // Check if it's the player's turn and in actions phase
+    if (
+      playerId !== this.state.currentPlayer ||
+      this.state.phase !== "actions"
+    ) {
+      console.log("Can only junk cards on your turn during actions phase");
+      return false;
+    }
+
+    console.log(`Junking ${card.name} for ${card.junkEffect} effect`);
+    console.log("Water before:", player.water);
+
+    // Remove from hand first
     player.hand.splice(cardIndex, 1);
+
+    // Handle special case for Water Silo
+    if (card.name === "Water Silo") {
+      player.waterSilo = "available";
+      console.log("Water Silo returned to play area");
+      return true;
+    }
+
+    // Add to discard pile
     this.state.discard.push(card);
+
+    // Process the junk effect
+    const junkEffect = card.junkEffect?.toLowerCase();
+    console.log("Processing junk effect:", junkEffect);
+
+    switch (junkEffect) {
+      case "water":
+        player.water += 1;
+        console.log("Gained 1 water from junk effect");
+        console.log("Water after:", player.water);
+        break;
+
+      case "injure":
+        // Set up targeting for injure
+        this.state.pending = {
+          type: "junk_injure",
+          source: card,
+          sourcePlayerId: playerId,
+        };
+        console.log("Select an unprotected enemy person to injure");
+        break;
+
+      case "restore":
+        // Set up targeting for restore
+        this.state.pending = {
+          type: "junk_restore",
+          source: card,
+          sourcePlayerId: playerId,
+        };
+        console.log("Select a damaged card to restore");
+        break;
+
+      case "raid":
+        // Execute raid effect
+        this.executeRaid(playerId);
+        console.log("Raid effect triggered");
+        break;
+
+      case "card":
+      case "draw":
+        // Draw a card
+        if (this.state.deck.length > 0) {
+          const drawnCard = this.state.deck.shift();
+          player.hand.push(drawnCard);
+          console.log(`Drew ${drawnCard.name} from junk effect`);
+        } else {
+          console.log("Deck is empty, cannot draw");
+        }
+        break;
+
+      case "punk":
+        // Set up placement for punk
+        this.state.pending = {
+          type: "place_punk",
+          source: card,
+          sourcePlayerId: playerId,
+        };
+        console.log("Select where to place the punk");
+        break;
+
+      default:
+        console.log(`Unknown or missing junk effect: ${junkEffect}`);
+    }
+
+    console.log("Final water count:", player.water);
+    return true;
+  }
+
+  handleDamage(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // This is for direct damage commands, not ability-based damage
+    // For now, just apply damage directly
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target) return false;
+
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+      console.log(`${target.name} destroyed!`);
+    } else {
+      target.isDamaged = true;
+      if (target.type === "person") {
+        target.isReady = false;
+      }
+      console.log(`${target.name} damaged!`);
+    }
+
     return true;
   }
 
@@ -304,26 +387,32 @@ export class CommandSystem {
   }
 
   validateCommand(command) {
+    console.log("Validating command:", command.type);
+
     // Basic validation
     if (!command.type) return false;
 
     // SELECT_TARGET is a special case - it doesn't need playerId check
     if (command.type === "SELECT_TARGET") {
-      return this.state.pending !== null; // Only valid when there's a pending action
+      return this.state.pending !== null;
     }
 
     // All other commands need playerId
-    if (!command.playerId) return false;
+    if (!command.playerId) {
+      console.log("Command missing playerId");
+      return false;
+    }
 
     // Check if it's player's turn
     if (command.playerId !== this.state.currentPlayer && !command.isForced) {
+      console.log("Not player's turn");
       return false;
     }
 
     // Phase-specific validation
     switch (command.type) {
       case "PLAY_CARD":
-      case "JUNK_CARD":
+      case "JUNK_CARD": // ADD THIS
       case "USE_ABILITY":
         return this.state.phase === "actions";
       case "END_TURN":
@@ -334,6 +423,9 @@ export class CommandSystem {
   }
 
   execute(command) {
+    console.log("=== Command execute called ===");
+    console.log("Command:", command);
+
     // Validate command
     if (!this.validateCommand(command)) {
       console.error("Invalid command:", command);
@@ -351,10 +443,13 @@ export class CommandSystem {
 
     // Execute
     const handler = this.handlers.get(command.type);
+    console.log("Handler found:", !!handler);
+
     if (handler) {
       const result = handler(
         command.type === "SELECT_TARGET" ? command : command.payload
       );
+      console.log("Handler result:", result);
 
       // Check for game end
       this.checkGameEnd();
@@ -367,6 +462,7 @@ export class CommandSystem {
       return result;
     }
 
+    console.log("No handler found for command type:", command.type);
     return false;
   }
 
@@ -722,6 +818,66 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "junk_injure": {
+        // Verify target is an enemy person
+        if (targetPlayer === this.state.pending.sourcePlayerId) {
+          console.log("Must target enemy for injure");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must target a person");
+          return false;
+        }
+
+        // Check protection
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        if (column.isProtected(targetPosition)) {
+          console.log("Cannot injure protected person");
+          return false;
+        }
+
+        // Apply injure (same as damage for people)
+        if (target.isDamaged) {
+          target.isDestroyed = true;
+          console.log(`${target.name} destroyed by junk injure!`);
+          // Handle destruction...
+        } else {
+          target.isDamaged = true;
+          target.isReady = false;
+          console.log(`${target.name} injured by junk effect!`);
+        }
+
+        this.state.pending = null;
+        return true;
+      }
+
+      case "junk_restore": {
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must target a damaged card");
+          return false;
+        }
+
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false;
+        }
+        console.log(`${target.name} restored by junk effect!`);
+
+        this.state.pending = null;
+        return true;
+      }
+
       case "damage":
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
 

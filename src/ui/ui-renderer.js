@@ -236,6 +236,25 @@ export class UIRenderer {
       }
     }
 
+    // Highlighting for junk effects:
+    if (this.state.pending?.type === "junk_injure") {
+      // Highlight valid injure targets
+      if (
+        playerId !== this.state.pending.sourcePlayerId &&
+        card?.type === "person" &&
+        !this.state.players[playerId].columns[columnIndex].isProtected(position)
+      ) {
+        cardDiv.classList.add("junk-injure-target");
+      }
+    }
+
+    if (this.state.pending?.type === "junk_restore") {
+      // Highlight damaged cards
+      if (card?.isDamaged) {
+        cardDiv.classList.add("junk-restore-target");
+      }
+    }
+
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");
@@ -419,13 +438,19 @@ export class UIRenderer {
         });
       }
 
-      // Card name and cost
-      cardDiv.textContent = `${card.name} (${card.cost}💧)`;
+      // Card name, cost, and junk effect
+      const cardText = document.createElement("div");
+      cardText.className = "card-text";
+      cardText.textContent = `${card.name} (${card.cost}💧)`;
+      cardDiv.appendChild(cardText);
 
       // Junk effect indicator
       if (card.junkEffect) {
         const junk = this.createElement("span", "junk-label");
-        junk.textContent = ` [Junk: ${card.junkEffect}]`;
+        // Capitalize first letter of effect name
+        const effectName =
+          card.junkEffect.charAt(0).toUpperCase() + card.junkEffect.slice(1);
+        junk.textContent = ` [Junk: ${effectName}]`;
         cardDiv.appendChild(junk);
       }
 
@@ -444,7 +469,11 @@ export class UIRenderer {
           this.commands.execute({
             type: "JUNK_CARD",
             playerId: playerId,
-            cardIndex: index,
+            payload: {
+              // ADD THIS PAYLOAD WRAPPER
+              playerId: playerId,
+              cardIndex: index,
+            },
           });
         }
       });

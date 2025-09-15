@@ -76,7 +76,7 @@ function setupTestGame() {
       name: "Muse",
       type: "person",
       cost: 1,
-      junkEffect: "water",
+      junkEffect: "injure",
       abilities: [{ effect: "extra water", cost: 0 }],
     },
     {

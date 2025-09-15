@@ -392,15 +392,10 @@ button:disabled {
   }
 }
 
-/* Junk effect styling */
 .junk-label {
-  display: block;
-  font-size: 10px;
-  color: #47007d;
-  font-style: italic;
-  margin-top: 2px;
-  border-top: 1px solid #ddd;
-  padding-top: 2px;
+  color: #9b59b6; /* Purple color */
+  font-weight: 500;
+  margin-left: 4px;
 }
 
 .hand-card:hover .junk-label {
@@ -608,5 +603,21 @@ button:disabled {
 
 .card.mimic-target {
   box-shadow: 0 0 10px 2px purple;
+  cursor: pointer;
+}
+
+.junk-effect {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 2px;
+}
+
+.card.junk-injure-target {
+  box-shadow: 0 0 10px 2px orange;
+  cursor: pointer;
+}
+
+.card.junk-restore-target {
+  box-shadow: 0 0 10px 2px green;
   cursor: pointer;
 }

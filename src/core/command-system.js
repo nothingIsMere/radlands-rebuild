@@ -26,6 +26,13 @@ export class CommandSystem {
 
   resolveDamage(targetPlayer, targetColumn, targetPosition) {
     const pending = this.state.pending;
+
+    if (!pending) {
+      console.error("No pending damage to resolve");
+      return false;
+    }
+
+    // Can't damage own cards
     if (targetPlayer === pending.sourcePlayerId) {
       console.log("Cannot damage own cards");
       return false;
@@ -36,21 +43,56 @@ export class CommandSystem {
       targetColumn,
       targetPosition
     );
-    if (!target) return false;
-
-    const column = this.state.players[targetPlayer].columns[targetColumn];
-    if (column.isProtected(targetPosition)) {
-      console.log("Cannot damage protected target");
+    if (!target) {
+      console.log("No target at that position");
       return false;
     }
 
-    if (target.isDamaged) {
-      target.isDestroyed = true;
-    } else {
-      target.isDamaged = true;
-      target.isReady = false;
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+
+    // Check protection (unless ability ignores it)
+    if (!pending.allowProtected && column.isProtected(targetPosition)) {
+      console.log(`Cannot damage protected ${target.name}`);
+      return false;
     }
 
+    // Apply damage
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+      console.log(`${target.name} destroyed!`);
+
+      // Handle destroyed cards
+      if (target.type === "person") {
+        // Move to discard
+        this.state.discard.push(target);
+        // Remove from column
+        column.setCard(targetPosition, null);
+
+        // Move any person in front back
+        if (targetPosition === 1 && column.getCard(2)) {
+          const frontCard = column.getCard(2);
+          column.setCard(1, frontCard);
+          column.setCard(2, null);
+          console.log(`${frontCard.name} moved back to position 1`);
+        }
+      } else if (target.type === "camp") {
+        // Camps stay in place when destroyed, just marked as destroyed
+        console.log(`Camp ${target.name} destroyed but remains in place`);
+      }
+    } else {
+      target.isDamaged = true;
+
+      // Only people become not-ready when damaged
+      if (target.type === "person") {
+        target.isReady = false;
+        console.log(`${target.name} damaged and not ready!`);
+      } else if (target.type === "camp") {
+        // Camps stay ready even when damaged
+        console.log(`Camp ${target.name} damaged but still ready!`);
+      }
+    }
+
+    // Clear pending only after successful damage
     this.state.pending = null;
     return true;
   }
@@ -273,40 +315,17 @@ export class CommandSystem {
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
   }
 
-  execute(command) {
-    // Validate command
-    if (!this.validateCommand(command)) {
-      console.error("Invalid command:", command);
-      return false;
-    }
-
-    // Store in history
-    this.history.push({
-      command,
-      state: this.state.clone(),
-      timestamp: Date.now(),
-    });
-
-    // Execute
-    const handler = this.handlers.get(command.type);
-    if (handler) {
-      const result = handler(command.payload);
-
-      // Check for game end
-      this.checkGameEnd();
-
-      // Notify UI
-      this.notifyUI(command.type, result);
-
-      return result;
-    }
-
-    return false;
-  }
-
   validateCommand(command) {
     // Basic validation
-    if (!command.type || !command.playerId) return false;
+    if (!command.type) return false;
+
+    // SELECT_TARGET is a special case - it doesn't need playerId check
+    if (command.type === "SELECT_TARGET") {
+      return this.state.pending !== null; // Only valid when there's a pending action
+    }
+
+    // All other commands need playerId
+    if (!command.playerId) return false;
 
     // Check if it's player's turn
     if (command.playerId !== this.state.currentPlayer && !command.isForced) {
@@ -324,6 +343,43 @@ export class CommandSystem {
       default:
         return true;
     }
+  }
+
+  execute(command) {
+    // Validate command
+    if (!this.validateCommand(command)) {
+      console.error("Invalid command:", command);
+      return false;
+    }
+
+    // Store in history (but not for SELECT_TARGET since it doesn't have playerId)
+    if (command.type !== "SELECT_TARGET") {
+      this.history.push({
+        command,
+        state: this.state.clone(),
+        timestamp: Date.now(),
+      });
+    }
+
+    // Execute
+    const handler = this.handlers.get(command.type);
+    if (handler) {
+      const result = handler(
+        command.type === "SELECT_TARGET" ? command : command.payload
+      );
+
+      // Check for game end
+      this.checkGameEnd();
+
+      // DEFER the UI notification to avoid re-render during event handling
+      setTimeout(() => {
+        this.notifyUI(command.type, result);
+      }, 0);
+
+      return result;
+    }
+
+    return false;
   }
 
   handlePlayCard(payload) {
@@ -572,7 +628,20 @@ export class CommandSystem {
   handleUseAbility(payload) {
     if (!payload) return false;
 
+    // Don't allow using abilities while there's a pending action
+    if (this.state.pending) {
+      console.log("Cannot use ability while another action is pending");
+      return false;
+    }
+
     const { playerId, columnIndex, position, abilityIndex } = payload;
+
+    // Verify this is actually the current player's card
+    if (playerId !== this.state.currentPlayer) {
+      console.log("Can only use abilities on your own turn");
+      return false;
+    }
+
     const card = this.state.getCard(playerId, columnIndex, position);
 
     if (!card || !card.abilities?.[abilityIndex]) {
@@ -606,21 +675,22 @@ export class CommandSystem {
     // Execute ability
     this.executeAbility(ability, {
       source: card,
-      playerId,
+      playerId: playerId,
       columnIndex,
       position,
     });
 
     // Mark as used (not ready)
     card.isReady = false;
+
     this.state.turnEvents.abilityUsedThisTurn = true;
 
     return true;
   }
 
   executeAbility(ability, context) {
-    const cardName = context.source.name.toLowerCase();
-    const effectName = ability.effect.toLowerCase();
+    const cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
+    const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
 
     // Check camp abilities first
     if (context.source.type === "camp") {
@@ -632,18 +702,23 @@ export class CommandSystem {
     }
 
     // Then check person abilities
-    const handler = this.getAbilityHandler(cardName, effectName);
-
-    if (handler) {
-      handler(this.state, context);
-    } else {
-      // Generic ability handling
-      this.handleGenericAbility(ability, context);
+    const personAbility =
+      window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
+    if (personAbility?.handler) {
+      return personAbility.handler(this.state, context);
     }
+
+    // Fall back to generic ability handling
+    this.handleGenericAbility(ability, context);
   }
 
   handleSelectTarget(payload) {
-    if (!this.state.pending) return false;
+    console.log("handleSelectTarget called, pending:", this.state.pending);
+    // Add safety check
+    if (!this.state.pending) {
+      console.error("No pending action to select target for");
+      return false;
+    }
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
 
@@ -651,6 +726,31 @@ export class CommandSystem {
     switch (this.state.pending.type) {
       case "damage":
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+
+      case "looter_damage":
+        // Save this BEFORE calling resolveDamage (which clears pending)
+        const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+        // Special handling for Looter's camp bonus
+        const damaged = this.resolveDamage(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        if (damaged && targetPosition === 0) {
+          // Hit a camp - use the saved sourcePlayerId, not this.state.pending
+          const player = this.state.players[sourcePlayerId];
+          if (this.state.deck.length > 0) {
+            const drawnCard = this.state.deck.shift();
+            player.hand.push(drawnCard);
+            console.log(
+              `Looter bonus: Drew ${drawnCard.name} for hitting camp`
+            );
+          }
+        }
+        return damaged;
+
       case "injure":
         return this.resolveInjure(targetPlayer, targetColumn, targetPosition);
       case "restore":
@@ -658,6 +758,7 @@ export class CommandSystem {
       case "place_punk":
         return this.resolvePlacePunk(targetColumn, targetPosition);
       default:
+        console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;
     }
   }
@@ -704,6 +805,7 @@ export class CommandSystem {
         this.state.pending = {
           type: "damage",
           source: context.source,
+          sourcePlayerId: context.playerId, // ALWAYS set this
           context,
         };
         break;
@@ -825,27 +927,30 @@ export class CommandSystem {
     }
 
     // Set water
-    // First turn of the game (turn 1) gets only 1 water
     if (this.state.turnNumber === 1) {
       player.water = 100;
     } else {
       player.water = 100;
     }
 
-    // Ready all undamaged cards
+    // Ready all undamaged cards (but camps are ALWAYS ready unless ability used)
     for (let col = 0; col < 3; col++) {
       for (let pos = 0; pos < 3; pos++) {
         const card = player.columns[col].getCard(pos);
-        if (card && !card.isDamaged && !card.isDestroyed) {
-          card.isReady = true;
+        if (card && !card.isDestroyed) {
+          if (card.type === "camp") {
+            // Camps are always ready (damaged or not)
+            card.isReady = true;
+          } else if (card.type === "person" && !card.isDamaged) {
+            // People are only ready if not damaged
+            card.isReady = true;
+          }
         }
       }
     }
 
     // Move to actions phase
     this.state.phase = "actions";
-
-    // Notify UI of all the changes
     this.notifyUI("PHASE_CHANGE", this.state.phase);
   }
 }

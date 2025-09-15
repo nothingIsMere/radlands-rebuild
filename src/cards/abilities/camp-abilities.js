@@ -38,4 +38,29 @@ export const campAbilities = {
       },
     },
   },
+
+  // camp-abilities.js
+  parachutebase: {
+    paradrop: {
+      cost: 0, // Special - pays when selecting person
+      handler: (state, context) => {
+        // Set up multi-step process
+        state.pending = {
+          type: "parachute_select_person",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          columnIndex: context.columnIndex,
+          step: 1, // Track which step we're on
+        };
+        console.log("Parachute Base: Select person from hand to paradrop");
+        return true;
+      },
+    },
+  },
+
+  // In command-system, add handlers for each step:
+  // Step 1: Select person from hand
+  // Step 2: Select where to play them
+  // Step 3: Automatically trigger their ability
+  // Step 4: Automatically damage them
 };

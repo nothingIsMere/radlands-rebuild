@@ -212,6 +212,18 @@ export class UIRenderer {
     slotBadge.textContent = globalSlotIndex;
     cardDiv.appendChild(slotBadge);
 
+    // Add targeting highlight for damage abilities
+    if (this.state.pending?.type?.includes("damage")) {
+      const isValidTarget = this.canTargetForDamage(
+        playerId,
+        columnIndex,
+        position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("damage-target");
+      }
+    }
+
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");
@@ -246,7 +258,8 @@ export class UIRenderer {
             card.isReady &&
             !card.isDamaged &&
             !card.isDestroyed &&
-            playerId === this.state.currentPlayer
+            playerId === this.state.currentPlayer &&
+            !this.state.pending // ADD THIS LINE - Don't show ability buttons while pending
           ) {
             const btn = this.createElement("button", "ability-btn");
             btn.textContent = `${ability.effect} (${ability.cost}💧)`;
@@ -270,6 +283,7 @@ export class UIRenderer {
             text.textContent = `${ability.effect} (${ability.cost}💧)`;
             if (!card.isReady) text.textContent += " [Not Ready]";
             if (card.isDamaged) text.textContent += " [Damaged]";
+            if (this.state.pending) text.textContent += " [Targeting]"; // ADD THIS LINE
             if (playerId !== this.state.currentPlayer)
               text.textContent += " [Not Your Turn]";
             abilities.appendChild(text);
@@ -280,10 +294,13 @@ export class UIRenderer {
       }
 
       // Make cards clickable for multiple purposes
-      cardDiv.addEventListener("click", () => {
+      cardDiv.addEventListener("click", (e) => {
+        e.stopPropagation(); // STOP THE EVENT FROM BUBBLING UP!
+
         // First priority: handle pending targeting
         if (this.state.pending) {
           this.handleCardTargetClick(playerId, columnIndex, position);
+          return; // And return early so we don't process anything else
         }
         // Second priority: handle card placement if we have a person selected
         else if (
@@ -298,6 +315,25 @@ export class UIRenderer {
 
     return cardDiv;
   }
+
+  canTargetForDamage(playerId, columnIndex, position) {
+    if (!this.state.pending) return false;
+
+    // Can't damage own cards (this includes the source card itself)
+    if (playerId === this.state.pending.sourcePlayerId) return false;
+
+    const card = this.state.getCard(playerId, columnIndex, position);
+    if (!card || card.isDestroyed) return false;
+
+    // Check protection (unless ability ignores it, like Sniper)
+    const column = this.state.players[playerId].columns[columnIndex];
+    if (!this.state.pending.allowProtected && column.isProtected(position)) {
+      return false;
+    }
+
+    return true;
+  }
+
   renderHand(player, playerId) {
     const hand = this.createElement("div", "hand");
 
@@ -478,15 +514,18 @@ export class UIRenderer {
   }
 
   handleCardTargetClick(playerId, columnIndex, position) {
-    // Handle targeting for pending abilities
-    if (this.state.pending) {
-      this.commands.execute({
-        type: "SELECT_TARGET",
-        targetPlayer: playerId,
-        targetColumn: columnIndex,
-        targetPosition: position,
-      });
+    // Check if pending still exists
+    if (!this.state.pending) {
+      console.log("Pending state already cleared, ignoring click");
+      return;
     }
+
+    this.commands.execute({
+      type: "SELECT_TARGET",
+      targetPlayer: playerId,
+      targetColumn: columnIndex,
+      targetPosition: position,
+    });
   }
 
   handleAbilityClick(playerId, columnIndex, position, abilityIndex) {

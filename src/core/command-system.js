@@ -32,7 +32,16 @@ export class CommandSystem {
       return false;
     }
 
-    // Only check once - allow self-damage for Parachute Base
+    // DEBUG: Log the exact values being compared
+    console.log("resolveDamage check:", {
+      targetPlayer,
+      pendingSourcePlayerId: pending.sourcePlayerId,
+      pendingType: pending.type,
+      comparison: targetPlayer === pending.sourcePlayerId,
+      typeCheck: pending.type !== "parachute_damage_self",
+    });
+
+    // Special case: Parachute Base can damage own cards
     if (
       targetPlayer === pending.sourcePlayerId &&
       pending.type !== "parachute_damage_self"
@@ -204,37 +213,6 @@ export class CommandSystem {
 
   triggerEntryEffects(person, playerId) {
     console.log(`${person.name} entered play`);
-  }
-
-  resolveDamage(targetPlayer, targetColumn, targetPosition) {
-    const pending = this.state.pending;
-    if (targetPlayer === pending.sourcePlayerId) {
-      console.log("Cannot damage own cards");
-      return false;
-    }
-
-    const target = this.state.getCard(
-      targetPlayer,
-      targetColumn,
-      targetPosition
-    );
-    if (!target) return false;
-
-    const column = this.state.players[targetPlayer].columns[targetColumn];
-    if (column.isProtected(targetPosition)) {
-      console.log("Cannot damage protected target");
-      return false;
-    }
-
-    if (target.isDamaged) {
-      target.isDestroyed = true;
-    } else {
-      target.isDamaged = true;
-      target.isReady = false;
-    }
-
-    this.state.pending = null;
-    return true;
   }
 
   resolveInjure(targetPlayer, targetColumn, targetPosition) {
@@ -737,10 +715,10 @@ export class CommandSystem {
       case "damage":
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
 
-      case "looter_damage":
-        // Save this BEFORE calling resolveDamage (which clears pending)
+      case "looter_damage": {
+        // Save BOTH of these BEFORE calling resolveDamage
         const sourcePlayerId = this.state.pending.sourcePlayerId;
-        console.log(`Looter damage - sourcePlayerId: ${sourcePlayerId}`);
+        const parachuteBaseDamage = this.state.pending.parachuteBaseDamage; // SAVE THIS!
 
         // Get the target to check if it's a camp
         const targetCard = this.state.getCard(
@@ -749,40 +727,34 @@ export class CommandSystem {
           targetPosition
         );
         const isTargetCamp = targetCard?.type === "camp";
-        console.log(
-          `Target card: ${targetCard?.name}, type: ${targetCard?.type}, is camp: ${isTargetCamp}`
-        );
 
-        // Special handling for Looter's camp bonus
+        // This call clears this.state.pending!
         const damaged = this.resolveDamage(
           targetPlayer,
           targetColumn,
           targetPosition
         );
-        console.log(`Damage successful: ${damaged}`);
 
         if (damaged && isTargetCamp) {
-          console.log("Should draw card for hitting camp!");
           // Hit a camp - draw a card
           const player = this.state.players[sourcePlayerId];
-          console.log(
-            `Player ${sourcePlayerId} deck size before: ${this.state.deck.length}`
-          );
           if (this.state.deck.length > 0) {
             const drawnCard = this.state.deck.shift();
             player.hand.push(drawnCard);
             console.log(
               `Looter bonus: Drew ${drawnCard.name} for hitting camp`
             );
-          } else {
-            console.log("No cards in deck to draw!");
           }
-        } else {
-          console.log(
-            `No bonus - damaged: ${damaged}, isTargetCamp: ${isTargetCamp}`
-          );
         }
+
+        // Now restore the parachuteBaseDamage to pending before calling the helper
+        if (parachuteBaseDamage) {
+          this.state.pending = { parachuteBaseDamage: parachuteBaseDamage };
+          this.checkAndApplyParachuteBaseDamage();
+        }
+
         return damaged;
+      }
 
       case "injure":
         return this.resolveInjure(targetPlayer, targetColumn, targetPosition);
@@ -971,6 +943,40 @@ export class CommandSystem {
         console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;
     }
+  }
+
+  checkAndApplyParachuteBaseDamage() {
+    if (this.state.pending?.parachuteBaseDamage) {
+      const pbDamage = this.state.pending.parachuteBaseDamage;
+      console.log("Applying Parachute Base damage", pbDamage);
+
+      // Set up self-damage pending
+      this.state.pending = {
+        type: "parachute_damage_self",
+        sourcePlayerId: pbDamage.targetPlayer,
+      };
+
+      console.log("Pending state before damage:", this.state.pending);
+
+      // Apply the damage
+      const selfDamaged = this.resolveDamage(
+        pbDamage.targetPlayer,
+        pbDamage.targetColumn,
+        pbDamage.targetPosition
+      );
+
+      if (selfDamaged) {
+        console.log(
+          "Parachute Base: Damaged the person after ability resolved"
+        );
+      } else {
+        console.log("Failed to damage - check resolveDamage");
+      }
+
+      this.state.pending = null;
+      return true;
+    }
+    return false;
   }
 
   checkGameEnd() {

@@ -74,35 +74,6 @@ export const personAbilities = {
     },
   },
 
-  // Raid ability - triggers special event
-  scout: {
-    raid: {
-      cost: 1,
-      handler: (state, context) => {
-        const player = state.players[context.playerId];
-        // Handle Raiders card placement
-        if (player.raiders === "available") {
-          // Place in event queue at position 2
-          const slotIndex = 1; // Array index for position 2
-          if (!player.eventQueue[slotIndex]) {
-            player.eventQueue[slotIndex] = {
-              id: `${context.playerId}_raiders`,
-              name: "Raiders",
-              isRaiders: true,
-              queueNumber: 2,
-            };
-            player.raiders = "in_queue";
-            console.log("Scout: Raiders placed in event queue");
-          }
-        } else if (player.raiders === "in_queue") {
-          // Advance raiders
-          console.log("Scout: Would advance Raiders (not implemented yet)");
-        }
-        return true;
-      },
-    },
-  },
-
   mimic: {
     copyability: {
       cost: 0, // Initial cost, will be replaced by target ability cost

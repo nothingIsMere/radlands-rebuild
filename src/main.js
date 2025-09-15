@@ -64,6 +64,30 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "repair_bot_1",
+      name: "Repair Bot",
+      type: "person",
+      cost: 1,
+      junkEffect: "injure", // According to doc
+      abilities: [{ effect: "restore", cost: 2 }],
+    },
+    {
+      id: "magnus_1",
+      name: "Magnus Karv",
+      type: "person",
+      cost: 3,
+      junkEffect: "punk",
+      abilities: [{ effect: "damage column", cost: 2 }],
+    },
+    {
+      id: "gunner_1",
+      name: "Gunner",
+      type: "person",
+      cost: 1,
+      junkEffect: "restore", // This has restore junk
+      abilities: [{ effect: "injure all", cost: 2 }],
+    },
+    {
       id: "looter_1",
       name: "Looter",
       type: "person",
@@ -158,6 +182,30 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "repair_bot_2",
+      name: "Repair Bot",
+      type: "person",
+      cost: 1,
+      junkEffect: "injure", // According to doc
+      abilities: [{ effect: "restore", cost: 2 }],
+    },
+    {
+      id: "magnus_2",
+      name: "Magnus Karv",
+      type: "person",
+      cost: 3,
+      junkEffect: "punk",
+      abilities: [{ effect: "damage column", cost: 2 }],
+    },
+    {
+      id: "gunner_2",
+      name: "Gunner",
+      type: "person",
+      cost: 1,
+      junkEffect: "restore", // This has restore junk
+      abilities: [{ effect: "injure all", cost: 2 }],
+    },
     {
       id: "looter_2",
       name: "Looter",

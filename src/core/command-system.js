@@ -144,8 +144,7 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
     const column = player.columns[targetColumn];
 
-    if (!column.canPlaceCard(targetPosition, { type: "person" })) return false;
-
+    // Create punk (facedown card)
     const punk = {
       id: `punk_${Date.now()}`,
       name: "Punk",
@@ -153,9 +152,66 @@ export class CommandSystem {
       isPunk: true,
       isReady: false,
       isDamaged: false,
+      cost: 0, // Punks have no cost
     };
 
+    // Use the SAME placement logic as normal person cards
+    const existingCard = column.getCard(targetPosition);
+
+    if (existingCard) {
+      console.log(
+        `Position ${targetPosition} is occupied by ${existingCard.name}`
+      );
+
+      // Find where to push the existing card
+      let pushToPosition = -1;
+
+      // Check for Juggernaut in column
+      let juggernautPos = -1;
+      for (let i = 0; i < 3; i++) {
+        const card = column.getCard(i);
+        if (card?.name === "Juggernaut") {
+          juggernautPos = i;
+          break;
+        }
+      }
+
+      if (juggernautPos === -1) {
+        // No Juggernaut - normal push forward
+        if (targetPosition < 2 && !column.getCard(targetPosition + 1)) {
+          pushToPosition = targetPosition + 1;
+        }
+      } else {
+        // Juggernaut present - find the other non-Juggernaut position
+        const nonJuggernautPositions = [0, 1, 2].filter(
+          (p) => p !== juggernautPos
+        );
+        const otherPosition = nonJuggernautPositions.find(
+          (p) => p !== targetPosition
+        );
+
+        if (otherPosition !== undefined && !column.getCard(otherPosition)) {
+          pushToPosition = otherPosition;
+        }
+      }
+
+      if (pushToPosition === -1) {
+        console.log("Cannot place punk - no empty position for push");
+        return false;
+      }
+
+      // Push the existing card
+      column.setCard(pushToPosition, existingCard);
+      column.setCard(targetPosition, null);
+      console.log(`Pushed ${existingCard.name} to position ${pushToPosition}`);
+    }
+
+    // Place the punk
     column.setCard(targetPosition, punk);
+    console.log(
+      `Placed punk at column ${targetColumn}, position ${targetPosition}`
+    );
+
     this.state.pending = null;
     return true;
   }
@@ -772,6 +828,68 @@ export class CommandSystem {
     return true;
   }
 
+  executeRaid(playerId) {
+    const player = this.state.players[playerId];
+
+    if (player.raiders === "available") {
+      // Place raiders in queue at slot 2 (index 1)
+      const slotIndex = 1;
+      if (!player.eventQueue[slotIndex]) {
+        player.eventQueue[slotIndex] = {
+          id: `${playerId}_raiders`,
+          name: "Raiders",
+          isRaiders: true,
+          queueNumber: 2,
+        };
+        player.raiders = "in_queue";
+        console.log("Raid: Raiders placed in event queue at slot 2");
+        return true;
+      }
+      console.log("Raid: Cannot place Raiders - slot 2 occupied");
+      return false;
+    } else if (player.raiders === "in_queue") {
+      // Find where Raiders currently is
+      let raidersIndex = -1;
+      for (let i = 0; i < 3; i++) {
+        if (player.eventQueue[i]?.isRaiders) {
+          raidersIndex = i;
+          break;
+        }
+      }
+
+      console.log(`Raid: Found Raiders at slot ${raidersIndex + 1}`);
+
+      if (raidersIndex > 0) {
+        // Can advance (move to lower index = closer to slot 1)
+        const newIndex = raidersIndex - 1;
+        if (!player.eventQueue[newIndex]) {
+          player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
+          player.eventQueue[raidersIndex] = null;
+          console.log(
+            `Raid: Advanced Raiders from slot ${raidersIndex + 1} to slot ${
+              newIndex + 1
+            }`
+          );
+          return true;
+        } else {
+          console.log(
+            `Raid: Cannot advance Raiders - slot ${newIndex + 1} is occupied`
+          );
+          return false;
+        }
+      } else if (raidersIndex === 0) {
+        console.log("Raid: Raiders already in slot 1, cannot advance further");
+        return false;
+      } else {
+        console.log("Raid: Raiders not found in queue (this shouldn't happen)");
+        return false;
+      }
+    } else {
+      console.log("Raid: Raiders already used this game");
+      return false;
+    }
+  }
+
   executeAbility(ability, context) {
     let cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
     const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
@@ -818,6 +936,29 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "junk_restore": {
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must target a damaged card");
+          return false;
+        }
+
+        // Restore the card
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false; // Person becomes not ready when restored
+        }
+        // Camps stay ready when restored
+        console.log(`${target.name} restored by junk effect!`);
+
+        this.state.pending = null;
+        return true;
+      }
+
       case "junk_injure": {
         // Verify target is an enemy person
         if (targetPlayer === this.state.pending.sourcePlayerId) {
@@ -1274,18 +1415,12 @@ export class CommandSystem {
   }
 
   handleGenericAbility(ability, context) {
-    console.log("=== handleGenericAbility called ===");
-    console.log("Effect:", ability.effect);
-    console.log("Source:", context.source.name);
-    console.log("From Mimic?", context.fromMimic);
-    console.log("Copied from:", context.copiedFrom);
-
     switch (ability.effect) {
       case "damage":
         this.state.pending = {
           type: "damage",
           source: context.source,
-          sourcePlayerId: context.playerId, // ALWAYS set this
+          sourcePlayerId: context.playerId,
           context,
         };
         break;
@@ -1295,27 +1430,8 @@ export class CommandSystem {
       case "raid":
         this.executeRaid(context.playerId);
         break;
-    }
-  }
-
-  executeRaid(playerId) {
-    const player = this.state.players[playerId];
-
-    if (player.raiders === "available") {
-      // Place raiders in queue
-      const slotIndex = this.findEventSlot(playerId, 2);
-      if (slotIndex !== -1) {
-        player.eventQueue[slotIndex] = {
-          id: `${playerId}_raiders`,
-          name: "Raiders",
-          isRaiders: true,
-          queuePosition: 2,
-        };
-        player.raiders = "in_queue";
-      }
-    } else if (player.raiders === "in_queue") {
-      // Advance raiders
-      this.advanceRaiders(playerId);
+      default:
+        console.log(`Unknown ability effect: ${ability.effect}`);
     }
   }
 

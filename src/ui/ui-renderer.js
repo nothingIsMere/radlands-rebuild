@@ -120,10 +120,14 @@ export class UIRenderer {
   renderEventQueue(player, playerId) {
     const queue = this.createElement("div", "event-queue");
 
-    for (let i = 0; i < 3; i++) {
+    // For left player, render slots in reverse order (3, 2, 1)
+    // For right player, render in normal order (1, 2, 3)
+    const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
+
+    slotOrder.forEach((i) => {
       const slot = this.createElement("div", "event-slot");
 
-      // Add slot number
+      // Add slot number (visual number, not array index)
       const slotNumber = this.createElement("div", "event-slot-number");
       slotNumber.textContent = i + 1;
       slot.appendChild(slotNumber);
@@ -137,7 +141,7 @@ export class UIRenderer {
       }
 
       queue.appendChild(slot);
-    }
+    });
 
     return queue;
   }
@@ -255,6 +259,13 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "place_punk") {
+      // Highlight valid placement slots (any slot, empty or occupied)
+      if (playerId === this.state.pending.sourcePlayerId) {
+        cardDiv.classList.add("punk-placement-target");
+      }
+    }
+
     if (!card) {
       cardDiv.classList.add("empty");
       const label = this.createElement("div");
@@ -263,6 +274,19 @@ export class UIRenderer {
 
       // Make empty slots clickable for placing cards
       cardDiv.addEventListener("click", () => {
+        // Handle punk placement from junk effect
+        if (
+          this.state.pending?.type === "place_punk" &&
+          playerId === this.state.pending.sourcePlayerId
+        ) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
         // Handle Parachute Base placement
         if (
           this.state.pending?.type === "parachute_place_person" &&

@@ -621,3 +621,77 @@ button:disabled {
   box-shadow: 0 0 10px 2px green;
   cursor: pointer;
 }
+
+/* Pending action overlay */
+.pending-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.pending-message-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Specific styling for punk placement */
+.pending-overlay.punk-placement .pending-message-banner {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* Enhanced punk placement targets */
+.card.punk-placement-target {
+  position: relative;
+  animation: glow 1.5s infinite;
+  border: 3px dashed #ff69b4;
+  cursor: pointer;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px 2px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.5);
+  }
+}
+
+.card.punk-placement-target::after {
+  content: "PLACE PUNK HERE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 105, 180, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+/* Make the game area position relative for overlay */
+.game-area {
+  position: relative;
+}

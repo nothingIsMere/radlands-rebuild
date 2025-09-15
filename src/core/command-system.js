@@ -32,15 +32,6 @@ export class CommandSystem {
       return false;
     }
 
-    // DEBUG: Log the exact values being compared
-    console.log("resolveDamage check:", {
-      targetPlayer,
-      pendingSourcePlayerId: pending.sourcePlayerId,
-      pendingType: pending.type,
-      comparison: targetPlayer === pending.sourcePlayerId,
-      typeCheck: pending.type !== "parachute_damage_self",
-    });
-
     // Special case: Parachute Base can damage own cards
     if (
       targetPlayer === pending.sourcePlayerId &&
@@ -69,21 +60,35 @@ export class CommandSystem {
     }
 
     // Apply damage
-    if (target.isDamaged) {
+    if (target.isDamaged || target.isPunk) {
+      // Punks are destroyed on first damage
       target.isDestroyed = true;
       console.log(`${target.name} destroyed!`);
 
       // Handle destroyed cards
       if (target.type === "person") {
-        // Move to discard
-        this.state.discard.push(target);
+        if (target.isPunk) {
+          // Punks go back to top of deck face down
+          console.log(`Punk returned to top of deck`);
+          // Don't add actual card object, just note that a card should be there
+          this.state.deck.unshift({
+            id: `returned_punk_${Date.now()}`,
+            name: "Unknown Card",
+            type: "person",
+            cost: 0,
+            isFaceDown: true,
+          });
+        } else {
+          // Normal people go to discard
+          this.state.discard.push(target);
+          console.log(`${target.name} discarded`);
+        }
+
         // Remove from column
         column.setCard(targetPosition, null);
 
-        // Move any card in front back (regardless of type)
-        // Don't assume positions - just check if there's a card in the next position
+        // Move any card in front back
         if (targetPosition < 2) {
-          // If not in the frontmost position
           const nextPosition = targetPosition + 1;
           const cardInFront = column.getCard(nextPosition);
           if (cardInFront) {
@@ -123,6 +128,8 @@ export class CommandSystem {
       targetPosition
     );
     if (!target || target.type !== "person") return false;
+
+    // Just use the damage resolution since injure works the same for people
     return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
   }
 
@@ -960,42 +967,15 @@ export class CommandSystem {
       }
 
       case "junk_injure": {
-        // Verify target is an enemy person
-        if (targetPlayer === this.state.pending.sourcePlayerId) {
-          console.log("Must target enemy for injure");
-          return false;
-        }
+        // Set up a damage pending state for the injure
+        this.state.pending = {
+          type: "damage",
+          sourcePlayerId: this.state.pending.sourcePlayerId,
+          source: this.state.pending.source,
+        };
 
-        const target = this.state.getCard(
-          targetPlayer,
-          targetColumn,
-          targetPosition
-        );
-        if (!target || target.type !== "person") {
-          console.log("Must target a person");
-          return false;
-        }
-
-        // Check protection
-        const column = this.state.players[targetPlayer].columns[targetColumn];
-        if (column.isProtected(targetPosition)) {
-          console.log("Cannot injure protected person");
-          return false;
-        }
-
-        // Apply injure (same as damage for people)
-        if (target.isDamaged) {
-          target.isDestroyed = true;
-          console.log(`${target.name} destroyed by junk injure!`);
-          // Handle destruction...
-        } else {
-          target.isDamaged = true;
-          target.isReady = false;
-          console.log(`${target.name} injured by junk effect!`);
-        }
-
-        this.state.pending = null;
-        return true;
+        // Now resolve it as damage (which will handle destruction properly)
+        return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
       }
 
       case "junk_restore": {

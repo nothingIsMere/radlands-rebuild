@@ -69,6 +69,37 @@ export class UIRenderer {
   renderGameArea() {
     const gameArea = this.createElement("div", "game-area");
 
+    if (this.state.pending) {
+      const overlay = this.createElement("div", "pending-overlay");
+      const message = this.createElement("div", "pending-message-banner");
+
+      switch (this.state.pending.type) {
+        case "place_punk":
+          message.textContent = "📍 Click any slot to place a PUNK";
+          overlay.classList.add("punk-placement");
+          break;
+        case "junk_restore":
+          message.textContent = "🔧 Select a damaged card to RESTORE";
+          overlay.classList.add("restore-selection");
+          break;
+        case "junk_injure":
+          message.textContent =
+            "⚔️ Select an unprotected enemy person to INJURE";
+          overlay.classList.add("injure-selection");
+          break;
+        case "damage":
+        case "looter_damage":
+          message.textContent = "💥 Select target for DAMAGE";
+          overlay.classList.add("damage-selection");
+          break;
+      }
+
+      if (message.textContent) {
+        overlay.appendChild(message);
+        gameArea.appendChild(overlay);
+      }
+    }
+
     // Render left player's board
     gameArea.appendChild(this.renderPlayerBoard("left"));
 

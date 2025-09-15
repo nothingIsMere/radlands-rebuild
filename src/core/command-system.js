@@ -910,38 +910,67 @@ export class CommandSystem {
             playerId: pb.sourcePlayerId,
             columnIndex: targetColumn,
             position: targetSlot,
+            fromParachuteBase: true,
           });
 
           console.log(
             `Parachute Base: Used ${person.name}'s ${ability.effect} ability`
           );
+
+          // DON'T damage immediately - wait for ability to resolve
+          // Store the damage target in the person or pending state
+          if (this.state.pending) {
+            // Ability set up a pending state (like Looter's targeting)
+            // Add parachute damage info to it
+            this.state.pending.parachuteBaseDamage = {
+              targetPlayer: pb.sourcePlayerId,
+              targetColumn: targetColumn,
+              targetPosition: targetSlot,
+            };
+            console.log("Parachute Base: Will damage after ability resolves");
+          } else {
+            // Ability completed immediately (no targeting needed)
+            // Can damage now
+            this.state.pending = {
+              type: "parachute_damage_self",
+              sourcePlayerId: pb.sourcePlayerId,
+            };
+
+            const damaged = this.resolveDamage(
+              pb.sourcePlayerId,
+              targetColumn,
+              targetSlot
+            );
+            if (damaged) {
+              console.log(`Parachute Base: Damaged ${person.name}`);
+            }
+            this.state.pending = null;
+          }
+        } else {
+          // No abilities - just damage the person immediately
+          this.state.pending = {
+            type: "parachute_damage_self",
+            sourcePlayerId: pb.sourcePlayerId,
+          };
+
+          const damaged = this.resolveDamage(
+            pb.sourcePlayerId,
+            targetColumn,
+            targetSlot
+          );
+          if (damaged) {
+            console.log(`Parachute Base: Damaged ${person.name} (no ability)`);
+          }
+          this.state.pending = null;
         }
 
-        // Set up self-damage
-        this.state.pending = {
-          type: "parachute_damage_self",
-          sourcePlayerId: pb.sourcePlayerId,
-        };
-
-        // Apply damage immediately
-        const damaged = this.resolveDamage(
-          pb.sourcePlayerId,
-          targetColumn,
-          targetSlot
-        );
-
-        if (damaged) {
-          console.log(`Parachute Base: Damaged ${person.name}`);
-        }
-
-        this.state.pending = null;
-        return true;
-      } // THIS CLOSING BRACE WAS MISSING
+        return true; // ADD THIS
+      } // This closes the parachute_place_person case
 
       default:
         console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;
-    } // This closes the switch statement
+    }
   }
 
   checkGameEnd() {

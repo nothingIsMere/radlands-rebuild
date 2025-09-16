@@ -47,17 +47,52 @@ export const personAbilities = {
     },
   },
 
-  // Simple restore ability
   repairbot: {
     restore: {
       cost: 2,
       handler: (state, context) => {
+        // Find all damaged cards that can be restored
+        const validTargets = [];
+
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 0; pos < 3; pos++) {
+              const card = player.columns[col].getCard(pos);
+              if (card && card.isDamaged && !card.isDestroyed) {
+                validTargets.push({
+                  playerId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Repair Bot: No damaged cards to restore");
+          return false;
+        }
+
+        // Mark card as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
         state.pending = {
           type: "restore",
           source: context.source,
           sourcePlayerId: context.playerId,
           context,
+          validTargets: validTargets.map((t) => ({
+            playerId: t.playerId,
+            columnIndex: t.columnIndex,
+            position: t.position,
+          })),
         };
+
         console.log("Repair Bot: Select damaged card to restore");
         return true;
       },

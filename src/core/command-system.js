@@ -11,6 +11,35 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
+  applyParachuteBaseDamage(playerId, columnIndex, position) {
+    console.log(
+      `Parachute Base: Applying damage to person at ${columnIndex}, ${position}`
+    );
+
+    // Set up temporary pending for self-damage
+    this.state.pending = {
+      type: "parachute_damage_self",
+      sourcePlayerId: playerId,
+    };
+
+    const damaged = this.resolveDamage(playerId, columnIndex, position);
+
+    if (damaged) {
+      const person = this.state.getCard(playerId, columnIndex, position);
+      if (person) {
+        console.log(`Parachute Base: Damaged ${person.name}`);
+      }
+    } else {
+      console.log(
+        "Parachute Base: Failed to damage (person might have been destroyed)"
+      );
+    }
+
+    // Clear pending
+    this.state.pending = null;
+    return damaged;
+  }
+
   handleUseCampAbility(payload) {
     const { playerId, columnIndex } = payload;
     const camp = this.state.getCard(playerId, columnIndex, 0);
@@ -1134,12 +1163,32 @@ export class CommandSystem {
 
         target.isDamaged = false;
         if (target.type === "person") {
-          target.isReady = false; // Person becomes not ready when restored
+          target.isReady = false;
         }
-        // Camps stay ready when restored
-        console.log(`${target.name} restored!`);
 
-        this.state.pending = null;
+        console.log(`Restored ${target.name}!`);
+
+        // Check if this restore was from Parachute Base
+        if (this.state.pending?.parachuteBaseDamage) {
+          const pbDamage = this.state.pending.parachuteBaseDamage;
+          console.log(
+            "Parachute Base: Restore ability completed, now applying damage"
+          );
+
+          // Clear pending first
+          this.state.pending = null;
+
+          // Apply damage to the card that was played via Parachute Base
+          this.applyParachuteBaseDamage(
+            pbDamage.targetPlayer,
+            pbDamage.targetColumn,
+            pbDamage.targetPosition
+          );
+        } else {
+          // Normal restore, just clear pending
+          this.state.pending = null;
+        }
+
         return true;
       }
 
@@ -1172,14 +1221,109 @@ export class CommandSystem {
         // Restore the card
         target.isDamaged = false;
         if (target.type === "person") {
-          target.isReady = false; // Person becomes not ready when restored
+          target.isReady = false;
         }
-        // Camps stay ready when restored
 
-        console.log(`Repair Bot restored ${target.name} on entry!`);
+        console.log(`Repair Bot entry trait: Restored ${target.name}!`);
 
-        // Clear pending
-        this.state.pending = null;
+        // Check if this was from Parachute Base
+        const pbContext = pending.parachuteBaseContext;
+        if (pbContext) {
+          console.log(
+            "=== Continuing Parachute Base sequence after Repair Bot entry trait ==="
+          );
+
+          // Clear pending first
+          this.state.pending = null;
+
+          const player = this.state.players[pbContext.sourcePlayerId];
+          const person = this.state.getCard(
+            pbContext.sourcePlayerId,
+            pbContext.targetColumn,
+            pbContext.targetSlot
+          );
+
+          if (!person) {
+            console.log("ERROR: Can't find Repair Bot after entry trait");
+            return true;
+          }
+
+          // Now use Repair Bot's actual ability
+          if (person.abilities?.length > 0) {
+            const ability = person.abilities[0];
+
+            console.log(
+              `Checking if player can afford ${person.name}'s ability (${ability.cost} water)`
+            );
+
+            if (player.water >= ability.cost) {
+              // Pay for the ability
+              player.water -= ability.cost;
+              console.log(
+                `Parachute Base: Paid ${ability.cost} water for ${person.name}'s restore ability`
+              );
+
+              // Execute the ability with fromParachuteBase flag
+              const abilityResult = this.executeAbility(ability, {
+                source: person,
+                playerId: pbContext.sourcePlayerId,
+                columnIndex: pbContext.targetColumn,
+                position: pbContext.targetSlot,
+                fromParachuteBase: true,
+              });
+
+              console.log(
+                `Parachute Base: Executed ${person.name}'s restore ability`
+              );
+
+              // Check if ability set up new pending (it should for Repair Bot's restore)
+              if (this.state.pending) {
+                console.log(
+                  "Repair Bot ability set up restore targeting - adding Parachute damage info"
+                );
+                // Add damage info for after ability resolves
+                this.state.pending.parachuteBaseDamage = {
+                  targetPlayer: pbContext.sourcePlayerId,
+                  targetColumn: pbContext.targetColumn,
+                  targetPosition: pbContext.targetSlot,
+                };
+              } else {
+                // No pending means no valid targets or ability failed
+                console.log(
+                  "Repair Bot ability completed (no targets?) - applying Parachute damage"
+                );
+                this.applyParachuteBaseDamage(
+                  pbContext.sourcePlayerId,
+                  pbContext.targetColumn,
+                  pbContext.targetSlot
+                );
+              }
+            } else {
+              console.log(
+                `Not enough water for ability (need ${ability.cost}, have ${player.water})`
+              );
+              // Still apply damage even if can't afford ability
+              this.applyParachuteBaseDamage(
+                pbContext.sourcePlayerId,
+                pbContext.targetColumn,
+                pbContext.targetSlot
+              );
+            }
+          } else {
+            console.log(
+              "Repair Bot has no abilities - applying Parachute damage"
+            );
+            this.applyParachuteBaseDamage(
+              pbContext.sourcePlayerId,
+              pbContext.targetColumn,
+              pbContext.targetSlot
+            );
+          }
+        } else {
+          // Normal entry restore (not from Parachute Base)
+          this.state.pending = null;
+        }
+
         return true;
       }
 

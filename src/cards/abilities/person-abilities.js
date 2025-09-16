@@ -1,4 +1,7 @@
+import { CONSTANTS } from "../../core/constants.js";
+
 // person-abilities.js
+
 export const personAbilities = {
   damage: {
     cost: 2,

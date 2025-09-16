@@ -453,13 +453,38 @@ export class CommandSystem {
         break;
 
       case "restore":
-        // Set up targeting for restore
+        // Set up targeting for restore - ONLY OWN CARDS
+        const validRestoreTargets = [];
+        const currentPlayer = this.state.players[playerId];
+
+        // Only check the player's own cards
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = currentPlayer.columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              validRestoreTargets.push({
+                playerId: playerId, // Always own player
+                columnIndex: col,
+                position: pos,
+              });
+            }
+          }
+        }
+
+        if (validRestoreTargets.length === 0) {
+          console.log("No damaged cards to restore");
+          break;
+        }
+
         this.state.pending = {
           type: "junk_restore",
           source: card,
           sourcePlayerId: playerId,
+          validTargets: validRestoreTargets,
         };
-        console.log("Select a damaged card to restore");
+        console.log(
+          `Select one of your damaged cards to restore (${validRestoreTargets.length} available)`
+        );
         break;
 
       case "raid":
@@ -1011,6 +1036,19 @@ export class CommandSystem {
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
       case "junk_restore": {
+        // Check if this is a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid restoration target");
+          return false;
+        }
+
         const target = this.state.getCard(
           targetPlayer,
           targetColumn,

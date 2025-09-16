@@ -395,8 +395,15 @@ export class UIRenderer {
     }
 
     if (this.state.pending?.type === "junk_restore") {
-      // Highlight damaged cards
-      if (card?.isDamaged) {
+      // Only highlight cards in the valid targets list
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
         cardDiv.classList.add("junk-restore-target");
       }
     }

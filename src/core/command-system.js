@@ -54,13 +54,17 @@ export class CommandSystem {
 
     const column = this.state.players[targetPlayer].columns[targetColumn];
 
-    // Check protection (unless ability ignores it)
-    if (!pending.allowProtected && column.isProtected(targetPosition)) {
+    // Check protection (unless ability ignores it OR it's Parachute self-damage)
+    if (
+      !pending.allowProtected &&
+      pending.type !== "parachute_damage_self" && // ADD THIS CONDITION
+      column.isProtected(targetPosition)
+    ) {
       console.log(`Cannot damage protected ${target.name}`);
       return false;
     }
 
-    // Apply damage using the new helper
+    // Apply damage using the helper
     const result = this.applyDamageToCard(
       target,
       targetPlayer,
@@ -1049,27 +1053,6 @@ export class CommandSystem {
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
       }
 
-      case "junk_restore": {
-        const target = this.state.getCard(
-          targetPlayer,
-          targetColumn,
-          targetPosition
-        );
-        if (!target || !target.isDamaged) {
-          console.log("Must target a damaged card");
-          return false;
-        }
-
-        target.isDamaged = false;
-        if (target.type === "person") {
-          target.isReady = false;
-        }
-        console.log(`${target.name} restored by junk effect!`);
-
-        this.state.pending = null;
-        return true;
-      }
-
       case "damage":
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
 
@@ -1120,8 +1103,27 @@ export class CommandSystem {
       case "injure":
         return this.resolveInjure(targetPlayer, targetColumn, targetPosition);
 
-      case "restore":
-        return this.resolveRestore(targetPlayer, targetColumn, targetPosition);
+      case "restore": {
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must target a damaged card");
+          return false;
+        }
+
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false; // Person becomes not ready when restored
+        }
+        // Camps stay ready when restored
+        console.log(`${target.name} restored!`);
+
+        this.state.pending = null;
+        return true;
+      }
 
       case "place_punk":
         return this.resolvePlacePunk(targetColumn, targetPosition);

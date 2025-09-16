@@ -361,6 +361,13 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "restore") {
+      // Highlight damaged cards that can be restored
+      if (card?.isDamaged && !card.isDestroyed) {
+        cardDiv.classList.add("restore-target");
+      }
+    }
+
     if (this.state.pending?.type === "junk_restore") {
       // Highlight damaged cards
       if (card?.isDamaged) {

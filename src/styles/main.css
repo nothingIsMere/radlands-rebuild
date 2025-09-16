@@ -738,11 +738,11 @@ button:disabled {
 body.has-pending .hand-card:not(.parachute-target),
 body.has-pending .ability-btn,
 body.has-pending
-  .card:not(.damage-target):not(.mimic-target):not(.punk-placement-target):not(
-    .junk-injure-target
-  ):not(.junk-restore-target):not(.raiders-target-camp):not(
-    .parachute-placement-target
-  ) {
+  .card:not(.damage-target):not(.restore-target):not(.mimic-target):not(
+    .punk-placement-target
+  ):not(.junk-injure-target):not(.junk-restore-target):not(
+    .raiders-target-camp
+  ):not(.parachute-placement-target) {
   opacity: 0.5;
   pointer-events: none;
 }

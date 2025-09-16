@@ -746,3 +746,73 @@ body.has-pending
   opacity: 0.5;
   pointer-events: none;
 }
+
+/* Parachute Base placement phase */
+.pending-overlay.parachute-placement .pending-message-banner {
+  background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);
+  font-size: 20px;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.card.parachute-placement-target {
+  border: 3px dashed #4a90e2;
+  background: rgba(74, 144, 226, 0.1);
+  cursor: pointer;
+  animation: pulse-blue 1.5s infinite;
+}
+
+.card.parachute-placement-empty {
+  background: rgba(74, 144, 226, 0.2);
+  border-color: #7b68ee;
+  border-width: 3px;
+}
+
+.card.parachute-placement-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
+  background: rgba(74, 144, 226, 0.3);
+}
+
+@keyframes pulse-blue {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
+  }
+}
+
+/* Add a helpful tooltip */
+.card.parachute-placement-target::after {
+  content: "CLICK TO PLACE HERE";
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(74, 144, 226, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card.parachute-placement-target:hover::after {
+  opacity: 1;
+}

@@ -81,6 +81,11 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "repair_bot_entry_restore":
+          message.textContent =
+            "🔧 Repair Bot: Select a damaged card to RESTORE";
+          overlay.classList.add("restore-selection");
+          break;
         case "raiders_select_camp":
           // Show which player needs to act
           if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
@@ -109,6 +114,10 @@ export class UIRenderer {
         case "looter_damage":
           message.textContent = "💥 Select target for DAMAGE";
           overlay.classList.add("damage-selection");
+          break;
+        case "parachute_place_person":
+          message.textContent = `🪂 Place ${this.state.pending.selectedPerson.name} on the board (costs ${this.state.pending.selectedPerson.cost} water)`;
+          overlay.classList.add("parachute-placement");
           break;
       }
 
@@ -276,11 +285,18 @@ export class UIRenderer {
     }
     const cardDiv = this.createElement("div", "card");
 
+    // Add this near the top of renderCard method, right after creating cardDiv
     if (
       this.state.pending?.type === "parachute_place_person" &&
       playerId === this.state.pending.sourcePlayerId
     ) {
+      // Highlight ALL slots in player's own columns for placement
       cardDiv.classList.add("parachute-placement-target");
+
+      // Add extra visual cue for empty slots
+      if (!card) {
+        cardDiv.classList.add("parachute-placement-empty");
+      }
     }
 
     cardDiv.addEventListener("contextmenu", (e) => {
@@ -346,6 +362,19 @@ export class UIRenderer {
         !card.isDestroyed
       ) {
         cardDiv.classList.add("raiders-target-camp");
+      }
+    }
+
+    if (this.state.pending?.type === "repair_bot_entry_restore") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("restore-target");
       }
     }
 

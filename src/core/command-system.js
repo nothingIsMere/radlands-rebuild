@@ -292,8 +292,22 @@ export class CommandSystem {
     return true;
   }
 
-  triggerEntryEffects(person, playerId) {
+  triggerEntryTraits(person, playerId, columnIndex, position) {
     console.log(`${person.name} entered play`);
+
+    // Check if this card has an entry trait
+    const cardName = person.name.toLowerCase().replace(/\s+/g, "");
+    const traitHandler = window.cardRegistry?.getTraitHandler(cardName);
+
+    if (traitHandler?.onEntry) {
+      console.log(`Triggering entry trait for ${person.name}`);
+      traitHandler.onEntry(this.state, {
+        card: person,
+        playerId,
+        columnIndex,
+        position,
+      });
+    }
   }
 
   resolveInjure(targetPlayer, targetColumn, targetPosition) {
@@ -656,10 +670,14 @@ export class CommandSystem {
     player.water -= cost;
     player.hand.splice(cardIndex, 1);
 
-    this.triggerEntryEffects(person, playerId);
+    // Track for turn events
     this.state.turnEvents.peoplePlayedThisTurn++;
 
     console.log(`Played ${card.name} to position ${position}`);
+
+    // Check for entry traits AFTER successful placement
+    this.triggerEntryTraits(person, playerId, columnIndex, position);
+
     return true;
   }
 
@@ -1125,6 +1143,46 @@ export class CommandSystem {
         return true;
       }
 
+      case "repair_bot_entry_restore": {
+        const pending = this.state.pending;
+
+        // Verify this is a valid target
+        const isValidTarget = pending.validTargets.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid restoration target");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must target a damaged card");
+          return false;
+        }
+
+        // Restore the card
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false; // Person becomes not ready when restored
+        }
+        // Camps stay ready when restored
+
+        console.log(`Repair Bot restored ${target.name} on entry!`);
+
+        // Clear pending
+        this.state.pending = null;
+        return true;
+      }
+
       case "place_punk":
         return this.resolvePlacePunk(targetColumn, targetPosition);
 
@@ -1178,12 +1236,6 @@ export class CommandSystem {
         const targetColumn = payload.columnIndex;
         const targetSlot = payload.position;
 
-        // Validate it's not the camp slot (removing this check since we allow any slot)
-        // if (targetSlot === 0) {
-        //   console.log("Cannot place person in camp slot");
-        //   return false;
-        // }
-
         const column =
           this.state.players[pb.sourcePlayerId].columns[targetColumn];
         const existingCard = column.getCard(targetSlot);
@@ -1230,10 +1282,36 @@ export class CommandSystem {
           `Parachute Base: Placed ${person.name} at column ${targetColumn}, position ${targetSlot}`
         );
 
-        // Clear the pending state first to prevent UI hanging
+        // Clear the pending state first
         this.state.pending = null;
 
-        // Use their first ability if they have one
+        // Trigger entry traits
+        this.triggerEntryTraits(
+          person,
+          pb.sourcePlayerId,
+          targetColumn,
+          targetSlot
+        );
+
+        // Check if entry trait set up a pending state
+        if (this.state.pending) {
+          // Entry trait needs resolution (like Repair Bot's restore)
+          // Store Parachute Base context to continue after
+          this.state.pending.parachuteBaseContext = {
+            person,
+            sourcePlayerId: pb.sourcePlayerId,
+            targetColumn,
+            targetSlot,
+            hasAbility: person.abilities?.length > 0,
+            abilityCost: person.abilities?.[0]?.cost || 0,
+          };
+          console.log(
+            "Parachute Base: Entry trait triggered, will continue after it resolves"
+          );
+          return true;
+        }
+
+        // No entry trait pending, continue with ability use and damage
         if (person.abilities?.length > 0) {
           const ability = person.abilities[0];
 

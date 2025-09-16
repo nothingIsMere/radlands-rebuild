@@ -733,3 +733,14 @@ button:disabled {
 .pending-overlay.raiders-waiting .pending-message-banner {
   background: linear-gradient(135deg, #666 0%, #333 100%);
 }
+
+/* When there's a pending action, dim non-relevant elements */
+body.has-pending .hand-card:not(.parachute-target),
+body.has-pending .ability-btn,
+body.has-pending
+  .card:not(.damage-target):not(.mimic-target):not(.punk-placement-target):not(
+    .junk-injure-target
+  ):not(.junk-restore-target):not(.raiders-target-camp) {
+  opacity: 0.5;
+  pointer-events: none;
+}

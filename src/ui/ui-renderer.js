@@ -7,6 +7,11 @@ export class UIRenderer {
   }
 
   render() {
+    if (this.state.pending) {
+      document.body.classList.add("has-pending");
+    } else {
+      document.body.classList.remove("has-pending");
+    }
     // Get or create main container
     if (!this.container) {
       this.container = document.getElementById("app");
@@ -252,6 +257,30 @@ export class UIRenderer {
   renderCard(card, playerId, columnIndex, position) {
     const cardDiv = this.createElement("div", "card");
 
+    cardDiv.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+
+      // Block junking during pending actions
+      if (this.state.pending) {
+        console.log("Complete current action before junking cards");
+        return;
+      }
+
+      if (
+        this.state.currentPlayer === playerId &&
+        this.state.phase === "actions"
+      ) {
+        this.commands.execute({
+          type: "JUNK_CARD",
+          playerId: playerId,
+          payload: {
+            playerId: playerId,
+            cardIndex: index,
+          },
+        });
+      }
+    });
+
     // Add a slot index badge
     const slotBadge = this.createElement("div", "slot-badge");
     const globalSlotIndex = columnIndex * 3 + position;
@@ -387,18 +416,33 @@ export class UIRenderer {
         const abilities = this.createElement("div", "ability-info");
 
         card.abilities.forEach((ability, index) => {
-          // Only show ability button if card is ready and belongs to current player
+          // Different ready conditions for camps vs people
+          let canUseAbility = false;
+
+          if (card.type === "camp") {
+            canUseAbility = card.isReady && !card.isDestroyed;
+          } else if (card.type === "person") {
+            canUseAbility =
+              card.isReady && !card.isDamaged && !card.isDestroyed;
+          }
+
+          // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION
           if (
-            card.isReady &&
-            !card.isDamaged &&
-            !card.isDestroyed &&
+            canUseAbility &&
             playerId === this.state.currentPlayer &&
-            !this.state.pending
+            !this.state.pending // This already exists but make sure it's checked
           ) {
             const btn = this.createElement("button", "ability-btn");
             btn.textContent = `${ability.effect} (${ability.cost}💧)`;
             btn.addEventListener("click", (e) => {
               e.stopPropagation();
+
+              // Double-check pending state at click time
+              if (this.state.pending) {
+                console.log("Action in progress - please complete it first");
+                return;
+              }
+
               this.commands.execute({
                 type: "USE_ABILITY",
                 playerId: playerId,
@@ -412,18 +456,25 @@ export class UIRenderer {
             });
             abilities.appendChild(btn);
           } else {
-            // Show disabled ability text if not usable
+            // Show disabled ability text
             const text = this.createElement("span", "ability-text-disabled");
             text.textContent = `${ability.effect} (${ability.cost}💧)`;
-            if (card.type === "person" && !card.isReady) {
-              text.textContent += " [Not Ready]";
-            } else if (card.type === "camp" && !card.isReady) {
-              text.textContent += " [Used]";
+
+            // Add specific reason for blocking
+            if (this.state.pending) {
+              text.textContent += " [Action in Progress]";
+            } else if (card.type === "person") {
+              if (!card.isReady) text.textContent += " [Not Ready]";
+              if (card.isDamaged) text.textContent += " [Damaged]";
+            } else if (card.type === "camp") {
+              if (!card.isReady) text.textContent += " [Used]";
+              if (card.isDestroyed) text.textContent += " [Destroyed]";
             }
-            if (card.isDamaged) text.textContent += " [Damaged]";
-            if (this.state.pending) text.textContent += " [Targeting]";
-            if (playerId !== this.state.currentPlayer)
+
+            if (playerId !== this.state.currentPlayer && !this.state.pending) {
               text.textContent += " [Not Your Turn]";
+            }
+
             abilities.appendChild(text);
           }
         });

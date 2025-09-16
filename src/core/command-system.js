@@ -798,11 +798,24 @@ export class CommandSystem {
 
     const ability = card.abilities[abilityIndex];
 
-    // Check if ready
-    if (!card.isReady || card.isDamaged || card.isDestroyed) {
-      console.log("Card is not ready to use abilities");
+    // Check if ready - different rules for camps vs people
+    if (!card.isReady) {
+      console.log("Card has already used its ability this turn");
       return false;
     }
+
+    if (card.isDestroyed) {
+      console.log("Destroyed cards cannot use abilities");
+      return false;
+    }
+
+    // People also can't use abilities when damaged
+    if (card.type === "person" && card.isDamaged) {
+      console.log("Damaged people cannot use abilities");
+      return false;
+    }
+
+    // Camps CAN use abilities when damaged (just not when destroyed)
 
     // Check cost
     const player = this.state.players[playerId];

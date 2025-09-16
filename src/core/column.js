@@ -1,4 +1,6 @@
 // Flexible column system that doesn't care about card types
+import { CONSTANTS } from "../core/constants.js";
+
 export class Column {
   constructor(index) {
     this.index = index;

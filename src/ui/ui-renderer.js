@@ -1,3 +1,5 @@
+import { CONSTANTS } from "../core/constants.js";
+
 export class UIRenderer {
   constructor(state, commands) {
     this.state = state;
@@ -252,7 +254,7 @@ export class UIRenderer {
   renderColumns(player, playerId) {
     const camps = this.createElement("div", "camps");
 
-    for (let col = 0; col < 3; col++) {
+    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
       const column = player.columns[col];
       const columnDiv = this.createElement("div", "camp-column");
 

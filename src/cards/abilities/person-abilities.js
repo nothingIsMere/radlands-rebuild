@@ -83,7 +83,7 @@ export const personAbilities = {
 
         // Add own ready people (not including Mimic itself)
         const player = state.players[playerId];
-        for (let col = 0; col < 3; col++) {
+        for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
           for (let pos = 0; pos <= 2; pos++) {
             const card = player.columns[col].getCard(pos);
             if (
@@ -109,7 +109,7 @@ export const personAbilities = {
         // Add opponent's undamaged people (ready or not)
         const opponentId = playerId === "left" ? "right" : "left";
         const opponent = state.players[opponentId];
-        for (let col = 0; col < 3; col++) {
+        for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
           for (let pos = 0; pos <= 2; pos++) {
             const card = opponent.columns[col].getCard(pos);
             if (

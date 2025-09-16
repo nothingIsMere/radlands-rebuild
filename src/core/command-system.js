@@ -1,4 +1,5 @@
 import { CardRegistry } from "../cards/card-registry.js";
+import { CONSTANTS } from "./constants.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -59,66 +60,123 @@ export class CommandSystem {
       return false;
     }
 
-    // Apply damage
-    if (target.isDamaged || target.isPunk) {
-      // Punks are destroyed on first damage
-      target.isDestroyed = true;
-      console.log(`${target.name} destroyed!`);
-
-      // Handle destroyed cards
-      if (target.type === "person") {
-        if (target.isPunk) {
-          // Punks go back to top of deck face down
-          console.log(`Punk returned to top of deck`);
-          // Don't add actual card object, just note that a card should be there
-          this.state.deck.unshift({
-            id: `returned_punk_${Date.now()}`,
-            name: "Unknown Card",
-            type: "person",
-            cost: 0,
-            isFaceDown: true,
-          });
-        } else {
-          // Normal people go to discard
-          this.state.discard.push(target);
-          console.log(`${target.name} discarded`);
-        }
-
-        // Remove from column
-        column.setCard(targetPosition, null);
-
-        // Move any card in front back
-        if (targetPosition < 2) {
-          const nextPosition = targetPosition + 1;
-          const cardInFront = column.getCard(nextPosition);
-          if (cardInFront) {
-            column.setCard(targetPosition, cardInFront);
-            column.setCard(nextPosition, null);
-            console.log(
-              `${cardInFront.name} moved back to position ${targetPosition}`
-            );
-          }
-        }
-      } else if (target.type === "camp") {
-        // Camps stay in place when destroyed, just marked as destroyed
-        console.log(`Camp ${target.name} destroyed but remains in place`);
-      }
-    } else {
-      target.isDamaged = true;
-
-      // Only people become not-ready when damaged
-      if (target.type === "person") {
-        target.isReady = false;
-        console.log(`${target.name} damaged and not ready!`);
-      } else if (target.type === "camp") {
-        // Camps stay ready even when damaged
-        console.log(`Camp ${target.name} damaged but still ready!`);
-      }
-    }
+    // Apply damage using the new helper
+    const result = this.applyDamageToCard(
+      target,
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
 
     // Clear pending only after successful damage
     this.state.pending = null;
+    return result === "destroyed" || result === "damaged";
+  }
+
+  destroyPerson(player, column, position, card) {
+    if (card.isPunk) {
+      // Punk returns to deck
+      this.state.deck.unshift({
+        id: `returned_punk_${Date.now()}`,
+        name: "Unknown Card",
+        type: "person",
+        cost: 0,
+        isFaceDown: true,
+      });
+    } else {
+      // Normal person to discard
+      this.state.discard.push(card);
+    }
+
+    // Remove from column
+    column.setCard(position, null);
+
+    // Move card in front back
+    if (position < CONSTANTS.MAX_POSITION) {
+      const cardInFront = column.getCard(position + 1);
+      if (cardInFront) {
+        column.setCard(position, cardInFront);
+        column.setCard(position + 1, null);
+      }
+    }
+
+    console.log(`${card.name} destroyed`);
+  }
+
+  placeCardWithPush(column, position, newCard) {
+    const existingCard = column.getCard(position);
+
+    if (!existingCard) {
+      column.setCard(position, newCard);
+      return true;
+    }
+
+    // Find where to push
+    let pushToPosition = -1;
+
+    // Check for Juggernaut
+    let juggernautPos = -1;
+    for (let i = 0; i < 3; i++) {
+      const card = column.getCard(i);
+      if (card?.name === "Juggernaut") {
+        juggernautPos = i;
+        break;
+      }
+    }
+
+    if (juggernautPos === -1) {
+      // No Juggernaut - normal push forward
+      if (position < CONSTANTS.MAX_POSITION && !column.getCard(position + 1)) {
+        pushToPosition = position + 1;
+      }
+    } else {
+      // Juggernaut present
+      const nonJuggernautPositions = [0, 1, 2].filter(
+        (p) => p !== juggernautPos
+      );
+      const otherPosition = nonJuggernautPositions.find((p) => p !== position);
+
+      if (otherPosition !== undefined && !column.getCard(otherPosition)) {
+        pushToPosition = otherPosition;
+      }
+    }
+
+    if (pushToPosition === -1) {
+      console.log("Cannot place - no empty position for push");
+      return false;
+    }
+
+    // Push and place
+    column.setCard(pushToPosition, existingCard);
+    column.setCard(position, newCard);
+    console.log(`Pushed ${existingCard.name} to position ${pushToPosition}`);
     return true;
+  }
+
+  applyDamageToCard(target, targetPlayer, targetColumn, targetPosition) {
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+
+    if (target.isDamaged || target.isPunk) {
+      target.isDestroyed = true;
+      if (target.type === "person") {
+        this.destroyPerson(
+          this.state.players[targetPlayer],
+          column,
+          targetPosition,
+          target
+        );
+      } else if (target.type === "camp") {
+        console.log(`Camp ${target.name} destroyed but remains in place`);
+      }
+      return "destroyed";
+    } else {
+      target.isDamaged = true;
+      if (target.type === "person") {
+        target.isReady = false;
+      }
+      console.log(`${target.name} damaged`);
+      return "damaged";
+    }
   }
 
   resolveInjure(targetPlayer, targetColumn, targetPosition) {
@@ -151,7 +209,6 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
     const column = player.columns[targetColumn];
 
-    // Create punk (facedown card)
     const punk = {
       id: `punk_${Date.now()}`,
       name: "Punk",
@@ -159,66 +216,16 @@ export class CommandSystem {
       isPunk: true,
       isReady: false,
       isDamaged: false,
-      cost: 0, // Punks have no cost
+      cost: 0,
     };
 
-    // Use the SAME placement logic as normal person cards
-    const existingCard = column.getCard(targetPosition);
-
-    if (existingCard) {
-      console.log(
-        `Position ${targetPosition} is occupied by ${existingCard.name}`
-      );
-
-      // Find where to push the existing card
-      let pushToPosition = -1;
-
-      // Check for Juggernaut in column
-      let juggernautPos = -1;
-      for (let i = 0; i < 3; i++) {
-        const card = column.getCard(i);
-        if (card?.name === "Juggernaut") {
-          juggernautPos = i;
-          break;
-        }
-      }
-
-      if (juggernautPos === -1) {
-        // No Juggernaut - normal push forward
-        if (targetPosition < 2 && !column.getCard(targetPosition + 1)) {
-          pushToPosition = targetPosition + 1;
-        }
-      } else {
-        // Juggernaut present - find the other non-Juggernaut position
-        const nonJuggernautPositions = [0, 1, 2].filter(
-          (p) => p !== juggernautPos
-        );
-        const otherPosition = nonJuggernautPositions.find(
-          (p) => p !== targetPosition
-        );
-
-        if (otherPosition !== undefined && !column.getCard(otherPosition)) {
-          pushToPosition = otherPosition;
-        }
-      }
-
-      if (pushToPosition === -1) {
-        console.log("Cannot place punk - no empty position for push");
-        return false;
-      }
-
-      // Push the existing card
-      column.setCard(pushToPosition, existingCard);
-      column.setCard(targetPosition, null);
-      console.log(`Pushed ${existingCard.name} to position ${pushToPosition}`);
+    if (!this.placeCardWithPush(column, targetPosition, punk)) {
+      return false;
     }
 
-    // Place the punk
-    column.setCard(targetPosition, punk);
     console.log(
       `Placed punk at column ${targetColumn}, position ${targetPosition}`
     );
-
     this.state.pending = null;
     return true;
   }
@@ -269,12 +276,12 @@ export class CommandSystem {
   handleDrawCard() {
     const player = this.state.players[this.state.currentPlayer];
 
-    if (player.water < 2) {
+    if (player.water < CONSTANTS.DRAW_COST) {
       console.log("Not enough water");
       return false;
     }
 
-    player.water -= 2;
+    player.water -= CONSTANTS.DRAW_COST;
     if (this.state.deck.length > 0) {
       player.hand.push(this.state.deck.shift());
     }
@@ -470,21 +477,6 @@ export class CommandSystem {
     return true;
   }
 
-  handleDrawCard() {
-    const player = this.state.players[this.state.currentPlayer];
-
-    if (player.water < 2) {
-      console.log("Not enough water");
-      return false;
-    }
-
-    player.water -= 2;
-    if (this.state.deck.length > 0) {
-      player.hand.push(this.state.deck.shift());
-    }
-    return true;
-  }
-
   triggerEntryEffects(person, playerId) {
     console.log(`${person.name} entered play`);
   }
@@ -620,7 +612,7 @@ export class CommandSystem {
     const player = this.state.players[playerId];
     let emptySlots = 0;
 
-    for (let col = 0; col < 3; col++) {
+    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
       for (let pos = 0; pos < 3; pos++) {
         if (!player.columns[col].getCard(pos)) {
           emptySlots++;
@@ -635,83 +627,14 @@ export class CommandSystem {
     const player = this.state.players[playerId];
     const column = player.columns[columnIndex];
 
-    // Check if we can place at the requested position
-    const existingCard = column.getCard(position);
-    let pushToPosition = -1; // Declare it here so it's in scope for the whole function
-
-    if (existingCard) {
-      console.log(`Position ${position} is occupied by ${existingCard.name}`);
-
-      // Find where Juggernaut is (if anywhere)
-      let juggernautPos = -1;
-      for (let i = 0; i < 3; i++) {
-        const card = column.getCard(i);
-        if (card?.name === "Juggernaut") {
-          juggernautPos = i;
-          console.log(`Found Juggernaut at position ${i}`);
-          break;
-        }
-      }
-
-      if (juggernautPos === -1) {
-        // No Juggernaut - normal push forward
-        if (position < 2 && !column.getCard(position + 1)) {
-          pushToPosition = position + 1;
-        }
-      } else {
-        // Juggernaut present - find the other non-Juggernaut position
-        const nonJuggernautPositions = [0, 1, 2].filter(
-          (p) => p !== juggernautPos
-        );
-        console.log(`Non-Juggernaut positions: ${nonJuggernautPositions}`);
-
-        // The other position is the one that's not the requested position
-        const otherPosition = nonJuggernautPositions.find(
-          (p) => p !== position
-        );
-        console.log(`Other non-Juggernaut position: ${otherPosition}`);
-
-        // Check if that position is empty
-        const cardAtOther = column.getCard(otherPosition);
-        console.log(
-          `Card at position ${otherPosition}: ${
-            cardAtOther ? cardAtOther.name : "empty"
-          }`
-        );
-
-        if (otherPosition !== undefined && !cardAtOther) {
-          pushToPosition = otherPosition;
-          console.log(`Can push to position ${otherPosition}`);
-        }
-      }
-
-      if (pushToPosition === -1) {
-        console.log("Cannot push - no empty position available");
-        return false;
-      }
-
-      // Push the existing card
-      column.setCard(pushToPosition, existingCard);
-      column.setCard(position, null);
-      console.log(
-        `Pushed ${existingCard.name} from position ${position} to ${pushToPosition}`
-      );
-    }
-
-    // Rest of the method...
+    // Check cost
     const cost = this.getAdjustedCost(card, columnIndex, playerId);
     if (player.water < cost) {
       console.log("Not enough water!");
-      if (existingCard && pushToPosition !== -1) {
-        column.setCard(position, existingCard);
-        column.setCard(pushToPosition, null);
-      }
       return false;
     }
 
-    player.water -= cost;
-    player.hand.splice(cardIndex, 1);
-
+    // Create person object
     const person = {
       ...card,
       isReady: false,
@@ -720,7 +643,15 @@ export class CommandSystem {
       columnIndex,
     };
 
-    column.setCard(position, person);
+    // Try to place with push
+    if (!this.placeCardWithPush(column, position, person)) {
+      return false;
+    }
+
+    // Pay cost and remove from hand
+    player.water -= cost;
+    player.hand.splice(cardIndex, 1);
+
     this.triggerEntryEffects(person, playerId);
     this.state.turnEvents.peoplePlayedThisTurn++;
 
@@ -1503,7 +1434,7 @@ export class CommandSystem {
       const player = this.state.players[playerId];
       let destroyedCamps = 0;
 
-      for (let col = 0; col < 3; col++) {
+      for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
         const camp = player.columns[col].getCard(0);
         if (camp?.isDestroyed) destroyedCamps++;
       }
@@ -1691,7 +1622,7 @@ export class CommandSystem {
     }
 
     // Ready all undamaged cards (but camps are ALWAYS ready unless ability used)
-    for (let col = 0; col < 3; col++) {
+    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
       for (let pos = 0; pos < 3; pos++) {
         const card = player.columns[col].getCard(pos);
         if (card && !card.isDestroyed) {

@@ -211,27 +211,42 @@ export class UIRenderer {
     // Water Silo
     const waterSilo = this.createElement("div", "special-card");
     waterSilo.textContent = "Water Silo";
+
     if (player.waterSilo === "available") {
       waterSilo.classList.add("available");
-      waterSilo.addEventListener("click", () => {
-        if (
-          this.state.currentPlayer === playerId &&
-          this.state.phase === "actions"
-        ) {
+
+      // Make it clickable if it's the player's turn
+      if (
+        this.state.currentPlayer === playerId &&
+        this.state.phase === "actions" &&
+        !this.state.pending
+      ) {
+        waterSilo.classList.add("clickable");
+        waterSilo.title = "Click to take (1💧)";
+
+        waterSilo.addEventListener("click", () => {
+          if (this.state.pending) {
+            console.log("Complete current action first");
+            return;
+          }
+
           this.commands.execute({
             type: "TAKE_WATER_SILO",
             playerId: playerId,
+            payload: { playerId: playerId },
           });
-        }
-      });
+        });
+      }
     } else if (player.waterSilo === "in_hand") {
       waterSilo.classList.add("in-hand");
+      waterSilo.textContent = "Water Silo (in hand)";
     } else {
       waterSilo.classList.add("used");
     }
+
     specialCards.appendChild(waterSilo);
 
-    return specialCards;
+    return specialCards; // MAKE SURE THIS LINE EXISTS!
   }
 
   renderColumns(player, playerId) {

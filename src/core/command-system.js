@@ -223,6 +223,49 @@ export class CommandSystem {
     return true;
   }
 
+  handleTakeWaterSilo(payload) {
+    const { playerId } = payload;
+    const player = this.state.players[playerId];
+
+    // Check it's player's turn and correct phase
+    if (
+      playerId !== this.state.currentPlayer ||
+      this.state.phase !== "actions"
+    ) {
+      console.log("Can only take Water Silo on your turn during actions");
+      return false;
+    }
+
+    // Check if Water Silo is available
+    if (player.waterSilo !== "available") {
+      console.log("Water Silo not available");
+      return false;
+    }
+
+    // Check cost
+    if (player.water < 1) {
+      console.log("Need 1 water to take Water Silo");
+      return false;
+    }
+
+    // Pay cost and take to hand
+    player.water -= 1;
+    player.waterSilo = "in_hand";
+
+    // Add to hand
+    player.hand.push({
+      id: `water_silo_${playerId}`,
+      name: "Water Silo",
+      type: "special",
+      isWaterSilo: true,
+      junkEffect: "water",
+      cost: 0,
+    });
+
+    console.log("Water Silo taken to hand");
+    return true;
+  }
+
   handleDrawCard() {
     const player = this.state.players[this.state.currentPlayer];
 
@@ -314,6 +357,15 @@ export class CommandSystem {
 
     // Remove from hand first
     player.hand.splice(cardIndex, 1);
+
+    // Handle special case for Water Silo
+    if (card.name === "Water Silo" || card.isWaterSilo) {
+      player.waterSilo = "available";
+      player.water += 1; // Make sure this line is here!
+      console.log("Water Silo returned to play area, gained 1 water");
+      console.log("Water after returning silo:", player.water);
+      return true;
+    }
 
     // Handle special case for Water Silo
     if (card.name === "Water Silo") {
@@ -447,6 +499,7 @@ export class CommandSystem {
     this.handlers.set("END_TURN", this.handleEndTurn.bind(this));
     this.handlers.set("SELECT_TARGET", this.handleSelectTarget.bind(this));
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
+    this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
   }
 
   validateCommand(command) {

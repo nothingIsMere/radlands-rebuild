@@ -272,7 +272,16 @@ export class UIRenderer {
   }
 
   renderCard(card, playerId, columnIndex, position) {
+    if (this.state.pending?.type === "parachute_place_person") {
+    }
     const cardDiv = this.createElement("div", "card");
+
+    if (
+      this.state.pending?.type === "parachute_place_person" &&
+      playerId === this.state.pending.sourcePlayerId
+    ) {
+      cardDiv.classList.add("parachute-placement-target");
+    }
 
     cardDiv.addEventListener("contextmenu", (e) => {
       e.preventDefault();
@@ -374,6 +383,10 @@ export class UIRenderer {
 
       // Make empty slots clickable for placing cards
       cardDiv.addEventListener("click", () => {
+        console.log(
+          "Empty slot clicked, pending type:",
+          this.state.pending?.type
+        );
         // Handle punk placement from junk effect
         if (
           this.state.pending?.type === "place_punk" &&
@@ -392,6 +405,7 @@ export class UIRenderer {
           this.state.pending?.type === "parachute_place_person" &&
           playerId === this.state.pending.sourcePlayerId
         ) {
+          console.log("Executing Parachute placement for empty slot");
           this.commands.execute({
             type: "SELECT_TARGET",
             targetType: "slot",
@@ -399,6 +413,8 @@ export class UIRenderer {
             columnIndex: columnIndex,
             position: position,
           });
+          cardDiv.classList.add("parachute-placement-target");
+          return;
         } else {
           // Normal slot click handling
           this.handleCardSlotClick(playerId, columnIndex, position);
@@ -502,6 +518,35 @@ export class UIRenderer {
       // Make cards clickable for multiple purposes
       cardDiv.addEventListener("click", (e) => {
         e.stopPropagation();
+
+        console.log(
+          "Occupied slot clicked, pending type:",
+          this.state.pending?.type
+        );
+
+        // Handle pending targeting
+        if (this.state.pending) {
+          // Check if this is Parachute Base placement
+          if (
+            this.state.pending.type === "parachute_place_person" &&
+            playerId === this.state.pending.sourcePlayerId
+          ) {
+            console.log(
+              "Clicking slot for Parachute placement:",
+              columnIndex,
+              position
+            ); // ADD THIS DEBUG
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetType: "slot",
+              playerId: playerId,
+              columnIndex: columnIndex,
+              position: position,
+            });
+            cardDiv.classList.add("parachute-placement-target");
+            return;
+          }
+        }
 
         // First priority: handle pending targeting
         if (this.state.pending) {

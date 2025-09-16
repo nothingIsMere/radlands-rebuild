@@ -101,7 +101,7 @@ function setupTestGame() {
       type: "person",
       cost: 1,
       junkEffect: "injure",
-      abilities: [{ effect: "extra water", cost: 0 }],
+      abilities: [{ effect: "extra_water", cost: 0 }],
     },
     {
       id: "scout_1",

@@ -1161,6 +1161,7 @@ export class CommandSystem {
           campIndex: pending.campIndex,
         };
 
+        console.log("Set pending state to:", this.state.pending); // ADD THIS
         console.log(`Parachute Base: Now place ${selectedCard.name}`);
         return true;
       }
@@ -1175,11 +1176,11 @@ export class CommandSystem {
         const targetColumn = payload.columnIndex;
         const targetSlot = payload.position;
 
-        // Validate it's not the camp slot
-        if (targetSlot === 0) {
-          console.log("Cannot place person in camp slot");
-          return false;
-        }
+        // Validate it's not the camp slot (removing this check since we allow any slot)
+        // if (targetSlot === 0) {
+        //   console.log("Cannot place person in camp slot");
+        //   return false;
+        // }
 
         const column =
           this.state.players[pb.sourcePlayerId].columns[targetColumn];
@@ -1227,6 +1228,9 @@ export class CommandSystem {
           `Parachute Base: Placed ${person.name} at column ${targetColumn}, position ${targetSlot}`
         );
 
+        // Clear the pending state first to prevent UI hanging
+        this.state.pending = null;
+
         // Use their first ability if they have one
         if (person.abilities?.length > 0) {
           const ability = person.abilities[0];
@@ -1250,8 +1254,7 @@ export class CommandSystem {
             `Parachute Base: Used ${person.name}'s ${ability.effect} ability`
           );
 
-          // DON'T damage immediately - wait for ability to resolve
-          // Store the damage target in the person or pending state
+          // Check if the ability set up a new pending state
           if (this.state.pending) {
             // Ability set up a pending state (like Looter's targeting)
             // Add parachute damage info to it
@@ -1262,8 +1265,13 @@ export class CommandSystem {
             };
             console.log("Parachute Base: Will damage after ability resolves");
           } else {
-            // Ability completed immediately (no targeting needed)
-            // Can damage now
+            // Ability completed immediately (like Muse or Scout)
+            // Apply damage now
+            console.log(
+              "Parachute Base: Ability completed, applying damage now"
+            );
+
+            // Set up temporary pending for damage
             this.state.pending = {
               type: "parachute_damage_self",
               sourcePlayerId: pb.sourcePlayerId,
@@ -1274,9 +1282,12 @@ export class CommandSystem {
               targetColumn,
               targetSlot
             );
+
             if (damaged) {
               console.log(`Parachute Base: Damaged ${person.name}`);
             }
+
+            // Clear pending to unhang the UI
             this.state.pending = null;
           }
         } else {
@@ -1291,14 +1302,16 @@ export class CommandSystem {
             targetColumn,
             targetSlot
           );
+
           if (damaged) {
             console.log(`Parachute Base: Damaged ${person.name} (no ability)`);
           }
+
           this.state.pending = null;
         }
 
-        return true; // ADD THIS
-      } // This closes the parachute_place_person case
+        return true;
+      }
 
       // In handleSelectTarget method, add this case:
       case "mimic_select_target": {

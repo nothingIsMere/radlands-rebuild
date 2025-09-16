@@ -63,7 +63,7 @@ export const personAbilities = {
 
   // Simple water gain - no targeting needed
   muse: {
-    extrawater: {
+    extra_water: {
       cost: 0,
       handler: (state, context) => {
         const player = state.players[context.playerId];

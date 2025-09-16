@@ -740,7 +740,9 @@ body.has-pending .ability-btn,
 body.has-pending
   .card:not(.damage-target):not(.mimic-target):not(.punk-placement-target):not(
     .junk-injure-target
-  ):not(.junk-restore-target):not(.raiders-target-camp) {
+  ):not(.junk-restore-target):not(.raiders-target-camp):not(
+    .parachute-placement-target
+  ) {
   opacity: 0.5;
   pointer-events: none;
 }

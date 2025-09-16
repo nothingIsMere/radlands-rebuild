@@ -51,22 +51,20 @@ export const personAbilities = {
     restore: {
       cost: 2,
       handler: (state, context) => {
-        // Find all damaged cards that can be restored
+        // Find damaged cards - ONLY CHECK OWN CARDS
         const validTargets = [];
+        const player = state.players[context.playerId];
 
-        for (const playerId of ["left", "right"]) {
-          const player = state.players[playerId];
-          for (let col = 0; col < 3; col++) {
-            for (let pos = 0; pos < 3; pos++) {
-              const card = player.columns[col].getCard(pos);
-              if (card && card.isDamaged && !card.isDestroyed) {
-                validTargets.push({
-                  playerId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              validTargets.push({
+                playerId: context.playerId, // Always own player
+                columnIndex: col,
+                position: pos,
+                card,
+              });
             }
           }
         }
@@ -86,14 +84,12 @@ export const personAbilities = {
           source: context.source,
           sourcePlayerId: context.playerId,
           context,
-          validTargets: validTargets.map((t) => ({
-            playerId: t.playerId,
-            columnIndex: t.columnIndex,
-            position: t.position,
-          })),
+          validTargets: validTargets, // Already filtered to own cards only
         };
 
-        console.log("Repair Bot: Select damaged card to restore");
+        console.log(
+          `Repair Bot: Select one of your damaged cards to restore (${validTargets.length} available)`
+        );
         return true;
       },
     },

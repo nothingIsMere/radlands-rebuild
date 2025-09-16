@@ -365,7 +365,11 @@ export class UIRenderer {
       }
     }
 
-    if (this.state.pending?.type === "repair_bot_entry_restore") {
+    if (
+      this.state.pending?.type === "restore" ||
+      this.state.pending?.type === "repair_bot_entry_restore"
+    ) {
+      // Check if this card is in the valid targets list
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
           t.playerId === playerId &&
@@ -387,13 +391,6 @@ export class UIRenderer {
         !this.state.players[playerId].columns[columnIndex].isProtected(position)
       ) {
         cardDiv.classList.add("junk-injure-target");
-      }
-    }
-
-    if (this.state.pending?.type === "restore") {
-      // Highlight damaged cards that can be restored
-      if (card?.isDamaged && !card.isDestroyed) {
-        cardDiv.classList.add("restore-target");
       }
     }
 

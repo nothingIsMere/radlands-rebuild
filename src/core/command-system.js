@@ -964,6 +964,8 @@ export class CommandSystem {
       console.log(
         "Ability started multi-step process, will mark not ready when completed"
       );
+      // Add immediate UI update
+      this.notifyUI("PENDING_STATE_CREATED", true);
     } else {
       // Ability completed immediately - mark as not ready now
       card.isReady = false;
@@ -1100,6 +1102,90 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "scientist_select_junk": {
+        const selectedIndex = payload.junkIndex;
+
+        // Handle skip option
+        if (selectedIndex === -1) {
+          console.log("Scientist: Skipping junk effect");
+          this.state.pending = null;
+          return true;
+        }
+
+        const selectedCard = this.state.pending.discardedCards[selectedIndex];
+        if (!selectedCard) {
+          console.log("Invalid junk selection");
+          return false;
+        }
+
+        console.log(
+          `Scientist: Using ${selectedCard.name}'s junk effect: ${selectedCard.junkEffect}`
+        );
+
+        // Store context for potential Parachute Base
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+        // Clear pending before processing junk
+        this.state.pending = null;
+
+        // Use the existing handleJunkCard logic, but we need to simulate it
+        // since the card isn't actually in hand
+        const junkEffect = selectedCard.junkEffect?.toLowerCase();
+        const player = this.state.players[sourcePlayerId];
+
+        // Process the effect using existing logic
+        switch (junkEffect) {
+          case "water":
+            player.water += 1;
+            console.log("Gained 1 water from Scientist junk");
+            break;
+
+          case "card":
+          case "draw":
+            if (this.state.deck.length > 0) {
+              const drawnCard = this.state.deck.shift();
+              player.hand.push(drawnCard);
+              console.log(`Drew ${drawnCard.name} from Scientist junk`);
+            }
+            break;
+
+          case "raid":
+            this.executeRaid(sourcePlayerId);
+            break;
+
+          case "injure":
+          case "restore":
+          case "punk":
+            // These need targeting - set up pending
+            this.state.pending = {
+              type:
+                junkEffect === "punk"
+                  ? "place_punk"
+                  : junkEffect === "injure"
+                  ? "junk_injure"
+                  : "junk_restore",
+              sourcePlayerId: sourcePlayerId,
+              fromScientist: true, // Flag to know this came from Scientist
+            };
+            console.log(`Scientist junk: Setting up ${junkEffect} targeting`);
+            break;
+        }
+
+        // Apply Parachute Base damage if needed and no new pending
+        if (parachuteBaseDamage && !this.state.pending) {
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        } else if (parachuteBaseDamage && this.state.pending) {
+          // Preserve parachute damage through the junk targeting
+          this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+        }
+
+        return true;
+      }
       case "molgur_destroy_camp": {
         // Verify it's a valid target
         const isValidTarget = this.state.pending.validTargets?.some(

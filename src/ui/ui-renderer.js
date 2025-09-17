@@ -9,6 +9,7 @@ export class UIRenderer {
   }
 
   render() {
+    console.log("UI render called, pending state:", this.state.pending);
     if (this.state.pending) {
       document.body.classList.add("has-pending");
     } else {
@@ -42,8 +43,12 @@ export class UIRenderer {
 
     // Add ability selection modal if needed
     const abilityModal = this.renderAbilitySelection();
+    console.log("Modal returned from renderAbilitySelection:", abilityModal);
     if (abilityModal) {
+      console.log("Appending modal to gameContainer");
       gameContainer.appendChild(abilityModal);
+    } else {
+      console.log("No modal to append");
     }
 
     // Add controls
@@ -732,66 +737,109 @@ export class UIRenderer {
   }
 
   renderAbilitySelection() {
+    console.log("renderAbilitySelection called");
+    console.log("Full pending state:", this.state.pending);
+    console.log("Pending type specifically:", this.state.pending?.type);
+
+    // Handle Scientist's junk selection
     if (
-      !this.state.pending ||
-      (this.state.pending.type !== "parachute_select_ability" &&
-        this.state.pending.type !== "mimic_select_ability")
+      this.state.pending &&
+      this.state.pending.type === "scientist_select_junk"
     ) {
-      return null;
-    }
+      console.log("Creating Scientist modal");
+      console.log("Discarded cards:", this.state.pending.discardedCards);
 
-    const modal = this.createElement("div", "ability-selection-modal");
-    const backdrop = this.createElement("div", "modal-backdrop");
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
 
-    const content = this.createElement("div", "modal-content");
-    const title = this.createElement("h3", "modal-title");
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Scientist: Choose a junk effect to use:";
+      content.appendChild(title);
 
-    let abilities;
-    if (this.state.pending.type === "parachute_select_ability") {
-      title.textContent = `Choose ${this.state.pending.person.name}'s ability to use:`;
-      abilities = this.state.pending.person.abilities;
-    } else {
-      title.textContent = `Choose which ${this.state.pending.targetCard.name} ability to copy:`;
-      abilities = this.state.pending.targetCard.abilities;
-    }
+      const buttonContainer = this.createElement("div", "ability-buttons");
 
-    content.appendChild(title);
+      // Show each discarded card with its junk effect
+      this.state.pending.discardedCards.forEach((card, index) => {
+        const btn = this.createElement("button", "ability-select-btn");
+        btn.textContent = `${card.name}: ${card.junkEffect}`;
 
-    const buttonContainer = this.createElement("div", "ability-buttons");
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            junkIndex: index,
+          });
+        });
 
-    abilities.forEach((ability, index) => {
-      const btn = this.createElement("button", "ability-select-btn");
+        buttonContainer.appendChild(btn);
+      });
 
-      // Check if player can afford it
-      const player = this.state.players[this.state.pending.sourcePlayerId];
-      const canAfford = player.water >= ability.cost;
+      // Add skip button
+      const skipBtn = this.createElement("button", "cancel-btn");
+      skipBtn.textContent = "Skip (Don't use any effect)";
 
-      // Special text for conditional abilities
-      let abilityText = `${ability.effect} (${ability.cost}💧)`;
-      if (ability.effect === "punkdamage") {
-        abilityText = `Damage if Punk (${ability.cost}💧)`;
-      }
-
-      btn.textContent = abilityText;
-      btn.disabled = !canAfford;
-
-      if (!canAfford) {
-        btn.title = "Not enough water";
-        btn.classList.add("disabled");
-      }
-
-      btn.addEventListener("click", () => {
+      skipBtn.addEventListener("click", () => {
         this.commands.execute({
           type: "SELECT_TARGET",
-          abilityIndex: index,
+          junkIndex: -1,
         });
       });
 
-      buttonContainer.appendChild(btn);
+      buttonContainer.appendChild(skipBtn);
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      console.log("Scientist modal created successfully");
+      return modal;
+    }
+
+    // Handle Parachute Base ability selection
+    if (this.state.pending?.type === "parachute_select_ability") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = `Choose ${this.state.pending.person.name}'s ability to use:`;
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      this.state.pending.person.abilities.forEach((ability, index) => {
+        const btn = this.createElement("button", "ability-select-btn");
+
+        // Check if player can afford it
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        const canAfford = player.water >= ability.cost;
+
+        // Special text for conditional abilities
+        let abilityText = `${ability.effect} (${ability.cost}💧)`;
+        if (ability.effect === "punkdamage") {
+          abilityText = `Damage if Punk (${ability.cost}💧)`;
+        }
+
+        btn.textContent = abilityText;
+        btn.disabled = !canAfford;
+
+        if (!canAfford) {
+          btn.title = "Not enough water";
+          btn.classList.add("disabled");
+        }
+
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            abilityIndex: index,
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
 
       // Add cancel button
-      const cancelBtn = this.createElement("button", "cancel-btn"); // ADD THIS LINE
-      cancelBtn.textContent = "Cancel"; // ADD THIS LINE
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
 
       cancelBtn.addEventListener("click", () => {
         console.log("Cancel clicked, pending:", this.state.pending);
@@ -813,34 +861,89 @@ export class UIRenderer {
       });
 
       buttonContainer.appendChild(cancelBtn);
-    });
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
 
-    // Add cancel button
-    cancelBtn.addEventListener("click", () => {
-      console.log("Cancel clicked, pending:", this.state.pending);
-      console.log("Has junkCard?", !!this.state.pending?.junkCard);
+      return modal;
+    }
 
-      if (this.state.pending?.junkCard) {
+    // Handle Mimic ability selection
+    if (this.state.pending?.type === "mimic_select_ability") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = `Choose which ${this.state.pending.targetCard.name} ability to copy:`;
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      this.state.pending.targetCard.abilities.forEach((ability, index) => {
+        const btn = this.createElement("button", "ability-select-btn");
+
+        // Check if player can afford it
         const player = this.state.players[this.state.pending.sourcePlayerId];
-        console.log(
-          "Returning card to hand:",
-          this.state.pending.junkCard.name
-        );
-        console.log("Hand before:", player.hand.length);
-        player.hand.push(this.state.pending.junkCard);
-        console.log("Hand after:", player.hand.length);
-      }
+        const canAfford = player.water >= ability.cost;
 
-      this.state.pending = null;
-      this.render();
-    });
-    buttonContainer.appendChild(cancelBtn);
+        // Special text for conditional abilities
+        let abilityText = `${ability.effect} (${ability.cost}💧)`;
+        if (ability.effect === "punkdamage") {
+          abilityText = `Damage if Punk (${ability.cost}💧)`;
+        }
 
-    content.appendChild(buttonContainer);
-    modal.appendChild(backdrop);
-    modal.appendChild(content);
+        btn.textContent = abilityText;
+        btn.disabled = !canAfford;
 
-    return modal;
+        if (!canAfford) {
+          btn.title = "Not enough water";
+          btn.classList.add("disabled");
+        }
+
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            abilityIndex: index,
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
+
+      cancelBtn.addEventListener("click", () => {
+        console.log("Cancel clicked, pending:", this.state.pending);
+        console.log("Has junkCard?", !!this.state.pending?.junkCard);
+
+        if (this.state.pending?.junkCard) {
+          const player = this.state.players[this.state.pending.sourcePlayerId];
+          console.log(
+            "Returning card to hand:",
+            this.state.pending.junkCard.name
+          );
+          console.log("Hand before:", player.hand.length);
+          player.hand.push(this.state.pending.junkCard);
+          console.log("Hand after:", player.hand.length);
+        }
+
+        this.state.pending = null;
+        this.render();
+      });
+
+      buttonContainer.appendChild(cancelBtn);
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
+    console.log("No modal created for pending type:", this.state.pending?.type);
+    return null;
   }
 
   canTargetForDamage(playerId, columnIndex, position) {
@@ -1040,7 +1143,13 @@ export class UIRenderer {
     // Cancel button (for pending actions)
     if (this.state.pending) {
       const cancel = this.createElement("button");
-      cancel.textContent = "Cancel";
+
+      // Check if this is an entry trait (currently only Repair Bot's entry restore)
+      if (this.state.pending?.isEntryTrait) {
+        cancel.textContent = "Skip";
+      } else {
+        cancel.textContent = "Cancel";
+      }
 
       cancel.addEventListener("click", () => {
         // Return junk card to hand if cancelling a junk effect

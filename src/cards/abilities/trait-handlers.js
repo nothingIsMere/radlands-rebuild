@@ -32,6 +32,7 @@ export const cardTraits = {
         source: context.card,
         sourcePlayerId: context.playerId,
         validTargets: validTargets, // Already filtered to own cards only
+        isEntryTrait: true,
       };
 
       console.log(

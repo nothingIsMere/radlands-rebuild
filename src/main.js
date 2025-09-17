@@ -7,6 +7,23 @@ const gameState = new GameState();
 const commandSystem = new CommandSystem(gameState);
 const uiRenderer = new UIRenderer(gameState, commandSystem);
 
+function ensureJunkEffect(card) {
+  if (!card.junkEffect) {
+    const defaultJunkEffects = [
+      "water",
+      "card",
+      "raid",
+      "injure",
+      "restore",
+      "punk",
+    ];
+    card.junkEffect =
+      defaultJunkEffects[Math.floor(Math.random() * defaultJunkEffects.length)];
+    console.log(`Added junk effect '${card.junkEffect}' to ${card.name}`);
+  }
+  return card;
+}
+
 // Set up test scenario
 function setupTestGame() {
   // Give players plenty of water for testing
@@ -63,6 +80,19 @@ function setupTestGame() {
 
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
+    {
+      id: `scientist_1`,
+      name: "Scientist",
+      type: "person",
+      cost: 1,
+      abilities: [
+        {
+          effect: "discardchoose",
+          cost: 1,
+        },
+      ],
+      junkEffect: "raid",
+    },
     {
       id: "cult_leader_1",
       name: "Cult Leader",
@@ -243,6 +273,19 @@ function setupTestGame() {
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
     {
+      id: `scientist_2`,
+      name: "Scientist",
+      type: "person",
+      cost: 1,
+      abilities: [
+        {
+          effect: "discardchoose",
+          cost: 1,
+        },
+      ],
+      junkEffect: "raid",
+    },
+    {
       id: "cult_leader_2",
       name: "Cult Leader",
       type: "person",
@@ -378,7 +421,7 @@ function setupTestGame() {
     { id: "deck_6", name: "Deck Healer", type: "person", cost: 1 },
     { id: "deck_7", name: "Deck Tank", type: "person", cost: 3 },
     { id: "deck_8", name: "Deck Support", type: "person", cost: 2 },
-  ];
+  ].map((card) => ensureJunkEffect(card));
 
   // Start in actions phase
   gameState.phase = "actions";

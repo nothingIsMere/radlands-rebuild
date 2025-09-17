@@ -3,6 +3,54 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  // In person-abilities.js:
+
+  scientist: {
+    discardchoose: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if deck has cards
+        if (state.deck.length === 0) {
+          console.log("Scientist: Deck is empty");
+          return false;
+        }
+
+        // Discard up to 3 cards
+        const cardsToDiscard = Math.min(3, state.deck.length);
+        const discardedCards = [];
+
+        for (let i = 0; i < cardsToDiscard; i++) {
+          const card = state.deck.shift();
+          discardedCards.push(card);
+          state.discard.push(card);
+        }
+
+        console.log(`Scientist: Discarded ${cardsToDiscard} cards from deck`);
+
+        // Filter cards with junk effects
+        const cardsWithJunk = discardedCards.filter((card) => card.junkEffect);
+
+        if (cardsWithJunk.length === 0) {
+          console.log("Scientist: No junk effects available");
+          return true;
+        }
+
+        // Set up selection for which junk to use (or skip)
+        state.pending = {
+          type: "scientist_select_junk",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          discardedCards: cardsWithJunk,
+          context,
+        };
+
+        console.log(
+          `Scientist: Choose junk effect to use (${cardsWithJunk.length} options)`
+        );
+        return true;
+      },
+    },
+  },
   cultleader: {
     destroyowndamage: {
       cost: 0,

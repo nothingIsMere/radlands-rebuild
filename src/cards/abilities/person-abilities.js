@@ -3,6 +3,98 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  exterminator: {
+    destroyalldamaged: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find all damaged enemy PEOPLE (camps are not enemies)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const targets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            // Only target people, not camps
+            if (
+              card &&
+              card.type === "person" &&
+              card.isDamaged &&
+              !card.isDestroyed
+            ) {
+              targets.push({
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (targets.length === 0) {
+          console.log("Exterminator: No damaged enemy people to destroy");
+          return false;
+        }
+
+        // Mark Exterminator as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        console.log(
+          `Exterminator: Destroying ${targets.length} damaged enemy people`
+        );
+
+        // Destroy all damaged enemy people immediately
+        targets.forEach((target) => {
+          const card = opponent.columns[target.columnIndex].getCard(
+            target.position
+          );
+          if (card && !card.isDestroyed) {
+            card.isDestroyed = true;
+
+            // Handle person destruction
+            if (card.isPunk) {
+              state.deck.unshift({
+                id: `returned_punk_${Date.now()}`,
+                name: "Unknown Card",
+                type: "person",
+                cost: 0,
+                isFaceDown: true,
+              });
+            } else {
+              state.discard.push(card);
+            }
+
+            // Remove from column
+            opponent.columns[target.columnIndex].setCard(target.position, null);
+
+            // Move card in front back if needed
+            if (target.position < 2) {
+              const cardInFront = opponent.columns[target.columnIndex].getCard(
+                target.position + 1
+              );
+              if (cardInFront) {
+                opponent.columns[target.columnIndex].setCard(
+                  target.position,
+                  cardInFront
+                );
+                opponent.columns[target.columnIndex].setCard(
+                  target.position + 1,
+                  null
+                );
+              }
+            }
+
+            console.log(`Exterminator destroyed ${card.name}`);
+          }
+        });
+
+        // Don't handle Parachute damage here - let Parachute Base do it
+        return true;
+      },
+    },
+  },
   gunner: {
     injureall: {
       cost: 2,

@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "exterminator_1",
+      name: "Exterminator",
+      type: "person",
+      cost: 1,
+      junkEffect: "card",
+      abilities: [{ effect: "destroyalldamaged", cost: 1 }],
+    },
+    {
       id: "repair_bot_1",
       name: "Repair Bot",
       type: "person",
@@ -183,6 +191,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "exterminator_2",
+      name: "Exterminator",
+      type: "person",
+      cost: 1,
+      junkEffect: "card",
+      abilities: [{ effect: "destroyalldamaged", cost: 1 }],
+    },
     {
       id: "repair_bot_2",
       name: "Repair Bot",

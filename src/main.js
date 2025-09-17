@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "pyromaniac_1",
+      name: "Pyromaniac",
+      type: "person",
+      cost: 1,
+      junkEffect: "injure",
+      abilities: [{ effect: "damagecamp", cost: 1 }],
+    },
+    {
       id: "sniper_1",
       name: "Sniper",
       type: "person",
@@ -207,6 +215,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "pyromaniac_2",
+      name: "Pyromaniac",
+      type: "person",
+      cost: 1,
+      junkEffect: "injure",
+      abilities: [{ effect: "damagecamp", cost: 1 }],
+    },
     {
       id: "sniper_2",
       name: "Sniper",

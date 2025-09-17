@@ -81,6 +81,10 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "pyromaniac_damage":
+          message.textContent = "🔥 Select an unprotected enemy camp to damage";
+          overlay.classList.add("pyromaniac-selection");
+          break;
         case "sniper_damage":
           message.textContent =
             "🎯 Sniper: Select ANY enemy card to damage (ignores protection)";
@@ -339,7 +343,28 @@ export class UIRenderer {
     slotBadge.textContent = globalSlotIndex;
     cardDiv.appendChild(slotBadge);
 
-    if (this.state.pending?.type === "assassin_destroy") {
+    // Check for specific damage types FIRST, before the generic check
+    if (this.state.pending?.type === "pyromaniac_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("pyromaniac-target");
+      }
+    } else if (this.state.pending?.type === "sniper_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("sniper-target");
+      }
+    } else if (this.state.pending?.type === "assassin_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
           t.playerId === playerId &&
@@ -349,10 +374,8 @@ export class UIRenderer {
       if (isValidTarget) {
         cardDiv.classList.add("assassin-target");
       }
-    }
-
-    // Add targeting highlight for damage abilities
-    if (this.state.pending?.type?.includes("damage")) {
+    } else if (this.state.pending?.type?.includes("damage")) {
+      // Generic damage handler - only for basic damage abilities
       const isValidTarget = this.canTargetForDamage(
         playerId,
         columnIndex,
@@ -360,18 +383,6 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("damage-target");
-      }
-    }
-
-    if (this.state.pending?.type === "sniper_damage") {
-      const isValidTarget = this.state.pending.validTargets?.some(
-        (t) =>
-          t.playerId === playerId &&
-          t.columnIndex === columnIndex &&
-          t.position === position
-      );
-      if (isValidTarget) {
-        cardDiv.classList.add("sniper-target");
       }
     }
 

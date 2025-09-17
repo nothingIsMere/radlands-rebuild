@@ -1189,6 +1189,53 @@ export class CommandSystem {
 
         return result;
       }
+      case "pyromaniac_damage": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Pyromaniac");
+          return false;
+        }
+
+        // Store Parachute Base damage info if present
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Apply the damage
+        const result = this.resolveDamage(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        if (result) {
+          const target = this.state.getCard(
+            targetPlayer,
+            targetColumn,
+            targetPosition
+          );
+          console.log(`Pyromaniac damaged ${target?.name || "camp"}`);
+        }
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Pyromaniac ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return result;
+      }
       case "junk_restore": {
         // Check if this is a valid target
         const isValidTarget = this.state.pending.validTargets?.some(

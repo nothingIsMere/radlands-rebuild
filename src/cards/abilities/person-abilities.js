@@ -3,6 +3,60 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  pyromaniac: {
+    damagecamp: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find unprotected enemy camps
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          // Camps are always at position 0
+          const camp = opponent.columns[col].getCard(0);
+          if (camp && camp.type === "camp" && !camp.isDestroyed) {
+            // Check if unprotected (no cards in front)
+            const hasProtection =
+              opponent.columns[col].getCard(1) ||
+              opponent.columns[col].getCard(2);
+            if (!hasProtection) {
+              validTargets.push({
+                playerId: opponentId,
+                columnIndex: col,
+                position: 0,
+                card: camp,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Pyromaniac: No unprotected enemy camps to damage");
+          return false;
+        }
+
+        // Mark Pyromaniac as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up targeting for camp damage
+        state.pending = {
+          type: "pyromaniac_damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+        };
+
+        console.log(
+          `Pyromaniac: Select an unprotected enemy camp to damage (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
   sniper: {
     damage: {
       cost: 2,

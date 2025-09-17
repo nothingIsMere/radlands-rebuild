@@ -1055,6 +1055,81 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "assassin_destroy": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Assassin");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Assassin can only destroy people");
+          return false;
+        }
+
+        // Store Parachute Base damage info if present
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Destroy the target
+        target.isDestroyed = true;
+
+        // Handle destruction
+        if (target.isPunk) {
+          this.state.deck.unshift({
+            id: `returned_punk_${Date.now()}`,
+            name: "Unknown Card",
+            type: "person",
+            cost: 0,
+            isFaceDown: true,
+          });
+        } else {
+          this.state.discard.push(target);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        console.log(`Assassin destroyed ${target.name}`);
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Assassin ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return true;
+      }
       case "junk_restore": {
         // Check if this is a valid target
         const isValidTarget = this.state.pending.validTargets?.some(

@@ -843,3 +843,20 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .card.parachute-placement-target:hover::after {
   opacity: 1;
 }
+
+.card.assassin-target {
+  animation: pulse-dark 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #8b0000;
+  border-color: #8b0000;
+}
+
+@keyframes pulse-dark {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #8b0000;
+  }
+  50% {
+    box-shadow: 0 0 20px #8b0000, 0 0 30px #8b0000;
+  }
+}

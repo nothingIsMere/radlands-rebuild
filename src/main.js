@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "assassin_1",
+      name: "Assassin",
+      type: "person",
+      cost: 1,
+      junkEffect: "raid",
+      abilities: [{ effect: "destroy", cost: 2 }],
+    },
+    {
       id: "exterminator_1",
       name: "Exterminator",
       type: "person",
@@ -191,6 +199,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "assassin_2",
+      name: "Assassin",
+      type: "person",
+      cost: 1,
+      junkEffect: "raid",
+      abilities: [{ effect: "destroy", cost: 2 }],
+    },
     {
       id: "exterminator_2",
       name: "Exterminator",

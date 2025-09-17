@@ -81,6 +81,11 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "assassin_destroy":
+          message.textContent =
+            "💀 Select an unprotected enemy person to DESTROY";
+          overlay.classList.add("assassin-selection");
+          break;
         case "repair_bot_entry_restore":
           message.textContent =
             "🔧 Repair Bot: Select a damaged card to RESTORE";
@@ -328,6 +333,18 @@ export class UIRenderer {
     const globalSlotIndex = columnIndex * 3 + position;
     slotBadge.textContent = globalSlotIndex;
     cardDiv.appendChild(slotBadge);
+
+    if (this.state.pending?.type === "assassin_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("assassin-target");
+      }
+    }
 
     // Add targeting highlight for damage abilities
     if (this.state.pending?.type?.includes("damage")) {

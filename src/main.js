@@ -215,14 +215,7 @@ function setupTestGame() {
       junkEffect: "water",
       abilities: [{ effect: "damage", cost: 2 }],
     },
-    {
-      id: "gunner_2",
-      name: "Gunner",
-      type: "person",
-      cost: 1,
-      junkEffect: "restore",
-      abilities: [{ effect: "injure all", cost: 2 }],
-    },
+
     {
       id: "vigilante_2",
       name: "Vigilante",

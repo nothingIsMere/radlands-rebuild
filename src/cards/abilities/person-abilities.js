@@ -3,6 +3,106 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  gunner: {
+    injureall: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find all unprotected enemy people
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const targets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              // Check if protected
+              if (!opponent.columns[col].isProtected(pos)) {
+                targets.push({
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (targets.length === 0) {
+          console.log("Gunner: No unprotected enemy people to injure");
+          return false;
+        }
+
+        // Mark Gunner as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        console.log(
+          `Gunner: Injuring ${targets.length} unprotected enemy people`
+        );
+
+        // Apply damage to all targets immediately
+        targets.forEach((target) => {
+          const card = opponent.columns[target.columnIndex].getCard(
+            target.position
+          );
+          if (card && !card.isDestroyed) {
+            if (card.isDamaged || card.isPunk) {
+              // Destroy it
+              card.isDestroyed = true;
+              // Handle destruction based on type
+              if (card.isPunk) {
+                state.deck.unshift({
+                  id: `returned_punk_${Date.now()}`,
+                  name: "Unknown Card",
+                  type: "person",
+                  cost: 0,
+                  isFaceDown: true,
+                });
+              } else {
+                state.discard.push(card);
+              }
+
+              // Remove from column and shift cards
+              opponent.columns[target.columnIndex].setCard(
+                target.position,
+                null
+              );
+
+              // Move card in front back if needed
+              if (target.position < 2) {
+                const cardInFront = opponent.columns[
+                  target.columnIndex
+                ].getCard(target.position + 1);
+                if (cardInFront) {
+                  opponent.columns[target.columnIndex].setCard(
+                    target.position,
+                    cardInFront
+                  );
+                  opponent.columns[target.columnIndex].setCard(
+                    target.position + 1,
+                    null
+                  );
+                }
+              }
+
+              console.log(`Gunner destroyed ${card.name}`);
+            } else {
+              // Damage it
+              card.isDamaged = true;
+              card.isReady = false;
+              console.log(`Gunner injured ${card.name}`);
+            }
+          }
+        });
+
+        // Don't handle Parachute damage here - let Parachute Base do it
+        return true;
+      },
+    },
+  },
+
   woundedsoldier: {
     damage: {
       cost: 1,

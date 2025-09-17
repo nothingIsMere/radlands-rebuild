@@ -40,6 +40,12 @@ export class UIRenderer {
     // Add main game area
     gameContainer.appendChild(this.renderGameArea());
 
+    // Add ability selection modal if needed
+    const abilityModal = this.renderAbilitySelection();
+    if (abilityModal) {
+      gameContainer.appendChild(abilityModal);
+    }
+
     // Add controls
     gameContainer.appendChild(this.renderControls());
 
@@ -81,6 +87,15 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "parachute_select_ability":
+          message.textContent = `🪂 Select which ${this.state.pending.person.name} ability to use`;
+          overlay.classList.add("ability-selection");
+          break;
+
+        case "mimic_select_ability":
+          message.textContent = `🎭 Select which ${this.state.pending.targetCard.name} ability to copy`;
+          overlay.classList.add("ability-selection");
+          break;
         case "molgur_destroy_camp":
           message.textContent =
             "💀 Molgur Stang: Select ANY enemy camp to DESTROY (ignores protection)";
@@ -563,10 +578,20 @@ export class UIRenderer {
           if (
             canUseAbility &&
             playerId === this.state.currentPlayer &&
-            !this.state.pending // This already exists but make sure it's checked
+            !this.state.pending
           ) {
             const btn = this.createElement("button", "ability-btn");
-            btn.textContent = `${ability.effect} (${ability.cost}💧)`;
+
+            // Special text for Rabble Rouser's conditional ability
+            if (
+              card.name === "Rabble Rouser" &&
+              ability.effect === "punkdamage"
+            ) {
+              btn.textContent = `Damage (if punk) (${ability.cost}💧)`;
+            } else {
+              btn.textContent = `${ability.effect} (${ability.cost}💧)`;
+            }
+
             btn.addEventListener("click", (e) => {
               e.stopPropagation();
 
@@ -591,7 +616,15 @@ export class UIRenderer {
           } else {
             // Show disabled ability text
             const text = this.createElement("span", "ability-text-disabled");
-            text.textContent = `${ability.effect} (${ability.cost}💧)`;
+
+            if (
+              card.name === "Rabble Rouser" &&
+              ability.effect === "punkdamage"
+            ) {
+              text.textContent = `Damage (if punk) (${ability.cost}💧)`;
+            } else {
+              text.textContent = `${ability.effect} (${ability.cost}💧)`;
+            }
 
             // Add specific reason for blocking
             if (this.state.pending) {
@@ -665,6 +698,82 @@ export class UIRenderer {
     }
 
     return cardDiv;
+  }
+
+  renderAbilitySelection() {
+    if (
+      !this.state.pending ||
+      (this.state.pending.type !== "parachute_select_ability" &&
+        this.state.pending.type !== "mimic_select_ability")
+    ) {
+      return null;
+    }
+
+    const modal = this.createElement("div", "ability-selection-modal");
+    const backdrop = this.createElement("div", "modal-backdrop");
+
+    const content = this.createElement("div", "modal-content");
+    const title = this.createElement("h3", "modal-title");
+
+    let abilities;
+    if (this.state.pending.type === "parachute_select_ability") {
+      title.textContent = `Choose ${this.state.pending.person.name}'s ability to use:`;
+      abilities = this.state.pending.person.abilities;
+    } else {
+      title.textContent = `Choose which ${this.state.pending.targetCard.name} ability to copy:`;
+      abilities = this.state.pending.targetCard.abilities;
+    }
+
+    content.appendChild(title);
+
+    const buttonContainer = this.createElement("div", "ability-buttons");
+
+    abilities.forEach((ability, index) => {
+      const btn = this.createElement("button", "ability-select-btn");
+
+      // Check if player can afford it
+      const player = this.state.players[this.state.pending.sourcePlayerId];
+      const canAfford = player.water >= ability.cost;
+
+      // Special text for conditional abilities
+      let abilityText = `${ability.effect} (${ability.cost}💧)`;
+      if (ability.effect === "punkdamage") {
+        abilityText = `Damage if Punk (${ability.cost}💧)`;
+      }
+
+      btn.textContent = abilityText;
+      btn.disabled = !canAfford;
+
+      if (!canAfford) {
+        btn.title = "Not enough water";
+        btn.classList.add("disabled");
+      }
+
+      btn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          abilityIndex: index,
+        });
+      });
+
+      buttonContainer.appendChild(btn);
+    });
+
+    // Add cancel button
+    const cancelBtn = this.createElement("button", "cancel-btn");
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => {
+      // Cancel the whole Parachute Base or Mimic action
+      this.state.pending = null;
+      this.render();
+    });
+    buttonContainer.appendChild(cancelBtn);
+
+    content.appendChild(buttonContainer);
+    modal.appendChild(backdrop);
+    modal.appendChild(content);
+
+    return modal;
   }
 
   canTargetForDamage(playerId, columnIndex, position) {

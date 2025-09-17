@@ -3,6 +3,78 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  rabblerouser: {
+    gainpunk: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if deck has cards
+        if (state.deck.length === 0) {
+          console.log("Rabble Rouser: Cannot gain punk - deck is empty");
+          return false;
+        }
+
+        // Mark Rabble Rouser as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up punk placement
+        state.pending = {
+          type: "place_punk",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+        };
+
+        console.log("Rabble Rouser: Select where to place the punk");
+        return true;
+      },
+    },
+
+    punkdamage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if player has any punks BEFORE marking as not ready
+        const player = state.players[context.playerId];
+        let hasPunk = false;
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.isPunk) {
+              hasPunk = true;
+              break;
+            }
+          }
+          if (hasPunk) break;
+        }
+
+        if (!hasPunk) {
+          console.log(
+            "Rabble Rouser: You need a punk in play to use this ability"
+          );
+          // DON'T mark as not ready, DON'T deduct water
+          // Return false to indicate the ability couldn't be used
+          return false;
+        }
+
+        // Only NOW mark as not ready since we can actually use the ability
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up damage targeting
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log("Rabble Rouser: Select target to damage (you have a punk)");
+        return true;
+      },
+    },
+  },
   pyromaniac: {
     damagecamp: {
       cost: 1,

@@ -64,6 +64,17 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "rabble_rouser_1",
+      name: "Rabble Rouser",
+      type: "person",
+      cost: 1,
+      junkEffect: "raid",
+      abilities: [
+        { effect: "gainpunk", cost: 1 },
+        { effect: "punkdamage", cost: 1 },
+      ],
+    },
+    {
       id: "molgur_stang_1",
       name: "Molgur Stang",
       type: "person",
@@ -223,6 +234,17 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "rabble_rouser_2",
+      name: "Rabble Rouser",
+      type: "person",
+      cost: 1,
+      junkEffect: "raid",
+      abilities: [
+        { effect: "gainpunk", cost: 1 },
+        { effect: "punkdamage", cost: 1 },
+      ],
+    },
     {
       id: "molgur_stang_2",
       name: "Molgur Stang",

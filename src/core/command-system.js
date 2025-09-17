@@ -968,14 +968,26 @@ export class CommandSystem {
     );
 
     // Execute ability
-    this.executeAbility(ability, {
+    const result = this.executeAbility(ability, {
       source: card,
       playerId: playerId,
-      columnIndex,
-      position,
+      columnIndex: columnIndex,
+      position: position,
     });
 
-    // Mark as used (not ready)
+    // Check if ability failed to execute
+    if (result === false) {
+      // Refund the water
+      player.water += ability.cost;
+      console.log(`Ability could not be used, refunded ${ability.cost} water`);
+
+      // Mark card as ready again (it was marked not ready earlier)
+      card.isReady = true;
+
+      return false;
+    }
+
+    // Mark as used (not ready) - only if ability succeeded
     card.isReady = false;
 
     this.state.turnEvents.abilityUsedThisTurn = true;
@@ -1158,6 +1170,77 @@ export class CommandSystem {
             parachuteBaseDamage.targetPlayer,
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return true;
+      }
+      case "parachute_select_ability": {
+        // This handles when player clicks an ability button to select which one to use
+        const pending = this.state.pending;
+        const abilityIndex = payload.abilityIndex;
+
+        if (
+          abilityIndex === undefined ||
+          !pending.person.abilities[abilityIndex]
+        ) {
+          console.log("Invalid ability selection");
+          return false;
+        }
+
+        const ability = pending.person.abilities[abilityIndex];
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Check if player can afford it
+        if (player.water < ability.cost) {
+          console.log(
+            `Not enough water for ${ability.effect} (need ${ability.cost}, have ${player.water})`
+          );
+          // Still need to damage the person even if can't use ability
+          this.state.pending = null;
+          this.applyParachuteBaseDamage(
+            pending.sourcePlayerId,
+            pending.targetColumn,
+            pending.targetSlot
+          );
+          return true;
+        }
+
+        // Pay for and execute the chosen ability
+        player.water -= ability.cost;
+        console.log(
+          `Parachute Base: Paid ${ability.cost} for ${pending.person.name}'s ${ability.effect}`
+        );
+
+        // Clear pending before executing
+        this.state.pending = null;
+
+        // Execute the chosen ability
+        this.executeAbility(ability, {
+          source: pending.person,
+          playerId: pending.sourcePlayerId,
+          columnIndex: pending.targetColumn,
+          position: pending.targetSlot,
+          fromParachuteBase: true,
+        });
+
+        console.log(`Parachute Base: Executed ${ability.effect} ability`);
+
+        // Check if ability set up a new pending state
+        if (this.state.pending) {
+          // Ability needs targeting/resolution
+          this.state.pending.parachuteBaseDamage = {
+            targetPlayer: pending.sourcePlayerId,
+            targetColumn: pending.targetColumn,
+            targetPosition: pending.targetSlot,
+          };
+          console.log("Parachute Base: Will damage after ability resolves");
+        } else {
+          // Ability completed immediately, apply damage now
+          this.applyParachuteBaseDamage(
+            pending.sourcePlayerId,
+            pending.targetColumn,
+            pending.targetSlot
           );
         }
 
@@ -1849,6 +1932,28 @@ export class CommandSystem {
 
         // No entry trait pending, continue with ability use and damage
         if (person.abilities?.length > 0) {
+          // Check if person has multiple abilities
+          if (person.abilities.length > 1) {
+            // Multiple abilities - let player choose
+            this.state.pending = {
+              type: "parachute_select_ability",
+              person: person,
+              sourcePlayerId: pb.sourcePlayerId,
+              targetColumn: targetColumn,
+              targetSlot: targetSlot,
+            };
+            console.log(
+              `Parachute Base: Choose which ${person.name} ability to use`
+            );
+            console.log(
+              `Available abilities: ${person.abilities
+                .map((a) => `${a.effect} (${a.cost} water)`)
+                .join(", ")}`
+            );
+            return true;
+          }
+
+          // Single ability - use it automatically
           const ability = person.abilities[0];
 
           // Pay for the ability
@@ -1929,7 +2034,6 @@ export class CommandSystem {
         return true;
       }
 
-      // In handleSelectTarget method, add this case:
       case "mimic_select_target": {
         const pending = this.state.pending;
 
@@ -1951,12 +2055,36 @@ export class CommandSystem {
           targetColumn,
           targetPosition
         );
+
         if (!targetCard || !targetCard.abilities?.length) {
           console.log("Target has no abilities");
           return false;
         }
 
-        // For now, use the first ability
+        // Check if target has multiple abilities
+        if (targetCard.abilities.length > 1) {
+          // Multiple abilities - let player choose which to copy
+          this.state.pending = {
+            type: "mimic_select_ability",
+            targetCard: targetCard,
+            targetPlayerId: targetPlayer,
+            targetColumnIndex: targetColumn,
+            targetPosition: targetPosition,
+            source: pending.source,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceContext: pending.sourceContext,
+            parachuteBaseDamage: pending.parachuteBaseDamage,
+          };
+          console.log(`Mimic: Choose which ${targetCard.name} ability to copy`);
+          console.log(
+            `Available abilities: ${targetCard.abilities
+              .map((a) => `${a.effect} (${a.cost} water)`)
+              .join(", ")}`
+          );
+          return true;
+        }
+
+        // Single ability - use it automatically
         const targetAbility = targetCard.abilities[0];
 
         // Check if player can afford the ability
@@ -2004,6 +2132,79 @@ export class CommandSystem {
         );
 
         // Restore Parachute Base damage if it was present
+        if (parachuteBaseDamage) {
+          if (!this.state.pending) {
+            // Ability completed immediately, apply damage now
+            this.state.pending = { parachuteBaseDamage };
+            this.checkAndApplyParachuteBaseDamage();
+          } else {
+            // Ability set up new pending, add parachute damage to it
+            this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+          }
+        }
+
+        return true;
+      }
+
+      case "mimic_select_ability": {
+        const pending = this.state.pending;
+        const abilityIndex = payload.abilityIndex;
+
+        if (
+          abilityIndex === undefined ||
+          !pending.targetCard.abilities[abilityIndex]
+        ) {
+          console.log("Invalid ability selection for Mimic");
+          return false;
+        }
+
+        const targetAbility = pending.targetCard.abilities[abilityIndex];
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Check if player can afford the chosen ability
+        if (player.water < targetAbility.cost) {
+          console.log(
+            `Not enough water for ${pending.targetCard.name}'s ${targetAbility.effect} (need ${targetAbility.cost})`
+          );
+          // Mark Mimic as ready again since we couldn't complete
+          pending.source.isReady = true;
+          this.state.pending = null;
+          return false;
+        }
+
+        // Pay the cost
+        player.water -= targetAbility.cost;
+        console.log(
+          `Mimic: Paid ${targetAbility.cost} water to copy ${pending.targetCard.name}'s ${targetAbility.effect}`
+        );
+
+        // Mark Mimic as not ready
+        pending.source.isReady = false;
+
+        // Store Parachute Base damage if needed
+        const parachuteBaseDamage = pending.parachuteBaseDamage;
+
+        // Clear the pending state
+        this.state.pending = null;
+
+        // Execute the copied ability with Mimic as the source
+        const mimicContext = {
+          source: pending.source,
+          playerId: pending.sourcePlayerId,
+          columnIndex: pending.sourceContext.columnIndex,
+          position: pending.sourceContext.position,
+          copiedFrom: pending.targetCard.name,
+          fromMimic: true,
+        };
+
+        // Execute the ability
+        this.executeAbility(targetAbility, mimicContext);
+
+        console.log(
+          `Mimic copied and used ${pending.targetCard.name}'s ${targetAbility.effect} ability`
+        );
+
+        // Handle Parachute Base damage if present
         if (parachuteBaseDamage) {
           if (!this.state.pending) {
             // Ability completed immediately, apply damage now

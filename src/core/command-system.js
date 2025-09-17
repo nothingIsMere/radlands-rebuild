@@ -1176,7 +1176,6 @@ export class CommandSystem {
         return true;
       }
       case "parachute_select_ability": {
-        // This handles when player clicks an ability button to select which one to use
         const pending = this.state.pending;
         const abilityIndex = payload.abilityIndex;
 
@@ -1196,7 +1195,6 @@ export class CommandSystem {
           console.log(
             `Not enough water for ${ability.effect} (need ${ability.cost}, have ${player.water})`
           );
-          // Still need to damage the person even if can't use ability
           this.state.pending = null;
           this.applyParachuteBaseDamage(
             pending.sourcePlayerId,
@@ -1212,13 +1210,17 @@ export class CommandSystem {
           `Parachute Base: Paid ${ability.cost} for ${pending.person.name}'s ${ability.effect}`
         );
 
+        // Store the person's ID so we can find it later (position might change)
+        const personId = pending.person.id;
+        const sourcePlayerId = pending.sourcePlayerId;
+
         // Clear pending before executing
         this.state.pending = null;
 
         // Execute the chosen ability
         this.executeAbility(ability, {
           source: pending.person,
-          playerId: pending.sourcePlayerId,
+          playerId: sourcePlayerId,
           columnIndex: pending.targetColumn,
           position: pending.targetSlot,
           fromParachuteBase: true,
@@ -1226,21 +1228,44 @@ export class CommandSystem {
 
         console.log(`Parachute Base: Executed ${ability.effect} ability`);
 
+        // Find where the person is NOW (might have moved)
+        let currentPosition = null;
+        let currentColumn = null;
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card =
+              this.state.players[sourcePlayerId].columns[col].getCard(pos);
+            if (card && card.id === personId) {
+              currentColumn = col;
+              currentPosition = pos;
+              break;
+            }
+          }
+          if (currentPosition !== null) break;
+        }
+
+        if (currentPosition === null) {
+          console.log("ERROR: Can't find the person that was paradropped");
+          return true;
+        }
+
         // Check if ability set up a new pending state
         if (this.state.pending) {
-          // Ability needs targeting/resolution
+          // Ability needs resolution - store CURRENT position for damage
           this.state.pending.parachuteBaseDamage = {
-            targetPlayer: pending.sourcePlayerId,
-            targetColumn: pending.targetColumn,
-            targetPosition: pending.targetSlot,
+            targetPlayer: sourcePlayerId,
+            targetColumn: currentColumn,
+            targetPosition: currentPosition,
           };
-          console.log("Parachute Base: Will damage after ability resolves");
+          console.log(
+            `Parachute Base: Will damage ${pending.person.name} at current position (${currentColumn}, ${currentPosition}) after ability resolves`
+          );
         } else {
-          // Ability completed immediately, apply damage now
+          // Ability completed immediately, apply damage now at CURRENT position
           this.applyParachuteBaseDamage(
-            pending.sourcePlayerId,
-            pending.targetColumn,
-            pending.targetSlot
+            sourcePlayerId,
+            currentColumn,
+            currentPosition
           );
         }
 
@@ -1802,8 +1827,71 @@ export class CommandSystem {
         return true;
       }
 
-      case "place_punk":
-        return this.resolvePlacePunk(targetColumn, targetPosition);
+      case "place_punk": {
+        // Store parachute damage info before resolving
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // If this is from Parachute Base, we need to track the original person's ID
+        let parachutePersonId = null;
+        if (parachuteBaseDamage) {
+          // Find the card at the stored position and get its ID
+          const card = this.state.getCard(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+          if (card) {
+            parachutePersonId = card.id;
+            console.log(
+              `Tracking ${card.name} (ID: ${parachutePersonId}) for Parachute damage`
+            );
+          }
+        }
+
+        const result = this.resolvePlacePunk(targetColumn, targetPosition);
+
+        // Apply Parachute Base damage if needed
+        if (result && parachuteBaseDamage && parachutePersonId) {
+          // Find where the person is NOW after punk placement
+          let currentPosition = null;
+          let currentColumn = null;
+
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 0; pos < 3; pos++) {
+              const card =
+                this.state.players[parachuteBaseDamage.targetPlayer].columns[
+                  col
+                ].getCard(pos);
+              if (card && card.id === parachutePersonId) {
+                currentColumn = col;
+                currentPosition = pos;
+                console.log(
+                  `Found ${card.name} at new position: column ${col}, position ${pos}`
+                );
+                break;
+              }
+            }
+            if (currentPosition !== null) break;
+          }
+
+          if (currentPosition !== null) {
+            console.log(
+              "Punk placed, applying Parachute Base damage to correct person"
+            );
+            this.applyParachuteBaseDamage(
+              parachuteBaseDamage.targetPlayer,
+              currentColumn,
+              currentPosition
+            );
+          } else {
+            console.log(
+              "ERROR: Lost track of the person that used Parachute Base"
+            );
+          }
+        }
+
+        return result;
+      }
 
       case "parachute_select_person": {
         // This case is triggered when a card is selected from hand

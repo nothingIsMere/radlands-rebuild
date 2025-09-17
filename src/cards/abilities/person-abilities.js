@@ -35,17 +35,20 @@ export const personAbilities = {
           return true;
         }
 
-        // Set up selection for which junk to use (or skip)
+        // Set up selection state
         state.pending = {
           type: "scientist_select_junk",
           source: context.source,
+          sourceCard: context.source, // Add this explicit reference
           sourcePlayerId: context.playerId,
           discardedCards: cardsWithJunk,
           context,
         };
 
         console.log(
-          `Scientist: Choose junk effect to use (${cardsWithJunk.length} options)`
+          `${
+            context.fromMimic ? "Mimic (as Scientist)" : "Scientist"
+          }: Choose junk effect to use (${cardsWithJunk.length} options)`
         );
         return true;
       },

@@ -742,6 +742,7 @@ export class UIRenderer {
     console.log("Pending type specifically:", this.state.pending?.type);
 
     // Handle Scientist's junk selection
+    // In the scientist_select_junk case:
     if (
       this.state.pending &&
       this.state.pending.type === "scientist_select_junk"
@@ -762,7 +763,7 @@ export class UIRenderer {
       // Show each discarded card with its junk effect
       this.state.pending.discardedCards.forEach((card, index) => {
         const btn = this.createElement("button", "ability-select-btn");
-        btn.textContent = `${card.name}: ${card.junkEffect}`;
+        btn.textContent = `${card.name}: Use ${card.junkEffect} effect`;
 
         btn.addEventListener("click", () => {
           this.commands.execute({
@@ -774,18 +775,20 @@ export class UIRenderer {
         buttonContainer.appendChild(btn);
       });
 
-      // Add skip button
-      const skipBtn = this.createElement("button", "cancel-btn");
-      skipBtn.textContent = "Skip (Don't use any effect)";
+      // Add "no junk" option - NOT a cancel/skip!
+      const noJunkBtn = this.createElement("button", "ability-select-btn");
+      noJunkBtn.textContent = "Discard all without using any junk effect";
+      noJunkBtn.style.marginTop = "10px";
 
-      skipBtn.addEventListener("click", () => {
+      noJunkBtn.addEventListener("click", () => {
+        // Signal no junk with index -1
         this.commands.execute({
           type: "SELECT_TARGET",
           junkIndex: -1,
         });
       });
 
-      buttonContainer.appendChild(skipBtn);
+      buttonContainer.appendChild(noJunkBtn);
       content.appendChild(buttonContainer);
       modal.appendChild(backdrop);
       modal.appendChild(content);

@@ -514,6 +514,14 @@ export class CommandSystem {
         // These effects complete immediately - discard now
         this.state.discard.push(card);
 
+        if (
+          this.state.pending?.fromScientist &&
+          this.state.pending?.scientistCard
+        ) {
+          this.state.pending.scientistCard.isReady = false;
+          console.log("Scientist marked not ready after junk effect completed");
+        }
+
         if (junkEffect === "water") {
           player.water += 1;
           console.log("Gained 1 water from junk effect");
@@ -534,6 +542,13 @@ export class CommandSystem {
       case "punk":
         // These effects need choices - DON'T discard yet
         // Store the card in pending so we can discard it after choice
+        if (
+          this.state.pending?.fromScientist &&
+          this.state.pending?.scientistCard
+        ) {
+          this.state.pending.scientistCard.isReady = false;
+          console.log("Scientist marked not ready after junk effect completed");
+        }
         this.state.pending = {
           type:
             junkEffect === "punk"
@@ -1105,10 +1120,39 @@ export class CommandSystem {
       case "scientist_select_junk": {
         const selectedIndex = payload.junkIndex;
 
-        // Handle skip option
+        // Store info needed after clearing pending
+        // sourceCard might be Mimic, not Scientist, so we need to handle both cases
+        const sourceCard =
+          this.state.pending.sourceCard || this.state.pending.source;
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+        // Handle "no junk" option
         if (selectedIndex === -1) {
-          console.log("Scientist: Skipping junk effect");
+          console.log(
+            "Scientist: Discarded all cards without using any junk effect"
+          );
+
+          // Mark ability complete - the source card (Scientist or Mimic) becomes not ready
+          if (sourceCard) {
+            sourceCard.isReady = false;
+            console.log(
+              `${sourceCard.name} marked not ready after Scientist ability completed`
+            );
+          }
+
+          // Clear pending
           this.state.pending = null;
+
+          // Apply Parachute Base damage if needed
+          if (parachuteBaseDamage) {
+            this.applyParachuteBaseDamage(
+              parachuteBaseDamage.targetPlayer,
+              parachuteBaseDamage.targetColumn,
+              parachuteBaseDamage.targetPosition
+            );
+          }
+
           return true;
         }
 
@@ -1122,23 +1166,22 @@ export class CommandSystem {
           `Scientist: Using ${selectedCard.name}'s junk effect: ${selectedCard.junkEffect}`
         );
 
-        // Store context for potential Parachute Base
-        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
-        const sourcePlayerId = this.state.pending.sourcePlayerId;
-
-        // Clear pending before processing junk
-        this.state.pending = null;
-
-        // Use the existing handleJunkCard logic, but we need to simulate it
-        // since the card isn't actually in hand
+        // Process the junk effect
         const junkEffect = selectedCard.junkEffect?.toLowerCase();
         const player = this.state.players[sourcePlayerId];
 
-        // Process the effect using existing logic
+        // Clear pending before processing immediate effects
+        this.state.pending = null;
+
+        // Process the effect
         switch (junkEffect) {
           case "water":
             player.water += 1;
             console.log("Gained 1 water from Scientist junk");
+            // Mark source card not ready
+            if (sourceCard) {
+              sourceCard.isReady = false;
+            }
             break;
 
           case "card":
@@ -1148,16 +1191,24 @@ export class CommandSystem {
               player.hand.push(drawnCard);
               console.log(`Drew ${drawnCard.name} from Scientist junk`);
             }
+            // Mark source card not ready
+            if (sourceCard) {
+              sourceCard.isReady = false;
+            }
             break;
 
           case "raid":
             this.executeRaid(sourcePlayerId);
+            // Mark source card not ready
+            if (sourceCard) {
+              sourceCard.isReady = false;
+            }
             break;
 
           case "injure":
           case "restore":
           case "punk":
-            // These need targeting - set up pending
+            // These need targeting - set up new pending
             this.state.pending = {
               type:
                 junkEffect === "punk"
@@ -1166,22 +1217,25 @@ export class CommandSystem {
                   ? "junk_injure"
                   : "junk_restore",
               sourcePlayerId: sourcePlayerId,
-              fromScientist: true, // Flag to know this came from Scientist
+              fromScientist: true,
+              scientistCard: sourceCard, // Store reference to mark not ready later
             };
             console.log(`Scientist junk: Setting up ${junkEffect} targeting`);
+
+            // Preserve parachute damage if present
+            if (parachuteBaseDamage) {
+              this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+            }
             break;
         }
 
-        // Apply Parachute Base damage if needed and no new pending
+        // Apply Parachute Base damage if no new pending was created
         if (parachuteBaseDamage && !this.state.pending) {
           this.applyParachuteBaseDamage(
             parachuteBaseDamage.targetPlayer,
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
-        } else if (parachuteBaseDamage && this.state.pending) {
-          // Preserve parachute damage through the junk targeting
-          this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
         }
 
         return true;

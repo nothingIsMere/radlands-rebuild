@@ -860,3 +860,19 @@ body.has-pending .player-board.active .card.parachute-placement-target {
     box-shadow: 0 0 20px #8b0000, 0 0 30px #8b0000;
   }
 }
+
+.card.sniper-target {
+  animation: pulse-red 1s infinite;
+  cursor: crosshair;
+  box-shadow: 0 0 10px #ff0000;
+  border-color: #ff0000;
+}
+
+.card.sniper-target::before {
+  content: "🎯";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  font-size: 20px;
+  z-index: 10;
+}

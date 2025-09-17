@@ -3,6 +3,57 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  sniper: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find ALL enemy cards (ignores protection, includes camps)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              // Sniper can target ANYTHING, protected or not
+              validTargets.push({
+                playerId: opponentId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Sniper: No targets available");
+          return false;
+        }
+
+        // Mark Sniper as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up targeting with special flag for ignoring protection
+        state.pending = {
+          type: "sniper_damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+          allowProtected: true, // Key flag for ignoring protection
+        };
+
+        console.log(
+          `Sniper: Select any enemy card to damage (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
   assassin: {
     destroy: {
       cost: 2,

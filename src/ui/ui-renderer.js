@@ -81,6 +81,11 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "sniper_damage":
+          message.textContent =
+            "🎯 Sniper: Select ANY enemy card to damage (ignores protection)";
+          overlay.classList.add("sniper-selection");
+          break;
         case "assassin_destroy":
           message.textContent =
             "💀 Select an unprotected enemy person to DESTROY";
@@ -355,6 +360,18 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("damage-target");
+      }
+    }
+
+    if (this.state.pending?.type === "sniper_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("sniper-target");
       }
     }
 
@@ -780,6 +797,28 @@ export class UIRenderer {
 
   renderControls() {
     const controls = this.createElement("div", "controls");
+
+    // Draw Card button (only during actions phase)
+    if (this.state.phase === "actions" && !this.state.pending) {
+      const drawCardBtn = this.createElement("button");
+      drawCardBtn.textContent = `Draw Card (2💧)`;
+
+      const currentPlayer = this.state.players[this.state.currentPlayer];
+      drawCardBtn.disabled = currentPlayer.water < CONSTANTS.DRAW_COST;
+
+      drawCardBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "DRAW_CARD",
+          playerId: this.state.currentPlayer,
+        });
+      });
+
+      if (currentPlayer.water < CONSTANTS.DRAW_COST) {
+        drawCardBtn.title = "Not enough water";
+      }
+
+      controls.appendChild(drawCardBtn);
+    }
 
     // End Turn button
     const endTurn = this.createElement("button");

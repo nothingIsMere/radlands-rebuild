@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "sniper_1",
+      name: "Sniper",
+      type: "person",
+      cost: 1,
+      junkEffect: "restore",
+      abilities: [{ effect: "damage", cost: 2 }],
+    },
+    {
       id: "assassin_1",
       name: "Assassin",
       type: "person",
@@ -199,6 +207,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "sniper_2",
+      name: "Sniper",
+      type: "person",
+      cost: 1,
+      junkEffect: "restore",
+      abilities: [{ effect: "damage", cost: 2 }],
+    },
     {
       id: "assassin_2",
       name: "Assassin",

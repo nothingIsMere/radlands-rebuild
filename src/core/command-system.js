@@ -106,16 +106,70 @@ export class CommandSystem {
     return result === "destroyed" || result === "damaged";
   }
 
+  returnPersonToHand(playerId, columnIndex, position) {
+    const player = this.state.players[playerId];
+    const column = player.columns[columnIndex];
+    const card = column.getCard(position);
+
+    if (!card || card.type !== "person") return false;
+
+    // Remove from column
+    column.setCard(position, null);
+
+    // If it's a punk, flip it over to reveal the actual card
+    if (card.isPunk) {
+      const revealedCard = {
+        id: card.id,
+        name: card.originalCard?.name || card.name,
+        type: card.originalCard?.type || "person",
+        cost: card.originalCard?.cost || card.cost,
+        abilities: card.originalCard?.abilities || card.abilities,
+        junkEffect: card.originalCard?.junkEffect || card.junkEffect,
+      };
+      player.hand.push(revealedCard);
+      console.log(`Returned punk to hand - revealed as ${revealedCard.name}!`);
+    } else {
+      // Normal person returns as-is
+      const returnCard = {
+        id: card.id,
+        name: card.name,
+        type: card.type,
+        cost: card.cost,
+        abilities: card.abilities,
+        junkEffect: card.junkEffect,
+      };
+      player.hand.push(returnCard);
+      console.log(`Returned ${card.name} to hand`);
+    }
+
+    // Move cards behind forward
+    if (position < CONSTANTS.MAX_POSITION) {
+      const cardInFront = column.getCard(position + 1);
+      if (cardInFront) {
+        column.setCard(position, cardInFront);
+        column.setCard(position + 1, null);
+      }
+    }
+
+    return true;
+  }
+
   destroyPerson(player, column, position, card) {
     if (card.isPunk) {
-      // Punk returns to deck
-      this.state.deck.unshift({
-        id: `returned_punk_${Date.now()}`,
-        name: "Unknown Card",
-        type: "person",
-        cost: 0,
-        isFaceDown: true,
-      });
+      // Restore the original card to return to deck
+      const returnCard = {
+        ...card,
+        name: card.originalName, // Restore original name
+        isPunk: undefined,
+        isFaceDown: undefined,
+        originalName: undefined,
+      };
+      delete returnCard.isPunk;
+      delete returnCard.isFaceDown;
+      delete returnCard.originalName;
+
+      this.state.deck.unshift(returnCard);
+      console.log(`Punk returned to top of deck (was ${returnCard.name})`);
     } else {
       // Normal person to discard
       this.state.discard.push(card);
@@ -133,7 +187,7 @@ export class CommandSystem {
       }
     }
 
-    console.log(`${card.name} destroyed`);
+    console.log(`${card.isPunk ? "Punk" : card.name} destroyed`);
   }
 
   placeCardWithPush(column, position, newCard) {
@@ -262,24 +316,45 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
     const column = player.columns[targetColumn];
 
+    console.log(`Deck size before taking card: ${this.state.deck.length}`);
+
+    // Check if deck has cards
+    if (this.state.deck.length === 0) {
+      console.log("Cannot place punk - deck is empty");
+      this.state.pending = null;
+      return false;
+    }
+
+    // Take the top card from the deck
+    const topCard = this.state.deck.shift();
+    console.log(`Took ${topCard.name} from deck to make punk`);
+    console.log(`Deck size after taking card: ${this.state.deck.length}`);
+
+    // Create punk from the actual card (face-down)
     const punk = {
-      id: `punk_${Date.now()}`,
-      name: "Punk",
-      type: "person",
+      ...topCard, // Keep ALL original properties including id
       isPunk: true,
+      isFaceDown: true,
       isReady: false,
       isDamaged: false,
-      cost: 0,
+      // Store the original for when flipped
+      originalName: topCard.name,
+      name: "Punk", // Override name for display
     };
 
+    // Try to place with push
     if (!this.placeCardWithPush(column, targetPosition, punk)) {
+      // If can't place, return card to deck
+      this.state.deck.unshift(topCard);
+      console.log("Couldn't place punk, returned card to deck");
       return false;
     }
 
     console.log(
-      `Placed punk at column ${targetColumn}, position ${targetPosition}`
+      `Placed punk (face-down ${topCard.name}) at column ${targetColumn}, position ${targetPosition}`
     );
     this.state.pending = null;
+
     return true;
   }
 
@@ -380,26 +455,6 @@ export class CommandSystem {
 
     target.isDamaged = false;
     target.isReady = false;
-    this.state.pending = null;
-    return true;
-  }
-
-  resolvePlacePunk(targetColumn, targetPosition) {
-    const player = this.state.players[this.state.currentPlayer];
-    const column = player.columns[targetColumn];
-
-    if (!column.canPlaceCard(targetPosition, { type: "person" })) return false;
-
-    const punk = {
-      id: `punk_${Date.now()}`,
-      name: "Punk",
-      type: "person",
-      isPunk: true,
-      isReady: false,
-      isDamaged: false,
-    };
-
-    column.setCard(targetPosition, punk);
     this.state.pending = null;
     return true;
   }

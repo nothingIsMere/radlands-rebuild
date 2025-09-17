@@ -111,12 +111,13 @@ function setupTestGame() {
       junkEffect: "water",
       abilities: [{ effect: "raid", cost: 1 }],
     },
+    // Add to left player's hand
     {
-      id: "test_person_1",
-      name: "Test Fighter",
+      id: "wounded_soldier_1",
+      name: "Wounded Soldier",
       type: "person",
-      cost: 2,
-      junkEffect: "draw",
+      cost: 1,
+      junkEffect: "injure",
       abilities: [{ effect: "damage", cost: 1 }],
     },
     {

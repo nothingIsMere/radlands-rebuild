@@ -44,19 +44,27 @@ export const cardTraits = {
   woundedsoldier: {
     onEntry: (state, context) => {
       const player = state.players[context.playerId];
+
       // Draw a card
       if (state.deck.length > 0) {
-        player.hand.push(state.deck.shift());
+        const drawnCard = state.deck.shift();
+        player.hand.push(drawnCard);
+        console.log(`Wounded Soldier: Drew ${drawnCard.name}`);
+      } else {
+        console.log("Wounded Soldier: Deck empty, cannot draw");
       }
+
       // Damage self
-      const card = state.getCard(
-        context.playerId,
-        context.columnIndex,
-        context.position
-      );
-      card.isDamaged = true;
-      card.isReady = false;
-      console.log("Wounded Soldier: Drew card and damaged self");
+      const card = state.players[context.playerId].columns[
+        context.columnIndex
+      ].getCard(context.position);
+
+      if (card) {
+        card.isDamaged = true;
+        card.isReady = false;
+        console.log("Wounded Soldier: Damaged self on entry");
+      }
+
       return true;
     },
   },

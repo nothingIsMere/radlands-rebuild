@@ -3,6 +3,28 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  woundedsoldier: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Mark as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log("Wounded Soldier: Select target to damage");
+        return true;
+      },
+    },
+  },
+
   damage: {
     cost: 2,
     handler: (state, context) => {

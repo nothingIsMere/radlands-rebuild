@@ -213,6 +213,7 @@ export class CommandSystem {
   }
 
   resolveInjure(targetPlayer, targetColumn, targetPosition) {
+    // Same as damage but only for people
     const target = this.state.getCard(
       targetPlayer,
       targetColumn,
@@ -220,8 +221,27 @@ export class CommandSystem {
     );
     if (!target || target.type !== "person") return false;
 
-    // Just use the damage resolution since injure works the same for people
-    return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+    // Store Parachute Base info before clearing pending
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+    // Use resolveDamage (which will clear pending)
+    const result = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    // Apply Parachute Base damage if needed
+    if (result && parachuteBaseDamage) {
+      console.log("Applying Parachute Base damage after injure");
+      this.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+
+    return result;
   }
 
   resolveRestore(targetPlayer, targetColumn, targetPosition) {
@@ -1185,8 +1205,53 @@ export class CommandSystem {
         return damaged;
       }
 
-      case "injure":
-        return this.resolveInjure(targetPlayer, targetColumn, targetPosition);
+      case "injure": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid injure target");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Can only injure people");
+          return false;
+        }
+
+        // CRITICAL: Store Parachute Base damage info BEFORE calling resolveInjure
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        console.log("Parachute Base damage info stored:", parachuteBaseDamage);
+
+        // Call resolveInjure (which will clear pending)
+        const result = this.resolveInjure(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Now apply Parachute Base damage if it existed
+        if (parachuteBaseDamage) {
+          console.log("Applying Parachute Base damage to Vigilante");
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return result;
+      }
 
       case "restore": {
         const target = this.state.getCard(

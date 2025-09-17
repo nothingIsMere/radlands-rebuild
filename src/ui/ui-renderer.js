@@ -788,13 +788,49 @@ export class UIRenderer {
       });
 
       buttonContainer.appendChild(btn);
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn"); // ADD THIS LINE
+      cancelBtn.textContent = "Cancel"; // ADD THIS LINE
+
+      cancelBtn.addEventListener("click", () => {
+        console.log("Cancel clicked, pending:", this.state.pending);
+        console.log("Has junkCard?", !!this.state.pending?.junkCard);
+
+        if (this.state.pending?.junkCard) {
+          const player = this.state.players[this.state.pending.sourcePlayerId];
+          console.log(
+            "Returning card to hand:",
+            this.state.pending.junkCard.name
+          );
+          console.log("Hand before:", player.hand.length);
+          player.hand.push(this.state.pending.junkCard);
+          console.log("Hand after:", player.hand.length);
+        }
+
+        this.state.pending = null;
+        this.render();
+      });
+
+      buttonContainer.appendChild(cancelBtn);
     });
 
     // Add cancel button
-    const cancelBtn = this.createElement("button", "cancel-btn");
-    cancelBtn.textContent = "Cancel";
     cancelBtn.addEventListener("click", () => {
-      // Cancel the whole Parachute Base or Mimic action
+      console.log("Cancel clicked, pending:", this.state.pending);
+      console.log("Has junkCard?", !!this.state.pending?.junkCard);
+
+      if (this.state.pending?.junkCard) {
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        console.log(
+          "Returning card to hand:",
+          this.state.pending.junkCard.name
+        );
+        console.log("Hand before:", player.hand.length);
+        player.hand.push(this.state.pending.junkCard);
+        console.log("Hand after:", player.hand.length);
+      }
+
       this.state.pending = null;
       this.render();
     });
@@ -991,22 +1027,33 @@ export class UIRenderer {
     endTurn.textContent = "End Turn";
     endTurn.disabled =
       this.state.phase !== "actions" || this.state.pending !== null;
+
     endTurn.addEventListener("click", () => {
       this.commands.execute({
         type: "END_TURN",
         playerId: this.state.currentPlayer,
       });
     });
+
     controls.appendChild(endTurn);
 
     // Cancel button (for pending actions)
     if (this.state.pending) {
       const cancel = this.createElement("button");
       cancel.textContent = "Cancel";
+
       cancel.addEventListener("click", () => {
+        // Return junk card to hand if cancelling a junk effect
+        if (this.state.pending?.junkCard) {
+          const player = this.state.players[this.state.pending.sourcePlayerId];
+          player.hand.push(this.state.pending.junkCard);
+          console.log(`Returned ${this.state.pending.junkCard.name} to hand`);
+        }
+
         this.state.pending = null;
         this.render();
       });
+
       controls.appendChild(cancel);
     }
 

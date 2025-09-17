@@ -30,10 +30,7 @@ export const personAbilities = {
           return false;
         }
 
-        // Mark Cult Leader as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
-        }
+        // DON'T mark as not ready here - let handleUseAbility do it
 
         // Set up selection for which of your own people to destroy
         state.pending = {
@@ -60,11 +57,6 @@ export const personAbilities = {
         if (state.deck.length === 0) {
           console.log("Rabble Rouser: Cannot gain punk - deck is empty");
           return false;
-        }
-
-        // Mark Rabble Rouser as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         // Set up punk placement
@@ -102,11 +94,6 @@ export const personAbilities = {
             "Rabble Rouser: You need a punk in play to use this ability"
           );
           return false;
-        }
-
-        // Only NOW mark as not ready since we can actually use the ability
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         // Set up damage targeting
@@ -156,11 +143,6 @@ export const personAbilities = {
           return false;
         }
 
-        // Mark Pyromaniac as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
-        }
-
         // Set up targeting for camp damage
         state.pending = {
           type: "pyromaniac_damage",
@@ -204,11 +186,6 @@ export const personAbilities = {
         if (validTargets.length === 0) {
           console.log("Molgur Stang: No enemy camps to destroy");
           return false;
-        }
-
-        // Mark Molgur as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         // Set up targeting for camp destruction
@@ -255,11 +232,6 @@ export const personAbilities = {
         if (validTargets.length === 0) {
           console.log("Sniper: No targets available");
           return false;
-        }
-
-        // Mark Sniper as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         // Set up targeting with special flag for ignoring protection
@@ -311,11 +283,6 @@ export const personAbilities = {
           return false;
         }
 
-        // Mark Assassin as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
-        }
-
         // Set up targeting for destroy
         state.pending = {
           type: "assassin_destroy",
@@ -364,11 +331,6 @@ export const personAbilities = {
         if (targets.length === 0) {
           console.log("Exterminator: No damaged enemy people to destroy");
           return false;
-        }
-
-        // Mark Exterminator as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         console.log(
@@ -456,11 +418,6 @@ export const personAbilities = {
           return false;
         }
 
-        // Mark Gunner as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
-        }
-
         console.log(
           `Gunner: Injuring ${targets.length} unprotected enemy people`
         );
@@ -530,11 +487,6 @@ export const personAbilities = {
     damage: {
       cost: 1,
       handler: (state, context) => {
-        // Mark as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
-        }
-
         state.pending = {
           type: "damage",
           source: context.source,
@@ -570,10 +522,6 @@ export const personAbilities = {
         console.log("Source card:", context.source.name);
         console.log("From Mimic?", context.fromMimic);
         console.log("Setting pending type to: looter_damage");
-        // Mark the card as used BEFORE setting up pending
-        if (!context.fromMimic) {
-          context.source.isReady = false;
-        }
 
         state.pending = {
           type: "looter_damage",
@@ -617,11 +565,6 @@ export const personAbilities = {
         if (validTargets.length === 0) {
           console.log("Repair Bot: No damaged cards to restore");
           return false;
-        }
-
-        // Mark card as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         state.pending = {
@@ -766,11 +709,6 @@ export const personAbilities = {
         if (validTargets.length === 0) {
           console.log("Vigilante: No unprotected enemy people to injure");
           return false;
-        }
-
-        // Mark card as not ready (unless from Parachute Base)
-        if (!context.fromParachuteBase) {
-          context.source.isReady = false;
         }
 
         state.pending = {

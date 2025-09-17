@@ -11,6 +11,16 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
+  completeAbility(pending) {
+    if (pending?.sourceCard) {
+      pending.sourceCard.isReady = false;
+      this.state.turnEvents.abilityUsedThisTurn = true;
+      console.log(
+        `${pending.sourceCard.name} marked as not ready after ability completed`
+      );
+    }
+  }
+
   applyParachuteBaseDamage(playerId, columnIndex, position) {
     console.log(
       `Parachute Base: Applying damage to person at ${columnIndex}, ${position}`
@@ -461,8 +471,6 @@ export class CommandSystem {
 
   handleJunkCard(payload) {
     console.log("=== handleJunkCard called ===");
-    console.log("Payload:", payload);
-
     const { playerId, cardIndex } = payload;
     const player = this.state.players[playerId];
     const card = player.hand[cardIndex];
@@ -482,29 +490,17 @@ export class CommandSystem {
     }
 
     console.log(`Junking ${card.name} for ${card.junkEffect} effect`);
-    console.log("Water before:", player.water);
 
-    // Remove from hand first
+    // Remove from hand first (we'll put it back if cancelled)
     player.hand.splice(cardIndex, 1);
 
     // Handle special case for Water Silo
     if (card.name === "Water Silo" || card.isWaterSilo) {
       player.waterSilo = "available";
-      player.water += 1; // Make sure this line is here!
+      player.water += 1;
       console.log("Water Silo returned to play area, gained 1 water");
-      console.log("Water after returning silo:", player.water);
       return true;
     }
-
-    // Handle special case for Water Silo
-    if (card.name === "Water Silo") {
-      player.waterSilo = "available";
-      console.log("Water Silo returned to play area");
-      return true;
-    }
-
-    // Add to discard pile
-    this.state.discard.push(card);
 
     // Process the junk effect
     const junkEffect = card.junkEffect?.toLowerCase();
@@ -512,89 +508,67 @@ export class CommandSystem {
 
     switch (junkEffect) {
       case "water":
-        player.water += 1;
-        console.log("Gained 1 water from junk effect");
-        console.log("Water after:", player.water);
+      case "card":
+      case "draw":
+      case "raid":
+        // These effects complete immediately - discard now
+        this.state.discard.push(card);
+
+        if (junkEffect === "water") {
+          player.water += 1;
+          console.log("Gained 1 water from junk effect");
+        } else if (junkEffect === "card" || junkEffect === "draw") {
+          if (this.state.deck.length > 0) {
+            const drawnCard = this.state.deck.shift();
+            player.hand.push(drawnCard);
+            console.log(`Drew ${drawnCard.name} from junk effect`);
+          }
+        } else if (junkEffect === "raid") {
+          this.executeRaid(playerId);
+          console.log("Raid effect triggered");
+        }
         break;
 
       case "injure":
-        // Set up targeting for injure
-        this.state.pending = {
-          type: "junk_injure",
-          source: card,
-          sourcePlayerId: playerId,
-        };
-        console.log("Select an unprotected enemy person to injure");
-        break;
-
       case "restore":
-        // Set up targeting for restore - ONLY OWN CARDS
-        const validRestoreTargets = [];
-        const currentPlayer = this.state.players[playerId];
-
-        // Only check the player's own cards
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = currentPlayer.columns[col].getCard(pos);
-            if (card && card.isDamaged && !card.isDestroyed) {
-              validRestoreTargets.push({
-                playerId: playerId, // Always own player
-                columnIndex: col,
-                position: pos,
-              });
-            }
-          }
-        }
-
-        if (validRestoreTargets.length === 0) {
-          console.log("No damaged cards to restore");
-          break;
-        }
-
-        this.state.pending = {
-          type: "junk_restore",
-          source: card,
-          sourcePlayerId: playerId,
-          validTargets: validRestoreTargets,
-        };
-        console.log(
-          `Select one of your damaged cards to restore (${validRestoreTargets.length} available)`
-        );
-        break;
-
-      case "raid":
-        // Execute raid effect
-        this.executeRaid(playerId);
-        console.log("Raid effect triggered");
-        break;
-
-      case "card":
-      case "draw":
-        // Draw a card
-        if (this.state.deck.length > 0) {
-          const drawnCard = this.state.deck.shift();
-          player.hand.push(drawnCard);
-          console.log(`Drew ${drawnCard.name} from junk effect`);
-        } else {
-          console.log("Deck is empty, cannot draw");
-        }
-        break;
-
       case "punk":
-        // Set up placement for punk
+        // These effects need choices - DON'T discard yet
+        // Store the card in pending so we can discard it after choice
         this.state.pending = {
-          type: "place_punk",
+          type:
+            junkEffect === "punk"
+              ? "place_punk"
+              : junkEffect === "injure"
+              ? "junk_injure"
+              : "junk_restore",
           source: card,
           sourcePlayerId: playerId,
+          junkCard: card, // Store the card to discard later
         };
-        console.log("Select where to place the punk");
+        console.log("Set pending with junkCard:", card.name);
+
+        if (junkEffect === "punk") {
+          if (this.state.deck.length === 0) {
+            console.log("Cannot gain punk - deck is empty");
+            player.hand.push(card); // Return to hand
+            this.state.pending = null;
+            return false;
+          }
+          console.log("Select where to place the punk");
+        } else if (junkEffect === "injure") {
+          console.log("Select an unprotected enemy person to injure");
+        } else {
+          console.log("Select a damaged card to restore");
+        }
         break;
 
       default:
-        console.log(`Unknown or missing junk effect: ${junkEffect}`);
+        console.log(`Unknown junk effect: ${junkEffect}`);
+        // Return card to hand if effect is unknown
+        player.hand.push(card);
+        return false;
     }
 
-    console.log("Final water count:", player.water);
     return true;
   }
 
@@ -950,8 +924,6 @@ export class CommandSystem {
       return false;
     }
 
-    // Camps CAN use abilities when damaged (just not when destroyed)
-
     // Check cost
     const player = this.state.players[playerId];
     if (player.water < ability.cost) {
@@ -980,17 +952,23 @@ export class CommandSystem {
       // Refund the water
       player.water += ability.cost;
       console.log(`Ability could not be used, refunded ${ability.cost} water`);
-
-      // Mark card as ready again (it was marked not ready earlier)
-      card.isReady = true;
-
+      // Card stays ready since ability didn't execute
       return false;
     }
 
-    // Mark as used (not ready) - only if ability succeeded
-    card.isReady = false;
-
-    this.state.turnEvents.abilityUsedThisTurn = true;
+    // NEW: Check if ability created a pending state that could be cancelled
+    if (this.state.pending) {
+      // Ability started a multi-step process - store card info in pending
+      this.state.pending.sourceCard = card;
+      this.state.pending.abilityUsed = ability;
+      console.log(
+        "Ability started multi-step process, will mark not ready when completed"
+      );
+    } else {
+      // Ability completed immediately - mark as not ready now
+      card.isReady = false;
+      this.state.turnEvents.abilityUsedThisTurn = true;
+    }
 
     return true;
   }
@@ -1329,6 +1307,9 @@ export class CommandSystem {
 
         console.log(`Assassin destroyed ${target.name}`);
 
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
         // Clear pending
         this.state.pending = null;
 
@@ -1484,6 +1465,13 @@ export class CommandSystem {
         // Camps stay ready when restored
         console.log(`${target.name} restored by junk effect!`);
 
+        const junkCard = this.state.pending?.junkCard;
+        if (junkCard) {
+          // Discard the card after successful restore
+          this.state.discard.push(junkCard);
+          console.log(`Discarded ${junkCard.name} after restore`);
+        }
+
         this.state.pending = null;
         return true;
       }
@@ -1521,6 +1509,9 @@ export class CommandSystem {
           console.log(`Raiders damaged ${camp.name}!`);
         }
 
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
         // Clear pending
         this.state.pending = null;
 
@@ -1550,6 +1541,13 @@ export class CommandSystem {
           sourcePlayerId: this.state.pending.sourcePlayerId,
           source: this.state.pending.source,
         };
+
+        const junkCard = this.state.pending?.junkCard;
+        if (junkCard) {
+          // Discard the card after successful restore
+          this.state.discard.push(junkCard);
+          console.log(`Discarded ${junkCard.name} after restore`);
+        }
 
         // Now resolve it as damage (which will handle destruction properly)
         return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
@@ -1827,6 +1825,9 @@ export class CommandSystem {
             "Parachute Base: Restore ability completed, now applying damage"
           );
 
+          // Mark ability complete
+          this.completeAbility(this.state.pending);
+
           // Clear pending first
           this.state.pending = null;
 
@@ -1884,6 +1885,9 @@ export class CommandSystem {
           console.log(
             "=== Continuing Parachute Base sequence after Repair Bot entry trait ==="
           );
+
+          // Mark ability complete
+          this.completeAbility(this.state.pending);
 
           // Clear pending first
           this.state.pending = null;
@@ -1980,27 +1984,18 @@ export class CommandSystem {
       }
 
       case "place_punk": {
-        // Store parachute damage info before resolving
+        // Store junk card and parachute info BEFORE resolving
+        const junkCard = this.state.pending?.junkCard;
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-        // If this is from Parachute Base, we need to track the original person's ID
-        let parachutePersonId = null;
-        if (parachuteBaseDamage) {
-          // Find the card at the stored position and get its ID
-          const card = this.state.getCard(
-            parachuteBaseDamage.targetPlayer,
-            parachuteBaseDamage.targetColumn,
-            parachuteBaseDamage.targetPosition
-          );
-          if (card) {
-            parachutePersonId = card.id;
-            console.log(
-              `Tracking ${card.name} (ID: ${parachutePersonId}) for Parachute damage`
-            );
-          }
-        }
-
+        // Resolve the punk placement
         const result = this.resolvePlacePunk(targetColumn, targetPosition);
+
+        // If successful and this was from a junk effect, discard the card
+        if (result && junkCard) {
+          this.state.discard.push(junkCard);
+          console.log(`Discarded ${junkCard.name} after placing punk`);
+        }
 
         // Apply Parachute Base damage if needed
         if (result && parachuteBaseDamage && parachutePersonId) {
@@ -2141,6 +2136,9 @@ export class CommandSystem {
           `Parachute Base: Placed ${person.name} at column ${targetColumn}, position ${targetSlot}`
         );
 
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
         // Clear the pending state first
         this.state.pending = null;
 
@@ -2248,6 +2246,9 @@ export class CommandSystem {
               console.log(`Parachute Base: Damaged ${person.name}`);
             }
 
+            // Mark ability complete
+            this.completeAbility(this.state.pending);
+
             // Clear pending to unhang the UI
             this.state.pending = null;
           }
@@ -2267,6 +2268,9 @@ export class CommandSystem {
           if (damaged) {
             console.log(`Parachute Base: Damaged ${person.name} (no ability)`);
           }
+
+          // Mark ability complete
+          this.completeAbility(this.state.pending);
 
           this.state.pending = null;
         }
@@ -2351,6 +2355,9 @@ export class CommandSystem {
         // Store Parachute Base damage if needed
         const parachuteBaseDamage = pending.parachuteBaseDamage;
 
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
         // Clear the mimic pending state
         this.state.pending = null;
 
@@ -2424,6 +2431,9 @@ export class CommandSystem {
         // Store Parachute Base damage if needed
         const parachuteBaseDamage = pending.parachuteBaseDamage;
 
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
         // Clear the pending state
         this.state.pending = null;
 
@@ -2492,6 +2502,9 @@ export class CommandSystem {
       } else {
         console.log("Failed to damage - check resolveDamage");
       }
+
+      // Mark ability complete
+      this.completeAbility(this.state.pending);
 
       this.state.pending = null;
       return true;

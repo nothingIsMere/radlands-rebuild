@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "cult_leader_1",
+      name: "Cult Leader",
+      type: "person",
+      cost: 1,
+      junkEffect: "card",
+      abilities: [{ effect: "destroyowndamage", cost: 0 }],
+    },
+    {
       id: "rabble_rouser_1",
       name: "Rabble Rouser",
       type: "person",
@@ -234,6 +242,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "cult_leader_2",
+      name: "Cult Leader",
+      type: "person",
+      cost: 1,
+      junkEffect: "card",
+      abilities: [{ effect: "destroyowndamage", cost: 0 }],
+    },
     {
       id: "rabble_rouser_2",
       name: "Rabble Rouser",

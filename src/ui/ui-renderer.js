@@ -87,6 +87,17 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "cultleader_select_destroy":
+          message.textContent =
+            "💀 Cult Leader: Select one of YOUR people to destroy";
+          overlay.classList.add("cultleader-selection");
+          break;
+
+        case "cultleader_damage":
+          message.textContent =
+            "💥 Cult Leader: Now select enemy target to damage";
+          overlay.classList.add("damage-selection");
+          break;
         case "parachute_select_ability":
           message.textContent = `🪂 Select which ${this.state.pending.person.name} ability to use`;
           overlay.classList.add("ability-selection");
@@ -393,6 +404,26 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("sniper-target");
+      }
+    } else if (this.state.pending?.type === "cultleader_select_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("cultleader-destroy-target");
+      }
+    } else if (this.state.pending?.type === "cultleader_damage") {
+      // Normal damage targeting for the second part
+      const isValidTarget = this.canTargetForDamage(
+        playerId,
+        columnIndex,
+        position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("damage-target");
       }
     } else if (this.state.pending?.type === "assassin_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(

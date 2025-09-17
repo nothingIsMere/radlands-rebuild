@@ -3,6 +3,55 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  cultleader: {
+    destroyowndamage: {
+      cost: 0,
+      handler: (state, context) => {
+        // Find all of player's own people
+        const player = state.players[context.playerId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validTargets.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Cult Leader: No people to destroy");
+          return false;
+        }
+
+        // Mark Cult Leader as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up selection for which of your own people to destroy
+        state.pending = {
+          type: "cultleader_select_destroy",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+        };
+
+        console.log(
+          `Cult Leader: Select one of your people to destroy (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
+
   rabblerouser: {
     gainpunk: {
       cost: 1,
@@ -73,6 +122,7 @@ export const personAbilities = {
       },
     },
   },
+
   pyromaniac: {
     damagecamp: {
       cost: 1,
@@ -127,6 +177,7 @@ export const personAbilities = {
       },
     },
   },
+
   molgurstang: {
     destroycamp: {
       cost: 1,
@@ -176,6 +227,7 @@ export const personAbilities = {
       },
     },
   },
+
   sniper: {
     damage: {
       cost: 2,
@@ -227,6 +279,7 @@ export const personAbilities = {
       },
     },
   },
+
   assassin: {
     destroy: {
       cost: 2,
@@ -279,6 +332,7 @@ export const personAbilities = {
       },
     },
   },
+
   exterminator: {
     destroyalldamaged: {
       cost: 1,
@@ -371,6 +425,7 @@ export const personAbilities = {
       },
     },
   },
+
   gunner: {
     injureall: {
       cost: 2,

@@ -1580,6 +1580,136 @@ export class CommandSystem {
 
         return result;
 
+      case "cultleader_select_destroy": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Cult Leader destruction");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Store if Cult Leader is destroying itself
+        const isDestroyingSelf = target.id === this.state.pending.source.id;
+
+        // Store Parachute Base damage info if present
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Destroy the target person
+        target.isDestroyed = true;
+
+        // Handle destruction
+        if (target.isPunk) {
+          // Return punk to deck
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.type,
+            cost: target.cost,
+            abilities: target.abilities,
+            junkEffect: target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log(`Cult Leader destroyed punk (returned to deck)`);
+        } else {
+          this.state.discard.push(target);
+          console.log(`Cult Leader destroyed ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Now set up damage targeting (even if Cult Leader destroyed itself)
+        this.state.pending = {
+          type: "cultleader_damage",
+          sourcePlayerId: this.state.pending.sourcePlayerId,
+          destroyedSelf: isDestroyingSelf,
+          parachuteBaseDamage: parachuteBaseDamage,
+        };
+
+        console.log("Cult Leader: Now select target to damage");
+        return true;
+      }
+
+      case "cultleader_damage": {
+        // This is the damage after destroying own person
+        // Can't damage own cards
+        if (targetPlayer === this.state.pending.sourcePlayerId) {
+          console.log("Cannot damage own cards");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.isDestroyed) {
+          console.log("Invalid target");
+          return false;
+        }
+
+        // Check protection
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        if (column.isProtected(targetPosition)) {
+          console.log("Cannot damage protected target");
+          return false;
+        }
+
+        // Store Parachute Base damage info
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Apply the damage
+        const result = this.resolveDamage(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        if (result) {
+          console.log(`Cult Leader damaged ${target.name}`);
+        }
+
+        // Apply Parachute Base damage if needed (and if Cult Leader didn't destroy itself)
+        if (parachuteBaseDamage && !this.state.pending?.destroyedSelf) {
+          console.log(
+            "Cult Leader ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return result;
+      }
+
       case "looter_damage": {
         console.log("=== Processing looter_damage target ===");
         console.log("Source player:", this.state.pending.sourcePlayerId);

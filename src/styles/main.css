@@ -742,7 +742,7 @@ body.has-pending .special-card:not(.clickable) {
   pointer-events: none;
 }
 
-/* Ensure valid targets stay interactive */
+/* Ensure ALL valid targets stay interactive, including own cards when needed */
 body.has-pending .card.damage-target,
 body.has-pending .card.restore-target,
 body.has-pending .card.mimic-target,
@@ -751,7 +751,12 @@ body.has-pending .card.injure-target,
 body.has-pending .card.junk-injure-target,
 body.has-pending .card.junk-restore-target,
 body.has-pending .card.raiders-target-camp,
-body.has-pending .card.parachute-placement-target {
+body.has-pending .card.parachute-placement-target,
+body.has-pending .card.cultleader-destroy-target,
+body.has-pending .card.assassin-target,
+body.has-pending .card.sniper-target,
+body.has-pending .card.pyromaniac-target,
+body.has-pending .card.molgur-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
@@ -1002,4 +1007,26 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 
 .cancel-btn:hover {
   background: #d32f2f;
+}
+
+.card.cultleader-destroy-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #9c27b0;
+  border: 2px dashed #9c27b0;
+}
+
+.card.cultleader-destroy-target::after {
+  content: "DESTROY";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(156, 39, 176, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
 }

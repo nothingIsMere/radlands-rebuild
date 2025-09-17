@@ -57,6 +57,55 @@ export const personAbilities = {
       },
     },
   },
+  molgurstang: {
+    destroycamp: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find ALL enemy camps (ignores protection)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          // Camps are always at position 0
+          const camp = opponent.columns[col].getCard(0);
+          if (camp && camp.type === "camp" && !camp.isDestroyed) {
+            // Molgur can target ANY camp, protected or not
+            validTargets.push({
+              playerId: opponentId,
+              columnIndex: col,
+              position: 0,
+              card: camp,
+            });
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Molgur Stang: No enemy camps to destroy");
+          return false;
+        }
+
+        // Mark Molgur as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        // Set up targeting for camp destruction
+        state.pending = {
+          type: "molgur_destroy_camp",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+        };
+
+        console.log(
+          `Molgur Stang: Select any enemy camp to destroy (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
   sniper: {
     damage: {
       cost: 2,

@@ -64,6 +64,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "molgur_stang_1",
+      name: "Molgur Stang",
+      type: "person",
+      cost: 4,
+      junkEffect: "punk",
+      abilities: [{ effect: "destroycamp", cost: 1 }],
+    },
+    {
       id: "pyromaniac_1",
       name: "Pyromaniac",
       type: "person",
@@ -215,6 +223,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "molgur_stang_2",
+      name: "Molgur Stang",
+      type: "person",
+      cost: 4,
+      junkEffect: "punk",
+      abilities: [{ effect: "destroycamp", cost: 1 }],
+    },
     {
       id: "pyromaniac_2",
       name: "Pyromaniac",

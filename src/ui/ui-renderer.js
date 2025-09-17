@@ -81,6 +81,11 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "molgur_destroy_camp":
+          message.textContent =
+            "💀 Molgur Stang: Select ANY enemy camp to DESTROY (ignores protection)";
+          overlay.classList.add("molgur-selection");
+          break;
         case "pyromaniac_damage":
           message.textContent = "🔥 Select an unprotected enemy camp to damage";
           overlay.classList.add("pyromaniac-selection");
@@ -353,6 +358,16 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("pyromaniac-target");
+      }
+    } else if (this.state.pending?.type === "molgur_destroy_camp") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("molgur-target");
       }
     } else if (this.state.pending?.type === "sniper_damage") {
       const isValidTarget = this.state.pending.validTargets?.some(

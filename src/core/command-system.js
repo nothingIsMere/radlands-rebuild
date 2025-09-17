@@ -1055,6 +1055,59 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "molgur_destroy_camp": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Molgur Stang");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "camp") {
+          console.log("Molgur can only destroy camps");
+          return false;
+        }
+
+        // Store Parachute Base damage info if present
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Destroy the camp outright (no damage state)
+        target.isDestroyed = true;
+        console.log(
+          `Molgur Stang destroyed ${target.name} (ignoring protection and damage state)`
+        );
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Check for game end
+        this.checkGameEnd();
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Molgur ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return true;
+      }
       case "assassin_destroy": {
         // Verify it's a valid target
         const isValidTarget = this.state.pending.validTargets?.some(

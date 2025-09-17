@@ -52,8 +52,6 @@ export const personAbilities = {
           console.log(
             "Rabble Rouser: You need a punk in play to use this ability"
           );
-          // DON'T mark as not ready, DON'T deduct water
-          // Return false to indicate the ability couldn't be used
           return false;
         }
 

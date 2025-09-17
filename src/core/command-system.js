@@ -1556,7 +1556,29 @@ export class CommandSystem {
       }
 
       case "damage":
-        return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+        // Store Parachute Base info before resolving
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Resolve the damage (this clears pending)
+        const result = this.resolveDamage(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Apply Parachute Base damage if needed
+        if (result && parachuteBaseDamage) {
+          console.log(
+            "Damage ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return result;
 
       case "looter_damage": {
         console.log("=== Processing looter_damage target ===");

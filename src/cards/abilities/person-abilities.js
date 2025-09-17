@@ -191,4 +191,56 @@ export const personAbilities = {
       },
     },
   },
+
+  vigilante: {
+    injure: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find valid targets - unprotected enemy people only
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              // Check if protected
+              if (!opponent.columns[col].isProtected(pos)) {
+                validTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Vigilante: No unprotected enemy people to injure");
+          return false;
+        }
+
+        // Mark card as not ready (unless from Parachute Base)
+        if (!context.fromParachuteBase) {
+          context.source.isReady = false;
+        }
+
+        state.pending = {
+          type: "injure",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+        };
+
+        console.log(
+          `Vigilante: Select an unprotected enemy person to injure (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
 };

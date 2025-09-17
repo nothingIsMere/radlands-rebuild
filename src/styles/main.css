@@ -737,16 +737,43 @@ button:disabled {
 /* When there's a pending action, dim non-relevant elements */
 body.has-pending .hand-card:not(.parachute-target),
 body.has-pending .ability-btn,
-body.has-pending
-  .card:not(.damage-target):not(.restore-target):not(.mimic-target):not(
-    .punk-placement-target
-  ):not(.junk-injure-target):not(.junk-restore-target):not(
-    .raiders-target-camp
-  ):not(.parachute-placement-target) {
+body.has-pending .special-card:not(.clickable) {
   opacity: 0.5;
   pointer-events: none;
 }
 
+/* Ensure valid targets stay interactive */
+body.has-pending .card.damage-target,
+body.has-pending .card.restore-target,
+body.has-pending .card.mimic-target,
+body.has-pending .card.punk-placement-target,
+body.has-pending .card.injure-target,
+body.has-pending .card.junk-injure-target,
+body.has-pending .card.junk-restore-target,
+body.has-pending .card.raiders-target-camp,
+body.has-pending .card.parachute-placement-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Only dim ENEMY cards that aren't targets during targeting */
+body.has-pending
+  .player-board:not(.active)
+  .card:not(.damage-target):not(.injure-target):not(.mimic-target) {
+  opacity: 0.5;
+}
+
+/* Keep own cards visible but not clickable during pending */
+body.has-pending .player-board.active .card {
+  pointer-events: none;
+}
+
+/* But allow clicking on valid targets even in own board */
+body.has-pending .player-board.active .card.restore-target,
+body.has-pending .player-board.active .card.punk-placement-target,
+body.has-pending .player-board.active .card.parachute-placement-target {
+  pointer-events: auto !important;
+}
 /* Parachute Base placement phase */
 .pending-overlay.parachute-placement .pending-message-banner {
   background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);

@@ -1051,3 +1051,15 @@ body.has-pending .card.vanguard-counter-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.card.rescue-team-target {
+  animation: pulse-blue 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px solid #2196f3;
+}
+
+body.has-pending .card.rescue-team-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

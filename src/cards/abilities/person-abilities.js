@@ -3,6 +3,51 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  rescueteam: {
+    returnperson: {
+      cost: 0,
+      handler: (state, context) => {
+        // Find all your people (including punks and Rescue Team itself)
+        const player = state.players[context.playerId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validTargets.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Rescue Team: No people to return");
+          return false;
+        }
+
+        // Set up selection
+        state.pending = {
+          type: "rescue_team_select",
+          source: context.source,
+          sourceCard: context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Rescue Team: Select person to return to hand (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
+
   vanguard: {
     damageandcounter: {
       cost: 1,

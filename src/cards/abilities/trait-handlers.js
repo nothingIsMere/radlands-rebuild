@@ -42,6 +42,21 @@ export const cardTraits = {
     },
   },
 
+  rescueteam: {
+    onEntry: (state, context) => {
+      const card = state.getCard(
+        context.playerId,
+        context.columnIndex,
+        context.position
+      );
+      if (card) {
+        card.isReady = true;
+        console.log("Rescue Team: Enters play ready");
+      }
+      return true;
+    },
+  },
+
   vanguard: {
     onEntry: (state, context) => {
       if (state.deck.length === 0) {

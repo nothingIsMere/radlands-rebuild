@@ -535,6 +535,20 @@ export class UIRenderer {
       }
     }
 
+    // Rescue Team targeting
+    if (this.state.pending?.type === "rescue_team_select") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("rescue-team-target");
+      }
+    }
+
     if (this.state.pending?.type === "mutant_restore") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>

@@ -2759,6 +2759,96 @@ export class CommandSystem {
         return result;
       }
 
+      case "rescue_team_select": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Rescue Team");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        const player = this.state.players[targetPlayer];
+        const column = player.columns[targetColumn];
+
+        // Return the person to hand
+        if (target.isPunk) {
+          // If it's a punk, reveal it when returning to hand
+          const revealedCard = {
+            id: target.id,
+            name: target.originalName || "Unknown Card",
+            type: "person",
+            cost: target.cost || 0,
+            abilities: target.abilities || [],
+            junkEffect: target.junkEffect,
+          };
+          player.hand.push(revealedCard);
+          console.log(
+            `Rescue Team returned punk to hand - revealed as ${revealedCard.name}!`
+          );
+        } else {
+          // Normal person returns as-is
+          const returnCard = {
+            id: target.id,
+            name: target.name,
+            type: target.type,
+            cost: target.cost,
+            abilities: target.abilities,
+            junkEffect: target.junkEffect,
+          };
+          player.hand.push(returnCard);
+          console.log(`Rescue Team returned ${target.name} to hand`);
+        }
+
+        // Remove from column
+        column.setCard(targetPosition, null);
+
+        // Move cards behind forward if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+            console.log(`${cardInFront.name} moved back to fill gap`);
+          }
+        }
+
+        // Mark Rescue Team's ability as complete
+        if (this.state.pending.sourceCard) {
+          this.state.pending.sourceCard.isReady = false;
+        }
+
+        // Check for Parachute Base damage if applicable
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Rescue Team ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return true;
+      }
+
       case "parachute_select_person": {
         // This case is triggered when a card is selected from hand
         if (payload.targetType !== "hand_card") return false;

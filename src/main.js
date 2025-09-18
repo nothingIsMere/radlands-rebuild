@@ -93,6 +93,19 @@ function setupTestGame() {
       junkEffect: "raid",
     },
     {
+      id: "rescue_team_1",
+      name: "Rescue Team",
+      type: "person",
+      cost: 1,
+      abilities: [
+        {
+          effect: "returnperson",
+          cost: 0,
+        },
+      ],
+      junkEffect: "injure",
+    },
+    {
       id: "cult_leader_1",
       name: "Cult Leader",
       type: "person",
@@ -281,6 +294,19 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "rescue_team_2",
+      name: "Rescue Team",
+      type: "person",
+      cost: 1,
+      abilities: [
+        {
+          effect: "returnperson",
+          cost: 0,
+        },
+      ],
+      junkEffect: "injure",
+    },
     {
       id: `scientist_2`,
       name: "Scientist",

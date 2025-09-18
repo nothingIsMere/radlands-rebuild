@@ -549,6 +549,18 @@ export class UIRenderer {
       }
     }
 
+    // Magnus Karv column targeting - highlight all cards in valid columns
+    if (this.state.pending?.type === "magnus_select_column") {
+      if (
+        this.state.pending.validColumns.includes(columnIndex) &&
+        playerId === this.state.pending.targetPlayerId &&
+        card &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("magnus-column-target");
+      }
+    }
+
     if (this.state.pending?.type === "mutant_restore") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>

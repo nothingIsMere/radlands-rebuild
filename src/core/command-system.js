@@ -1224,6 +1224,76 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "magnus_select_column": {
+        // Magnus needs a column selection, but SELECT_TARGET gives us a specific card
+        // We'll infer the column from the target position
+        const targetCol = targetColumn;
+
+        // Verify it's a valid column
+        if (!this.state.pending.validColumns.includes(targetCol)) {
+          console.log("Not a valid column for Magnus Karv");
+          return false;
+        }
+
+        const opponent = this.state.players[this.state.pending.targetPlayerId];
+        const column = opponent.columns[targetCol];
+        let damageCount = 0;
+
+        console.log(`Magnus Karv: Damaging all cards in column ${targetCol}`);
+
+        // Damage all cards in the column (camp and people)
+        for (let pos = 0; pos < 3; pos++) {
+          const card = column.getCard(pos);
+          if (card && !card.isDestroyed) {
+            // Apply damage
+            if (card.isDamaged) {
+              card.isDestroyed = true;
+              if (card.type === "person") {
+                // Handle person destruction
+                this.destroyPerson(opponent, column, pos, card);
+              }
+              console.log(`Magnus destroyed ${card.name}`);
+            } else {
+              card.isDamaged = true;
+              if (card.type === "person") {
+                card.isReady = false;
+              }
+              console.log(`Magnus damaged ${card.name}`);
+            }
+            damageCount++;
+          }
+        }
+
+        console.log(
+          `Magnus Karv damaged ${damageCount} cards in column ${targetCol}`
+        );
+
+        // Mark Magnus's ability as complete
+        if (this.state.pending.sourceCard) {
+          this.state.pending.sourceCard.isReady = false;
+        }
+
+        // Check for Parachute Base damage
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Magnus ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
+        return true;
+      }
+
       case "vanguard_damage": {
         console.log(
           "Vanguard damage target selected:",

@@ -3,6 +3,52 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  magnuskarv: {
+    damagecolumn: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find opponent's columns with at least one card
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validColumns = [];
+
+        for (let col = 0; col < 3; col++) {
+          let hasCards = false;
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              hasCards = true;
+              break;
+            }
+          }
+          if (hasCards) {
+            validColumns.push(col);
+          }
+        }
+
+        if (validColumns.length === 0) {
+          console.log("Magnus Karv: No columns with cards to damage");
+          return false;
+        }
+
+        // Set up column selection
+        state.pending = {
+          type: "magnus_select_column",
+          source: context.source,
+          sourceCard: context.source,
+          sourcePlayerId: context.playerId,
+          targetPlayerId: opponentId,
+          validColumns: validColumns,
+          context,
+        };
+
+        console.log(
+          `Magnus Karv: Select opponent's column to damage all cards (${validColumns.length} columns available)`
+        );
+        return true;
+      },
+    },
+  },
   rescueteam: {
     returnperson: {
       cost: 0,

@@ -3,7 +3,74 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
-  // In person-abilities.js:
+  mutant: {
+    damagerestore: {
+      cost: 0,
+      handler: (state, context) => {
+        // Find valid damage targets (unprotected enemy cards)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const damageTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = state.players[opponentId].columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              // Check if unprotected
+              if (!state.players[opponentId].columns[col].isProtected(pos)) {
+                damageTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        // Find valid restore targets (own damaged cards)
+        const restoreTargets = [];
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card =
+              state.players[context.playerId].columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              restoreTargets.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        // Must have at least one valid target (either damage or restore)
+        if (damageTargets.length === 0 && restoreTargets.length === 0) {
+          console.log("Mutant: No valid targets for damage or restore");
+          return false;
+        }
+
+        // Set up selection state for choosing damage and/or restore
+        state.pending = {
+          type: "mutant_choose_mode",
+          source: context.source,
+          sourceCard: context.source,
+          sourcePlayerId: context.playerId,
+          sourceColumn: context.columnIndex,
+          sourcePosition: context.position,
+          damageTargets,
+          restoreTargets,
+          context,
+        };
+
+        console.log(
+          `Mutant: Choose mode - Damage (${damageTargets.length} targets), Restore (${restoreTargets.length} targets), or both`
+        );
+        return true;
+      },
+    },
+  },
 
   scientist: {
     discardchoose: {

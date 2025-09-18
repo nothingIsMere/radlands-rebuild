@@ -210,12 +210,17 @@ function setupTestGame() {
       abilities: [{ effect: "damage", cost: 1 }],
     },
     {
-      id: "test_person_2",
-      name: "Test Healer",
+      id: "mutant_1",
+      name: "Mutant",
       type: "person",
-      cost: 2,
-      junkEffect: "restore",
-      abilities: [{ effect: "restore", cost: 1 }],
+      cost: 1,
+      abilities: [
+        {
+          effect: "damagerestore",
+          cost: 0,
+        },
+      ],
+      junkEffect: "injure",
     },
     {
       id: "mimic_1",
@@ -394,12 +399,17 @@ function setupTestGame() {
       abilities: [],
     }, // No abilities, good for testing basic placement
     {
-      id: "test_person_4",
-      name: "Test Support",
+      id: "mutant_2",
+      name: "Mutant",
       type: "person",
       cost: 1,
-      junkEffect: "draw",
-      abilities: [{ effect: "draw", cost: 2 }],
+      abilities: [
+        {
+          effect: "damagerestore",
+          cost: 0,
+        },
+      ],
+      junkEffect: "injure",
     },
     {
       id: "mimic_2",

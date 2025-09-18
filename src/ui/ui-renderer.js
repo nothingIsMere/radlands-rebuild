@@ -493,14 +493,16 @@ export class UIRenderer {
       }
     }
 
-    // Highlighting for junk effects:
     if (this.state.pending?.type === "junk_injure") {
       // Highlight valid injure targets
-      if (
-        playerId !== this.state.pending.sourcePlayerId &&
-        card?.type === "person" &&
-        !this.state.players[playerId].columns[columnIndex].isProtected(position)
-      ) {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId && // Changed from targetPlayer
+          t.columnIndex === columnIndex && // Changed from targetColumn
+          t.position === position // Changed from targetPosition
+      );
+
+      if (isValidTarget) {
         cardDiv.classList.add("junk-injure-target");
       }
     }
@@ -509,9 +511,9 @@ export class UIRenderer {
       // Only highlight cards in the valid targets list
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
-          t.playerId === playerId &&
-          t.columnIndex === columnIndex &&
-          t.position === position
+          t.playerId === playerId && // Changed from targetPlayer
+          t.columnIndex === columnIndex && // Changed from targetColumn
+          t.position === position // Changed from targetPosition
       );
 
       if (isValidTarget) {
@@ -740,6 +742,109 @@ export class UIRenderer {
     console.log("renderAbilitySelection called");
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
+
+    // Handle Mutant mode selection
+    if (this.state.pending?.type === "mutant_choose_mode") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Mutant: Choose what to do";
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      // Damage only button
+      if (this.state.pending.damageTargets.length > 0) {
+        const damageBtn = this.createElement("button", "ability-select-btn");
+        damageBtn.textContent = `Damage only (${this.state.pending.damageTargets.length} targets)`;
+        damageBtn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            mode: "damage",
+          });
+        });
+        buttonContainer.appendChild(damageBtn);
+      }
+
+      // Restore only button
+      if (this.state.pending.restoreTargets.length > 0) {
+        const restoreBtn = this.createElement("button", "ability-select-btn");
+        restoreBtn.textContent = `Restore only (${this.state.pending.restoreTargets.length} targets)`;
+        restoreBtn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            mode: "restore",
+          });
+        });
+        buttonContainer.appendChild(restoreBtn);
+      }
+
+      // Both button
+      if (
+        this.state.pending.damageTargets.length > 0 &&
+        this.state.pending.restoreTargets.length > 0
+      ) {
+        const bothBtn = this.createElement("button", "ability-select-btn");
+        bothBtn.textContent = "Damage AND Restore";
+        bothBtn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            mode: "both",
+          });
+        });
+        buttonContainer.appendChild(bothBtn);
+      }
+
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
+    // Handle Mutant order selection
+    if (this.state.pending?.type === "mutant_choose_order") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Mutant: Choose order";
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      const damageFirstBtn = this.createElement("button", "ability-select-btn");
+      damageFirstBtn.textContent = "Damage first, then Restore";
+      damageFirstBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          order: "damage_first",
+        });
+      });
+      buttonContainer.appendChild(damageFirstBtn);
+
+      const restoreFirstBtn = this.createElement(
+        "button",
+        "ability-select-btn"
+      );
+      restoreFirstBtn.textContent = "Restore first, then Damage";
+      restoreFirstBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          order: "restore_first",
+        });
+      });
+      buttonContainer.appendChild(restoreFirstBtn);
+
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
 
     // Handle Scientist's junk selection
     // In the scientist_select_junk case:

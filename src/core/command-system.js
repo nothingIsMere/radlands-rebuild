@@ -21,6 +21,46 @@ export class CommandSystem {
     }
   }
 
+  finishMutantAbility() {
+    const pending = this.state.pending;
+    const mutantCard = this.state.getCard(
+      pending.sourcePlayerId,
+      pending.sourceColumn,
+      pending.sourcePosition
+    );
+
+    if (mutantCard && !mutantCard.isDestroyed) {
+      // Damage Mutant itself
+      if (mutantCard.isDamaged) {
+        mutantCard.isDestroyed = true;
+        // Handle destruction
+        const column =
+          this.state.players[pending.sourcePlayerId].columns[
+            pending.sourceColumn
+          ];
+        this.destroyPerson(
+          this.state.players[pending.sourcePlayerId],
+          column,
+          pending.sourcePosition,
+          mutantCard
+        );
+        console.log("Mutant destroyed itself");
+      } else {
+        mutantCard.isDamaged = true;
+        mutantCard.isReady = false;
+        console.log("Mutant damaged itself");
+      }
+    }
+
+    // Mark ability complete
+    this.completeAbility(pending);
+
+    // Clear pending
+    this.state.pending = null;
+
+    console.log("Mutant ability completed");
+  }
+
   applyParachuteBaseDamage(playerId, columnIndex, position) {
     console.log(
       `Parachute Base: Applying damage to person at ${columnIndex}, ${position}`
@@ -514,14 +554,6 @@ export class CommandSystem {
         // These effects complete immediately - discard now
         this.state.discard.push(card);
 
-        if (
-          this.state.pending?.fromScientist &&
-          this.state.pending?.scientistCard
-        ) {
-          this.state.pending.scientistCard.isReady = false;
-          console.log("Scientist marked not ready after junk effect completed");
-        }
-
         if (junkEffect === "water") {
           player.water += 1;
           console.log("Gained 1 water from junk effect");
@@ -538,43 +570,118 @@ export class CommandSystem {
         break;
 
       case "injure":
-      case "restore":
-      case "punk":
-        // These effects need choices - DON'T discard yet
-        // Store the card in pending so we can discard it after choice
-        if (
-          this.state.pending?.fromScientist &&
-          this.state.pending?.scientistCard
-        ) {
-          this.state.pending.scientistCard.isReady = false;
-          console.log("Scientist marked not ready after junk effect completed");
+        // Find valid injure targets (unprotected enemy people)
+        const opponentId = playerId === "left" ? "right" : "left";
+        const opponent = this.state.players[opponentId];
+        const injureTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const targetCard = opponent.columns[col].getCard(pos);
+            if (
+              targetCard &&
+              targetCard.type === "person" &&
+              !targetCard.isDestroyed
+            ) {
+              // Check if protected
+              if (!opponent.columns[col].isProtected(pos)) {
+                injureTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card: targetCard,
+                });
+              }
+            }
+          }
         }
+
+        if (injureTargets.length === 0) {
+          console.log("No valid targets to injure");
+          player.hand.push(card); // Return card to hand
+          return false;
+        }
+
         this.state.pending = {
-          type:
-            junkEffect === "punk"
-              ? "place_punk"
-              : junkEffect === "injure"
-              ? "junk_injure"
-              : "junk_restore",
+          type: "junk_injure",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card, // Store the card to discard later
+          junkCard: card,
+          validTargets: injureTargets,
         };
-        console.log("Set pending with junkCard:", card.name);
+        console.log(
+          `Select unprotected enemy person to injure (${injureTargets.length} targets)`
+        );
+        break;
 
-        if (junkEffect === "punk") {
-          if (this.state.deck.length === 0) {
-            console.log("Cannot gain punk - deck is empty");
-            player.hand.push(card); // Return to hand
-            this.state.pending = null;
-            return false;
+      case "restore":
+        // Find ALL damaged cards (both players)
+        const restoreTargets = [];
+
+        // Check own cards
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const targetCard = player.columns[col].getCard(pos);
+            if (targetCard && targetCard.isDamaged && !targetCard.isDestroyed) {
+              restoreTargets.push({
+                playerId: playerId,
+                columnIndex: col,
+                position: pos,
+                card: targetCard,
+              });
+            }
           }
-          console.log("Select where to place the punk");
-        } else if (junkEffect === "injure") {
-          console.log("Select an unprotected enemy person to injure");
-        } else {
-          console.log("Select a damaged card to restore");
         }
+
+        // Check opponent's cards
+        const enemyId = playerId === "left" ? "right" : "left";
+        const enemy = this.state.players[enemyId];
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const targetCard = enemy.columns[col].getCard(pos);
+            if (targetCard && targetCard.isDamaged && !targetCard.isDestroyed) {
+              restoreTargets.push({
+                playerId: enemyId,
+                columnIndex: col,
+                position: pos,
+                card: targetCard,
+              });
+            }
+          }
+        }
+
+        if (restoreTargets.length === 0) {
+          console.log("No damaged cards to restore");
+          player.hand.push(card); // Return card to hand
+          return false;
+        }
+
+        this.state.pending = {
+          type: "junk_restore",
+          source: card,
+          sourcePlayerId: playerId,
+          junkCard: card,
+          validTargets: restoreTargets,
+        };
+        console.log(
+          `Select damaged card to restore (${restoreTargets.length} targets)`
+        );
+        break;
+
+      case "punk":
+        if (this.state.deck.length === 0) {
+          console.log("Cannot gain punk - deck is empty");
+          player.hand.push(card); // Return to hand
+          return false;
+        }
+
+        this.state.pending = {
+          type: "place_punk",
+          source: card,
+          sourcePlayerId: playerId,
+          junkCard: card,
+        };
+        console.log("Select where to place the punk");
         break;
 
       default:
@@ -1117,6 +1224,208 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "mutant_choose_mode": {
+        const mode = payload.mode; // 'damage', 'restore', or 'both'
+        const pending = this.state.pending;
+
+        console.log(`Mutant: Mode selected - ${mode}`);
+
+        if (mode === "damage") {
+          if (pending.damageTargets.length === 0) {
+            console.log("No valid damage targets");
+            return false;
+          }
+
+          // Set up damage targeting
+          this.state.pending = {
+            type: "mutant_damage",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceColumn: pending.sourceColumn,
+            sourcePosition: pending.sourcePosition,
+            validTargets: pending.damageTargets,
+            context: pending.context,
+          };
+          console.log("Mutant: Select target to damage");
+        } else if (mode === "restore") {
+          if (pending.restoreTargets.length === 0) {
+            console.log("No valid restore targets");
+            return false;
+          }
+
+          // Set up restore targeting
+          this.state.pending = {
+            type: "mutant_restore",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceColumn: pending.sourceColumn,
+            sourcePosition: pending.sourcePosition,
+            validTargets: pending.restoreTargets,
+            context: pending.context,
+          };
+          console.log("Mutant: Select card to restore");
+        } else if (mode === "both") {
+          // Player wants to do both - let them choose order
+          this.state.pending = {
+            type: "mutant_choose_order",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceColumn: pending.sourceColumn,
+            sourcePosition: pending.sourcePosition,
+            damageTargets: pending.damageTargets,
+            restoreTargets: pending.restoreTargets,
+            context: pending.context,
+          };
+          console.log("Mutant: Choose order - Damage first or Restore first?");
+        }
+
+        return true;
+      }
+
+      case "mutant_choose_order": {
+        const order = payload.order; // 'damage_first' or 'restore_first'
+        const pending = this.state.pending;
+
+        if (order === "damage_first") {
+          // Set up damage targeting, will do restore after
+          this.state.pending = {
+            type: "mutant_damage",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceColumn: pending.sourceColumn,
+            sourcePosition: pending.sourcePosition,
+            validTargets: pending.damageTargets,
+            restoreTargets: pending.restoreTargets, // Save for after damage
+            doRestoreAfter: true,
+            context: pending.context,
+          };
+          console.log("Mutant: Select target to damage (will restore after)");
+        } else {
+          // Set up restore targeting, will do damage after
+          this.state.pending = {
+            type: "mutant_restore",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            sourceColumn: pending.sourceColumn,
+            sourcePosition: pending.sourcePosition,
+            validTargets: pending.restoreTargets,
+            damageTargets: pending.damageTargets, // Save for after restore
+            doDamageAfter: true,
+            context: pending.context,
+          };
+          console.log("Mutant: Select card to restore (will damage after)");
+        }
+
+        return true;
+      }
+
+      case "mutant_damage": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid damage target for Mutant");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Apply damage
+        const result = this.applyDamageToCard(
+          target,
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        console.log(`Mutant damaged ${target.name}`);
+
+        // Check if we need to do restore after
+        if (this.state.pending.doRestoreAfter) {
+          // Set up restore targeting
+          this.state.pending = {
+            type: "mutant_restore",
+            source: this.state.pending.source,
+            sourceCard: this.state.pending.sourceCard,
+            sourcePlayerId: this.state.pending.sourcePlayerId,
+            sourceColumn: this.state.pending.sourceColumn,
+            sourcePosition: this.state.pending.sourcePosition,
+            validTargets: this.state.pending.restoreTargets,
+            finishMutant: true, // Flag to damage Mutant after restore
+            context: this.state.pending.context,
+          };
+          console.log("Mutant: Now select card to restore");
+        } else {
+          // Damage Mutant itself and finish
+          this.finishMutantAbility();
+        }
+
+        return true;
+      }
+
+      case "mutant_restore": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid restore target for Mutant");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Restore the card
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false;
+        }
+        console.log(`Mutant restored ${target.name}`);
+
+        // Check if we need to do damage after
+        if (this.state.pending.doDamageAfter) {
+          // Set up damage targeting
+          this.state.pending = {
+            type: "mutant_damage",
+            source: this.state.pending.source,
+            sourceCard: this.state.pending.sourceCard,
+            sourcePlayerId: this.state.pending.sourcePlayerId,
+            sourceColumn: this.state.pending.sourceColumn,
+            sourcePosition: this.state.pending.sourcePosition,
+            validTargets: this.state.pending.damageTargets,
+            finishMutant: true, // Flag to damage Mutant after damage
+            context: this.state.pending.context,
+          };
+          console.log("Mutant: Now select target to damage");
+        } else {
+          // Damage Mutant itself and finish
+          this.finishMutantAbility();
+        }
+
+        return true;
+      }
+
       case "scientist_select_junk": {
         const selectedIndex = payload.junkIndex;
 

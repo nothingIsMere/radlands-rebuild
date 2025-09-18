@@ -748,6 +748,7 @@ export const personAbilities = {
         state.pending = {
           type: "damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
         };

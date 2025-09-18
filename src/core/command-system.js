@@ -2281,6 +2281,9 @@ export class CommandSystem {
         // Store Parachute Base info before resolving
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
+        // Mark ability complete BEFORE resolving damage
+        this.completeAbility(this.state.pending);
+
         // Resolve the damage (this clears pending)
         const result = this.resolveDamage(
           targetPlayer,

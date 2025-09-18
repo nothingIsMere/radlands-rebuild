@@ -185,12 +185,17 @@ function setupTestGame() {
       abilities: [{ effect: "damage", cost: 2 }],
     },
     {
-      id: "muse_1",
-      name: "Muse",
+      id: "vanguard_1",
+      name: "Vanguard",
       type: "person",
       cost: 1,
-      junkEffect: "injure",
-      abilities: [{ effect: "extra_water", cost: 0 }],
+      abilities: [
+        {
+          effect: "damageandcounter",
+          cost: 1,
+        },
+      ],
+      junkEffect: "raid",
     },
     {
       id: "scout_1",
@@ -391,12 +396,17 @@ function setupTestGame() {
       abilities: [{ effect: "injure", cost: 1 }],
     },
     {
-      id: "test_person_3",
-      name: "Test Tank",
+      id: "vanguard_2",
+      name: "Vanguard",
       type: "person",
-      cost: 3,
-      junkEffect: "water",
-      abilities: [],
+      cost: 1,
+      abilities: [
+        {
+          effect: "damageandcounter",
+          cost: 1,
+        },
+      ],
+      junkEffect: "raid",
     }, // No abilities, good for testing basic placement
     {
       id: "mutant_2",

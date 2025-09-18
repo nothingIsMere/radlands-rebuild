@@ -507,7 +507,34 @@ export class UIRenderer {
       }
     }
 
-    // Add this case in renderCard where you handle other pending states:
+    // Vanguard damage targeting
+    if (this.state.pending?.type === "vanguard_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("vanguard-target");
+      }
+    }
+
+    // Vanguard counter-damage targeting
+    if (this.state.pending?.type === "vanguard_counter") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("vanguard-counter-target");
+      }
+    }
+
     if (this.state.pending?.type === "mutant_restore") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
@@ -521,7 +548,6 @@ export class UIRenderer {
       }
     }
 
-    // Similarly for mutant_damage:
     if (this.state.pending?.type === "mutant_damage") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>

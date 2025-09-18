@@ -42,6 +42,27 @@ export const cardTraits = {
     },
   },
 
+  vanguard: {
+    onEntry: (state, context) => {
+      // Check if deck has cards for punk
+      if (state.deck.length === 0) {
+        console.log("Vanguard: Cannot gain punk on entry - deck is empty");
+        return false;
+      }
+
+      // Set up punk placement
+      state.pending = {
+        type: "place_punk",
+        source: context.card,
+        sourcePlayerId: context.playerId,
+        fromVanguardEntry: true,
+      };
+
+      console.log("Vanguard entry: Place a punk");
+      return true;
+    },
+  },
+
   woundedsoldier: {
     onEntry: (state, context) => {
       const player = state.players[context.playerId];

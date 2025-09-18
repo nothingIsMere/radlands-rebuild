@@ -3,6 +3,55 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  vanguard: {
+    damageandcounter: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find valid damage targets (unprotected enemy cards)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const damageTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              // Check if unprotected
+              if (!opponent.columns[col].isProtected(pos)) {
+                damageTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (damageTargets.length === 0) {
+          console.log("Vanguard: No valid targets to damage");
+          return false;
+        }
+
+        // Set up damage targeting
+        state.pending = {
+          type: "vanguard_damage",
+          source: context.source,
+          sourceCard: context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: damageTargets,
+          context,
+        };
+
+        console.log(
+          `Vanguard: Select target to damage (${damageTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
+
   mutant: {
     damagerestore: {
       cost: 0,

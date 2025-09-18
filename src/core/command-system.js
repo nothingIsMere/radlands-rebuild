@@ -1224,6 +1224,129 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "vanguard_damage": {
+        console.log(
+          "Vanguard damage target selected:",
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Vanguard");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Apply Vanguard's damage
+        const result = this.applyDamageToCard(
+          target,
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        console.log(`Vanguard damaged ${target.name}`);
+
+        // Now set up opponent's counter-damage
+        // Find valid targets for counter-damage (unprotected cards belonging to Vanguard's controller)
+        const vanguardController = this.state.pending.sourcePlayerId;
+        const vanguardPlayer = this.state.players[vanguardController];
+        const counterTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = vanguardPlayer.columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              // Check if unprotected
+              if (!vanguardPlayer.columns[col].isProtected(pos)) {
+                counterTargets.push({
+                  playerId: vanguardController,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        // Set up counter-damage selection (opponent chooses)
+        this.state.pending = {
+          type: "vanguard_counter",
+          sourcePlayerId: targetPlayer, // The damaged player gets to counter
+          targetPlayerId: vanguardController, // They damage Vanguard's controller
+          validTargets: counterTargets,
+          vanguardCard: this.state.pending.sourceCard,
+        };
+
+        console.log(
+          `Vanguard: ${targetPlayer} player must now select counter-damage target`
+        );
+
+        return true;
+      }
+
+      case "vanguard_counter": {
+        console.log(
+          "Vanguard counter target selected:",
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Verify it's a valid counter target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid counter-damage target");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Apply counter damage
+        const result = this.applyDamageToCard(
+          target,
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        console.log(`Counter-damage hit ${target.name}`);
+
+        // Mark Vanguard's ability as complete
+        if (this.state.pending.vanguardCard) {
+          this.state.pending.vanguardCard.isReady = false;
+        }
+
+        // Clear pending
+        this.state.pending = null;
+
+        console.log("Vanguard ability completed");
+        return true;
+      }
+
       case "mutant_choose_mode": {
         const mode = payload.mode; // 'damage', 'restore', or 'both'
         const pending = this.state.pending;

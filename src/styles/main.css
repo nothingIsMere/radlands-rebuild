@@ -1038,3 +1038,16 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   transform: scale(1.05);
   box-shadow: 0 0 25px #4caf50;
 }
+
+.card.vanguard-target,
+.card.vanguard-counter-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #f44336;
+}
+
+body.has-pending .card.vanguard-target,
+body.has-pending .card.vanguard-counter-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

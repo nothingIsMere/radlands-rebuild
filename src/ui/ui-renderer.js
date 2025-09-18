@@ -507,6 +507,34 @@ export class UIRenderer {
       }
     }
 
+    // Add this case in renderCard where you handle other pending states:
+    if (this.state.pending?.type === "mutant_restore") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("mutant-restore-target");
+      }
+    }
+
+    // Similarly for mutant_damage:
+    if (this.state.pending?.type === "mutant_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("mutant-damage-target");
+      }
+    }
+
     if (this.state.pending?.type === "junk_restore") {
       // Only highlight cards in the valid targets list
       const isValidTarget = this.state.pending.validTargets?.some(

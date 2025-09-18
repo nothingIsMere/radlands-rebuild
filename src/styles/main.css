@@ -756,7 +756,9 @@ body.has-pending .card.cultleader-destroy-target,
 body.has-pending .card.assassin-target,
 body.has-pending .card.sniper-target,
 body.has-pending .card.pyromaniac-target,
-body.has-pending .card.molgur-target {
+body.has-pending .card.molgur-target,
+body.has-pending .card.mutant-restore-target,
+body.has-pending .card.mutant-damage-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
@@ -1029,4 +1031,10 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   font-size: 12px;
   font-weight: bold;
   pointer-events: none;
+}
+
+.card.mutant-restore-target:hover,
+.card.mutant-damage-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #4caf50;
 }

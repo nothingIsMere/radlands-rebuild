@@ -1414,13 +1414,49 @@ export class CommandSystem {
             sourceColumn: this.state.pending.sourceColumn,
             sourcePosition: this.state.pending.sourcePosition,
             validTargets: this.state.pending.damageTargets,
-            finishMutant: true, // Flag to damage Mutant after damage
             context: this.state.pending.context,
           };
           console.log("Mutant: Now select target to damage");
         } else {
           // Damage Mutant itself and finish
-          this.finishMutantAbility();
+          // Store the pending info we need before clearing it
+          const sourcePlayerId = this.state.pending.sourcePlayerId;
+          const sourceColumn = this.state.pending.sourceColumn;
+          const sourcePosition = this.state.pending.sourcePosition;
+          const sourceCard = this.state.pending.sourceCard;
+
+          // Clear pending first
+          this.state.pending = null;
+
+          // Now damage Mutant
+          const mutantCard = this.state.getCard(
+            sourcePlayerId,
+            sourceColumn,
+            sourcePosition
+          );
+
+          if (mutantCard && !mutantCard.isDestroyed) {
+            // Apply damage to Mutant
+            if (mutantCard.isDamaged) {
+              mutantCard.isDestroyed = true;
+              // Handle destruction
+              const column =
+                this.state.players[sourcePlayerId].columns[sourceColumn];
+              this.destroyPerson(
+                this.state.players[sourcePlayerId],
+                column,
+                sourcePosition,
+                mutantCard
+              );
+              console.log("Mutant destroyed itself");
+            } else {
+              mutantCard.isDamaged = true;
+              mutantCard.isReady = false;
+              console.log("Mutant damaged itself");
+            }
+          }
+
+          console.log("Mutant ability completed");
         }
 
         return true;

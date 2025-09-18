@@ -1283,6 +1283,31 @@ export class CommandSystem {
           }
         }
 
+        // Update Parachute Base damage position if present (in case Vanguard moved)
+        let parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        if (parachuteBaseDamage) {
+          // Find where Vanguard is NOW
+          const vanguardCard = this.state.pending.sourceCard;
+
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 0; pos < 3; pos++) {
+              const card = vanguardPlayer.columns[col].getCard(pos);
+              if (card && card.id === vanguardCard.id) {
+                parachuteBaseDamage = {
+                  targetPlayer: vanguardController,
+                  targetColumn: col,
+                  targetPosition: pos,
+                };
+                console.log(
+                  `Updated Vanguard position for PB damage: col ${col}, pos ${pos}`
+                );
+                break;
+              }
+            }
+          }
+        }
+
         // Set up counter-damage selection (opponent chooses)
         this.state.pending = {
           type: "vanguard_counter",
@@ -1290,6 +1315,7 @@ export class CommandSystem {
           targetPlayerId: vanguardController, // They damage Vanguard's controller
           validTargets: counterTargets,
           vanguardCard: this.state.pending.sourceCard,
+          parachuteBaseDamage: parachuteBaseDamage,
         };
 
         console.log(
@@ -1338,15 +1364,35 @@ export class CommandSystem {
         // Mark Vanguard's ability as complete
         if (this.state.pending.vanguardCard) {
           this.state.pending.vanguardCard.isReady = false;
+          console.log("Vanguard marked as not ready");
         }
+
+        // Store Parachute Base damage info before clearing pending
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
         // Clear pending
         this.state.pending = null;
 
-        console.log("Vanguard ability completed");
+        // Apply Parachute Base damage if this was from Parachute Base
+        if (parachuteBaseDamage) {
+          console.log(
+            "Vanguard ability completed, applying Parachute Base damage"
+          );
+          console.log(
+            `Damaging at: ${parachuteBaseDamage.targetColumn}, ${parachuteBaseDamage.targetPosition}`
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        } else {
+          console.log("No Parachute Base damage to apply");
+        }
+
+        console.log("Vanguard ability fully completed");
         return true;
       }
-
       case "mutant_choose_mode": {
         const mode = payload.mode; // 'damage', 'restore', or 'both'
         const pending = this.state.pending;
@@ -2592,9 +2638,12 @@ export class CommandSystem {
       }
 
       case "place_punk": {
-        // Store junk card and parachute info BEFORE resolving
+        console.log("=== Processing place_punk target ===");
+
+        // Store info BEFORE resolving
         const junkCard = this.state.pending?.junkCard;
-        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const fromVanguardEntry = this.state.pending?.fromVanguardEntry;
+        const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
 
         // Resolve the punk placement
         const result = this.resolvePlacePunk(targetColumn, targetPosition);
@@ -2605,44 +2654,106 @@ export class CommandSystem {
           console.log(`Discarded ${junkCard.name} after placing punk`);
         }
 
-        // Apply Parachute Base damage if needed
-        if (result && parachuteBaseDamage && parachutePersonId) {
-          // Find where the person is NOW after punk placement
-          let currentPosition = null;
-          let currentColumn = null;
+        // Check if this was Vanguard's entry trait during Parachute Base
+        if (result && fromVanguardEntry && parachuteBaseContext) {
+          console.log(
+            "=== Continuing Parachute Base sequence after Vanguard punk ==="
+          );
+
+          // The Vanguard card object should be in parachuteBaseContext.person
+          const vanguardCard = parachuteBaseContext.person;
+          const player =
+            this.state.players[parachuteBaseContext.sourcePlayerId];
+
+          // Find where Vanguard is NOW after potential push
+          let vanguardPos = null;
+          let vanguardCol = null;
 
           for (let col = 0; col < 3; col++) {
             for (let pos = 0; pos < 3; pos++) {
-              const card =
-                this.state.players[parachuteBaseDamage.targetPlayer].columns[
-                  col
-                ].getCard(pos);
-              if (card && card.id === parachutePersonId) {
-                currentColumn = col;
-                currentPosition = pos;
+              const card = player.columns[col].getCard(pos);
+              if (card && card.id === vanguardCard.id) {
+                vanguardCol = col;
+                vanguardPos = pos;
                 console.log(
-                  `Found ${card.name} at new position: column ${col}, position ${pos}`
+                  `Found Vanguard at new position: col ${col}, pos ${pos}`
                 );
                 break;
               }
             }
-            if (currentPosition !== null) break;
+            if (vanguardPos !== null) break;
           }
 
-          if (currentPosition !== null) {
-            console.log(
-              "Punk placed, applying Parachute Base damage to correct person"
-            );
-            this.applyParachuteBaseDamage(
-              parachuteBaseDamage.targetPlayer,
-              currentColumn,
-              currentPosition
-            );
-          } else {
-            console.log(
-              "ERROR: Lost track of the person that used Parachute Base"
-            );
+          if (vanguardPos === null) {
+            console.log("ERROR: Can't find Vanguard after punk placement");
+            console.log("Was looking for card with ID:", vanguardCard.id);
+            // Clear pending and bail out
+            this.state.pending = null;
+            return true;
           }
+
+          // Clear the pending state before continuing
+          this.state.pending = null;
+
+          // Now use Vanguard's ability
+          if (vanguardCard.abilities?.length > 0) {
+            const ability = vanguardCard.abilities[0];
+
+            console.log(
+              `Parachute Base: Using Vanguard's ability (${ability.cost} water)`
+            );
+
+            if (player.water >= ability.cost) {
+              player.water -= ability.cost;
+              console.log(
+                `Parachute Base: Paid ${ability.cost} for Vanguard's ability`
+              );
+
+              // Execute Vanguard's ability
+              const abilityResult = this.executeAbility(ability, {
+                source: vanguardCard,
+                playerId: parachuteBaseContext.sourcePlayerId,
+                columnIndex: vanguardCol,
+                position: vanguardPos,
+                fromParachuteBase: true,
+              });
+
+              // Check if ability set up new pending (it should for damage targeting)
+              if (this.state.pending) {
+                console.log(
+                  "Vanguard ability set up targeting, adding Parachute damage info"
+                );
+                // Add parachute damage info for after ability completes
+                this.state.pending.parachuteBaseDamage = {
+                  targetPlayer: parachuteBaseContext.sourcePlayerId,
+                  targetColumn: vanguardCol,
+                  targetPosition: vanguardPos,
+                };
+              } else {
+                console.log(
+                  "No pending from Vanguard ability, applying Parachute damage now"
+                );
+                this.applyParachuteBaseDamage(
+                  parachuteBaseContext.sourcePlayerId,
+                  vanguardCol,
+                  vanguardPos
+                );
+              }
+            } else {
+              console.log(
+                `Not enough water (need ${ability.cost}, have ${player.water})`
+              );
+              this.applyParachuteBaseDamage(
+                parachuteBaseContext.sourcePlayerId,
+                vanguardCol,
+                vanguardPos
+              );
+            }
+          }
+        } else {
+          // Normal punk placement
+          console.log("Normal punk placement completion");
+          this.state.pending = null;
         }
 
         return result;

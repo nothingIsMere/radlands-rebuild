@@ -19,7 +19,6 @@ function ensureJunkEffect(card) {
     ];
     card.junkEffect =
       defaultJunkEffects[Math.floor(Math.random() * defaultJunkEffects.length)];
-    console.log(`Added junk effect '${card.junkEffect}' to ${card.name}`);
   }
   return card;
 }

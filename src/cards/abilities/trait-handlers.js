@@ -44,11 +44,13 @@ export const cardTraits = {
 
   vanguard: {
     onEntry: (state, context) => {
-      // Check if deck has cards for punk
       if (state.deck.length === 0) {
         console.log("Vanguard: Cannot gain punk on entry - deck is empty");
         return false;
       }
+
+      // Check if this is from Parachute Base
+      const parachuteBaseContext = state.pending?.parachuteBaseContext;
 
       // Set up punk placement
       state.pending = {
@@ -56,6 +58,7 @@ export const cardTraits = {
         source: context.card,
         sourcePlayerId: context.playerId,
         fromVanguardEntry: true,
+        parachuteBaseContext: parachuteBaseContext, // Pass along if it exists
       };
 
       console.log("Vanguard entry: Place a punk");

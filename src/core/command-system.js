@@ -21,6 +21,26 @@ export class CommandSystem {
     }
   }
 
+  checkForActiveKarli(playerId) {
+    const player = this.state.players[playerId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (
+          card &&
+          card.name === "Karli Blaze" &&
+          !card.isDamaged &&
+          !card.isDestroyed
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   finishMutantAbility() {
     const pending = this.state.pending;
     const mutantCard = this.state.getCard(
@@ -880,11 +900,18 @@ export class CommandSystem {
     // Create person object
     const person = {
       ...card,
-      isReady: false,
+      isReady: false, // Default to not ready
       isDamaged: false,
       position: position,
       columnIndex,
     };
+
+    // Check for Karli Blaze's persistent trait BEFORE placement
+    const hasActiveKarli = this.checkForActiveKarli(playerId);
+    if (hasActiveKarli) {
+      person.isReady = true;
+      console.log(`${card.name} enters play ready due to Karli Blaze's trait!`);
+    }
 
     // Try to place with push
     if (!this.placeCardWithPush(column, position, person)) {
@@ -3056,6 +3083,15 @@ export class CommandSystem {
           position: targetSlot,
           columnIndex: targetColumn,
         };
+
+        // Check for Karli Blaze's persistent trait
+        const hasActiveKarli = this.checkForActiveKarli(pb.sourcePlayerId);
+        if (hasActiveKarli) {
+          person.isReady = true;
+          console.log(
+            `${person.name} enters play ready due to Karli Blaze's trait (via Parachute Base)!`
+          );
+        }
 
         // Place in column
         column.setCard(targetSlot, person);

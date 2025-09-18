@@ -1,5 +1,19 @@
 // trait-handlers.js
 export const cardTraits = {
+  karliblaze: {
+    onEntry: (state, context) => {
+      const card = state.getCard(
+        context.playerId,
+        context.columnIndex,
+        context.position
+      );
+      if (card) {
+        card.isReady = true;
+        console.log("Karli Blaze: Enters play ready");
+      }
+      return true;
+    },
+  },
   repairbot: {
     onEntry: (state, context) => {
       // Check if there are any damaged cards to restore - ONLY CHECK OWN CARDS

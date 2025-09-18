@@ -706,7 +706,12 @@ export class UIRenderer {
       name.textContent = card.name;
       cardDiv.appendChild(name);
 
-      // Add abilities if any
+      if (card.name === "Karli Blaze" && !card.isDamaged && !card.isDestroyed) {
+        const trait = this.createElement("div", "karli-trait-active");
+        trait.textContent = "⚡ All people enter ready!";
+        cardDiv.appendChild(trait);
+      }
+
       if (card.abilities && card.abilities.length > 0) {
         const abilities = this.createElement("div", "ability-info");
 

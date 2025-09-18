@@ -3,6 +3,22 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  karliblaze: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log("Karli Blaze: Select target to damage");
+        return true;
+      },
+    },
+  },
   magnuskarv: {
     damagecolumn: {
       cost: 2,

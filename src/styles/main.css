@@ -1090,3 +1090,24 @@ body.has-pending .card.magnus-column-target {
   font-size: 10px;
   font-weight: bold;
 }
+
+.karli-trait-active {
+  background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 4px;
+  animation: pulse-gold 1s infinite;
+}
+
+@keyframes pulse-gold {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

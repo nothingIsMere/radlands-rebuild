@@ -2366,10 +2366,14 @@ export class CommandSystem {
           }
         }
 
+        const cultLeaderCard =
+          this.state.pending.sourceCard || this.state.pending.source;
+
         // Now set up damage targeting (even if Cult Leader destroyed itself)
         this.state.pending = {
           type: "cultleader_damage",
           sourcePlayerId: this.state.pending.sourcePlayerId,
+          sourceCard: cultLeaderCard,
           destroyedSelf: isDestroyingSelf,
           parachuteBaseDamage: parachuteBaseDamage,
         };
@@ -2403,10 +2407,14 @@ export class CommandSystem {
           return false;
         }
 
-        // Store Parachute Base damage info
+        // Store info we need before clearing
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const destroyedSelf = this.state.pending?.destroyedSelf;
 
-        // Apply the damage
+        // Mark ability complete BEFORE resolving damage (which clears pending)
+        this.completeAbility(this.state.pending);
+
+        // Now apply the damage (this will clear pending)
         const result = this.resolveDamage(
           targetPlayer,
           targetColumn,
@@ -2418,7 +2426,7 @@ export class CommandSystem {
         }
 
         // Apply Parachute Base damage if needed (and if Cult Leader didn't destroy itself)
-        if (parachuteBaseDamage && !this.state.pending?.destroyedSelf) {
+        if (parachuteBaseDamage && !destroyedSelf) {
           console.log(
             "Cult Leader ability completed, applying Parachute Base damage"
           );

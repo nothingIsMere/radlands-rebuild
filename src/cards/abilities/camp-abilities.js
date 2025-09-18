@@ -60,7 +60,7 @@ export const campAbilities = {
           source: context.source,
           sourcePlayerId: context.playerId,
           campIndex: context.columnIndex,
-          validPeople: validPeople.map((c) => c.id), // Store just IDs
+          validPeople: validPeople.map((c) => c.id),
         };
 
         console.log("Parachute Base: Select person from hand to paradrop");

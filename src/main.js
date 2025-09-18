@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "holdout_1",
+      name: "Holdout",
+      type: "person",
+      cost: 2,
+      abilities: [{ effect: "damage", cost: 1 }],
+      junkEffect: "raid",
+    },
+    {
       id: `scientist_1`,
       name: "Scientist",
       type: "person",
@@ -294,6 +302,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "holdout_2",
+      name: "Holdout",
+      type: "person",
+      cost: 2,
+      abilities: [{ effect: "damage", cost: 1 }],
+      junkEffect: "raid",
+    },
     {
       id: "rescue_team_2",
       name: "Rescue Team",

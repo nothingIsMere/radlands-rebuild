@@ -2935,7 +2935,6 @@ export class CommandSystem {
       }
 
       case "parachute_select_person": {
-        // This case is triggered when a card is selected from hand
         if (payload.targetType !== "hand_card") return false;
 
         const pending = this.state.pending;
@@ -2947,15 +2946,11 @@ export class CommandSystem {
           return false;
         }
 
-        // Check total cost
-        const totalCost =
-          selectedCard.cost + (selectedCard.abilities?.[0]?.cost || 0);
-        if (player.water < totalCost) {
-          console.log(
-            `Need ${totalCost} water for Parachute Base (${
-              selectedCard.cost
-            } for card, ${selectedCard.abilities?.[0]?.cost || 0} for ability)`
-          );
+        // DON'T CHECK TOTAL COST HERE - we don't know the column yet!
+        // Just check if player has SOME water (minimum possible cost)
+        if (player.water < 0) {
+          // This will always pass
+          console.log("No water at all");
           this.state.pending = null;
           return false;
         }
@@ -2969,7 +2964,6 @@ export class CommandSystem {
           campIndex: pending.campIndex,
         };
 
-        console.log("Set pending state to:", this.state.pending); // ADD THIS
         console.log(`Parachute Base: Now place ${selectedCard.name}`);
         return true;
       }
@@ -2986,6 +2980,42 @@ export class CommandSystem {
 
         const column =
           this.state.players[pb.sourcePlayerId].columns[targetColumn];
+        const player = this.state.players[pb.sourcePlayerId];
+
+        // Calculate the ADJUSTED cost for this specific column
+        const adjustedCost = this.getAdjustedCost(
+          pb.selectedPerson,
+          targetColumn,
+          pb.sourcePlayerId
+        );
+
+        // Calculate ability cost (first ability only for Parachute Base)
+        const abilityCost = pb.selectedPerson.abilities?.[0]?.cost || 0;
+        const totalCost = adjustedCost + abilityCost;
+
+        // NOW check if player can afford it in this specific column
+        if (player.water < totalCost) {
+          console.log(
+            `Need ${totalCost} water for Parachute Base (${adjustedCost} for ${pb.selectedPerson.name}, ${abilityCost} for ability)`
+          );
+
+          // If Holdout could be free in another column, hint at that
+          if (pb.selectedPerson.name === "Holdout" && adjustedCost > 0) {
+            for (let col = 0; col < 3; col++) {
+              const camp =
+                this.state.players[pb.sourcePlayerId].columns[col].getCard(0);
+              if (camp?.isDestroyed) {
+                console.log(
+                  `Hint: Holdout would be FREE in column ${col} (destroyed camp)`
+                );
+                break;
+              }
+            }
+          }
+
+          return false; // Can't afford in this column
+        }
+
         const existingCard = column.getCard(targetSlot);
 
         // Handle pushing if slot is occupied
@@ -3003,10 +3033,13 @@ export class CommandSystem {
         }
 
         // Now place the person at the clicked position
-        const player = this.state.players[pb.sourcePlayerId];
-        player.water -= pb.selectedPerson.cost;
+        // Pay the ADJUSTED cost (not the base cost)
+        player.water -= adjustedCost;
         console.log(
-          `Parachute Base: Paid ${pb.selectedPerson.cost} for ${pb.selectedPerson.name}`
+          `Parachute Base: Paid ${adjustedCost} for ${pb.selectedPerson.name}` +
+            (adjustedCost === 0 && pb.selectedPerson.name === "Holdout"
+              ? " (FREE - destroyed camp!)"
+              : "")
         );
 
         // Remove from hand

@@ -166,7 +166,36 @@ export class UIRenderer {
           overlay.classList.add("damage-selection");
           break;
         case "parachute_place_person":
-          message.textContent = `🪂 Place ${this.state.pending.selectedPerson.name} on the board (costs ${this.state.pending.selectedPerson.cost} water)`;
+          // Calculate costs for each column to show in message
+          const costs = [];
+          for (let col = 0; col < 3; col++) {
+            const cost =
+              this.commands.state.commandSystem?.getAdjustedCost?.(
+                this.state.pending.selectedPerson,
+                col,
+                this.state.pending.sourcePlayerId
+              ) || this.state.pending.selectedPerson.cost;
+
+            if (this.state.pending.selectedPerson.name === "Holdout") {
+              const camp =
+                this.state.players[this.state.pending.sourcePlayerId].columns[
+                  col
+                ].getCard(0);
+              if (camp?.isDestroyed) {
+                costs.push(`Col ${col}: FREE`);
+              } else {
+                costs.push(`Col ${col}: ${cost}💧`);
+              }
+            }
+          }
+
+          if (costs.some((c) => c.includes("FREE"))) {
+            message.textContent = `🪂 Place ${
+              this.state.pending.selectedPerson.name
+            } (${costs.join(", ")})`;
+          } else {
+            message.textContent = `🪂 Place ${this.state.pending.selectedPerson.name} (costs ${this.state.pending.selectedPerson.cost}💧)`;
+          }
           overlay.classList.add("parachute-placement");
           break;
       }

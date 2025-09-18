@@ -2078,6 +2078,8 @@ export class CommandSystem {
         // Store Parachute Base damage info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
+        this.completeAbility(this.state.pending);
+
         // Set up for damage (with allowProtected flag preserved)
         this.state.pending = {
           type: "damage",
@@ -2126,6 +2128,8 @@ export class CommandSystem {
 
         // Store Parachute Base damage info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        this.completeAbility(this.state.pending);
 
         // Apply the damage
         const result = this.resolveDamage(
@@ -2444,10 +2448,6 @@ export class CommandSystem {
       }
 
       case "looter_damage": {
-        console.log("=== Processing looter_damage target ===");
-        console.log("Source player:", this.state.pending.sourcePlayerId);
-        console.log("Target:", targetPlayer, targetColumn, targetPosition);
-
         const sourcePlayerId = this.state.pending.sourcePlayerId;
         const parachuteBaseDamage = this.state.pending.parachuteBaseDamage;
 
@@ -2458,6 +2458,8 @@ export class CommandSystem {
           targetPosition
         );
         const isTargetCamp = targetCard?.type === "camp";
+
+        this.completeAbility(this.state.pending);
 
         // This call clears this.state.pending!
         const damaged = this.resolveDamage(
@@ -2514,6 +2516,8 @@ export class CommandSystem {
         // CRITICAL: Store Parachute Base damage info BEFORE calling resolveInjure
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
         console.log("Parachute Base damage info stored:", parachuteBaseDamage);
+
+        this.completeAbility(this.state.pending);
 
         // Call resolveInjure (which will clear pending)
         const result = this.resolveInjure(

@@ -3341,14 +3341,14 @@ export class CommandSystem {
         const pending = this.state.pending;
 
         // Find if this is a valid target
-        const isValidTarget = pending.validTargets.some(
+        const validTarget = pending.validTargets.find(
           (t) =>
             t.playerId === targetPlayer &&
             t.columnIndex === targetColumn &&
             t.position === targetPosition
         );
 
-        if (!isValidTarget) {
+        if (!validTarget) {
           console.log("Not a valid target for Mimic");
           return false;
         }
@@ -3359,6 +3359,74 @@ export class CommandSystem {
           targetPosition
         );
 
+        // Check if target only has Argo's granted ability (e.g., a punk with Argo active)
+        if (validTarget.hasArgoBonus) {
+          // Mimic copies the Argo-granted damage ability
+          const argoAbility = { effect: "damage", cost: 1 };
+
+          // Check if player can afford it
+          const player = this.state.players[pending.sourcePlayerId];
+          if (player.water < 1) {
+            console.log("Not enough water for Argo's damage ability");
+            pending.source.isReady = true;
+            this.state.pending = null;
+            return false;
+          }
+
+          // Pay the cost
+          player.water -= 1;
+          console.log(
+            `Mimic: Paid 1 water to copy ${
+              targetCard.isPunk ? "Punk" : targetCard.name
+            }'s [Argo] damage`
+          );
+
+          // Mark Mimic as not ready
+          pending.source.isReady = false;
+
+          // Store Parachute Base damage if needed
+          const parachuteBaseDamage = pending.parachuteBaseDamage;
+
+          // Mark ability complete
+          this.completeAbility(this.state.pending);
+
+          // Clear the mimic pending state
+          this.state.pending = null;
+
+          // Execute the damage ability with Mimic as the source
+          const mimicContext = {
+            source: pending.source,
+            playerId: pending.sourcePlayerId,
+            columnIndex: pending.sourceContext.columnIndex,
+            position: pending.sourceContext.position,
+            copiedFrom: targetCard.isPunk
+              ? "Punk (Argo)"
+              : `${targetCard.name} (Argo)`,
+            fromMimic: true,
+          };
+
+          this.executeAbility(argoAbility, mimicContext);
+
+          console.log(
+            `Mimic used ${
+              targetCard.isPunk ? "Punk" : targetCard.name
+            }'s [Argo] damage ability`
+          );
+
+          // Restore Parachute Base damage if it was present
+          if (parachuteBaseDamage) {
+            if (!this.state.pending) {
+              this.state.pending = { parachuteBaseDamage };
+              this.checkAndApplyParachuteBaseDamage();
+            } else {
+              this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+            }
+          }
+
+          return true;
+        }
+
+        // Handle normal abilities (not Argo-granted)
         if (!targetCard || !targetCard.abilities?.length) {
           console.log("Target has no abilities");
           return false;
@@ -3527,7 +3595,6 @@ export class CommandSystem {
 
         return true;
       }
-
       default:
         console.log(`Unknown pending type: ${this.state.pending.type}`);
         return false;

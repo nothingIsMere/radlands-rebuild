@@ -894,6 +894,24 @@ export const personAbilities = {
         const playerId = context.playerId;
         const validTargets = [];
 
+        // Check if there's an active Argo giving everyone damage ability
+        let hasActiveArgo = false;
+        for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
+          for (let pos = 0; pos <= 2; pos++) {
+            const card = state.players[playerId].columns[col].getCard(pos);
+            if (
+              card &&
+              card.name === "Argo Yesky" &&
+              !card.isDamaged &&
+              !card.isDestroyed
+            ) {
+              hasActiveArgo = true;
+              break;
+            }
+          }
+          if (hasActiveArgo) break;
+        }
+
         // Add own ready people (not including Mimic itself)
         const player = state.players[playerId];
         for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
@@ -905,16 +923,23 @@ export const personAbilities = {
               card.isReady &&
               !card.isDamaged &&
               !card.isDestroyed &&
-              card.id !== context.source.id && // Can't copy self
-              card.abilities?.length > 0
+              card.id !== context.source.id // Can't copy self
             ) {
-              validTargets.push({
-                card,
-                playerId,
-                columnIndex: col,
-                position: pos,
-                type: "ally",
-              });
+              // Check if card has abilities OR gets Argo's ability
+              const hasAbilities =
+                card.abilities?.length > 0 ||
+                (hasActiveArgo && (card.isPunk || card.type === "person"));
+
+              if (hasAbilities) {
+                validTargets.push({
+                  card,
+                  playerId,
+                  columnIndex: col,
+                  position: pos,
+                  type: "ally",
+                  hasArgoBonus: hasActiveArgo && !card.abilities?.length, // Track if ONLY has Argo ability
+                });
+              }
             }
           }
         }
@@ -922,6 +947,25 @@ export const personAbilities = {
         // Add opponent's undamaged people (ready or not)
         const opponentId = playerId === "left" ? "right" : "left";
         const opponent = state.players[opponentId];
+
+        // Check if opponent has active Argo
+        let opponentHasActiveArgo = false;
+        for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
+          for (let pos = 0; pos <= 2; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (
+              card &&
+              card.name === "Argo Yesky" &&
+              !card.isDamaged &&
+              !card.isDestroyed
+            ) {
+              opponentHasActiveArgo = true;
+              break;
+            }
+          }
+          if (opponentHasActiveArgo) break;
+        }
+
         for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
           for (let pos = 0; pos <= 2; pos++) {
             const card = opponent.columns[col].getCard(pos);
@@ -929,16 +973,25 @@ export const personAbilities = {
               card &&
               card.type === "person" &&
               !card.isDamaged &&
-              !card.isDestroyed &&
-              card.abilities?.length > 0
+              !card.isDestroyed
             ) {
-              validTargets.push({
-                card,
-                playerId: opponentId,
-                columnIndex: col,
-                position: pos,
-                type: "enemy",
-              });
+              // Check if card has abilities OR gets Argo's ability
+              const hasAbilities =
+                card.abilities?.length > 0 ||
+                (opponentHasActiveArgo &&
+                  (card.isPunk || card.type === "person"));
+
+              if (hasAbilities) {
+                validTargets.push({
+                  card,
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  type: "enemy",
+                  hasArgoBonus:
+                    opponentHasActiveArgo && !card.abilities?.length,
+                });
+              }
             }
           }
         }
@@ -959,8 +1012,9 @@ export const personAbilities = {
             playerId: t.playerId,
             columnIndex: t.columnIndex,
             position: t.position,
+            hasArgoBonus: t.hasArgoBonus,
           })),
-          parachuteBaseDamage: context.parachuteBaseDamage, // Preserve if from Parachute Base
+          parachuteBaseDamage: context.parachuteBaseDamage,
         };
 
         console.log(

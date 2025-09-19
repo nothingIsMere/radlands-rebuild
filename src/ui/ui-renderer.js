@@ -364,7 +364,6 @@ export class UIRenderer {
     }
     const cardDiv = this.createElement("div", "card");
 
-    // Add this near the top of renderCard method, right after creating cardDiv
     if (
       this.state.pending?.type === "parachute_place_person" &&
       playerId === this.state.pending.sourcePlayerId
@@ -801,22 +800,46 @@ export class UIRenderer {
               btn.addEventListener("click", (e) => {
                 e.stopPropagation();
 
-                // Double-check pending state at click time
                 if (this.state.pending) {
                   console.log("Action in progress - please complete it first");
                   return;
                 }
 
-                this.commands.execute({
-                  type: "USE_ABILITY",
-                  playerId: playerId,
-                  payload: {
+                // Juggernaut is special - it's a camp that can move to any position
+                if (card.name === "Juggernaut") {
+                  this.commands.execute({
+                    type: "USE_CAMP_ABILITY",
                     playerId: playerId,
-                    columnIndex: columnIndex,
-                    position: position,
-                    abilityIndex: index,
-                  },
-                });
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: position, // Include actual position for Juggernaut
+                    },
+                  });
+                } else if (card.type === "camp") {
+                  // Regular camps are always at position 0
+                  this.commands.execute({
+                    type: "USE_CAMP_ABILITY",
+                    playerId: playerId,
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: 0,
+                    },
+                  });
+                } else {
+                  // Regular person ability
+                  this.commands.execute({
+                    type: "USE_ABILITY",
+                    playerId: playerId,
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: position,
+                      abilityIndex: index,
+                    },
+                  });
+                }
               });
               abilities.appendChild(btn);
             } else {

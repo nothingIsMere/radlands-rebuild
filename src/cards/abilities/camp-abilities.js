@@ -1,3 +1,10 @@
+/*
+ * IMPORTANT: All camp abilities must be compatible with Vera Vosh's trait
+ * Vera's trait: "The first time you use a card's ability each turn, that card stays ready."
+ * This is handled in handleUseCampAbility() in command-system.js
+ * The ready state tracking is automatic - no special handling needed in individual camp handlers
+ */
+
 export const campAbilities = {
   juggernaut: {
     move: {
@@ -34,6 +41,11 @@ export const campAbilities = {
         }
 
         console.log(`Juggernaut should now be at position ${nextPosition}`);
+
+        // NOTE: Vera Vosh trait handling for camps
+        // The camp's ready state is handled in handleUseCampAbility
+        // which will check for Vera's trait when marking camps not ready
+
         return true;
       },
     },

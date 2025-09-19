@@ -712,119 +712,125 @@ export class UIRenderer {
         cardDiv.appendChild(trait);
       }
 
-      if (card.abilities && card.abilities.length > 0) {
+      // Check if Argo Yesky is giving this card an extra damage ability
+      let hasArgoBonus = false;
+      // Check for both person cards AND punks
+      if (
+        (card.type === "person" || card.isPunk) &&
+        playerId === this.state.currentPlayer
+      ) {
+        // Check for active Argo directly
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const checkCard =
+              this.state.players[playerId].columns[col].getCard(pos);
+            if (
+              checkCard &&
+              checkCard.name === "Argo Yesky" &&
+              !checkCard.isDamaged &&
+              !checkCard.isDestroyed &&
+              checkCard.id !== card.id
+            ) {
+              // Don't give Argo his own bonus
+              hasArgoBonus = true;
+              break;
+            }
+          }
+          if (hasArgoBonus) break;
+        }
+      }
+
+      // Create abilities div if there are normal abilities OR if there's an Argo bonus
+      if ((card.abilities && card.abilities.length > 0) || hasArgoBonus) {
         const abilities = this.createElement("div", "ability-info");
 
-        // Check if Argo Yesky is giving this card an extra damage ability
+        // Only render normal abilities if they exist
+        if (card.abilities && card.abilities.length > 0) {
+          card.abilities.forEach((ability, index) => {
+            // Different ready conditions for camps vs people
+            let canUseAbility = false;
 
-        let hasArgoBonus = false;
-        // Check for both person cards AND punks
-        if (
-          (card.type === "person" || card.isPunk) &&
-          playerId === this.state.currentPlayer
-        ) {
-          // Check for active Argo directly
-          for (let col = 0; col < 3; col++) {
-            for (let pos = 0; pos < 3; pos++) {
-              const checkCard =
-                this.state.players[playerId].columns[col].getCard(pos);
-              if (
-                checkCard &&
-                checkCard.name === "Argo Yesky" &&
-                !checkCard.isDamaged &&
-                !checkCard.isDestroyed &&
-                checkCard.id !== card.id
-              ) {
-                // Don't give Argo his own bonus
-                hasArgoBonus = true;
-                break;
-              }
-            }
-            if (hasArgoBonus) break;
-          }
-        }
-
-        card.abilities.forEach((ability, index) => {
-          // Different ready conditions for camps vs people
-          let canUseAbility = false;
-
-          if (card.type === "camp") {
-            canUseAbility = card.isReady && !card.isDestroyed;
-          } else if (card.type === "person") {
-            canUseAbility =
-              card.isReady && !card.isDamaged && !card.isDestroyed;
-          }
-
-          // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION
-          if (
-            canUseAbility &&
-            playerId === this.state.currentPlayer &&
-            !this.state.pending
-          ) {
-            const btn = this.createElement("button", "ability-btn");
-
-            // Special text for Rabble Rouser's conditional ability
-            if (
-              card.name === "Rabble Rouser" &&
-              ability.effect === "punkdamage"
-            ) {
-              btn.textContent = `Damage (if punk) (${ability.cost}💧)`;
-            } else {
-              btn.textContent = `${ability.effect} (${ability.cost}💧)`;
-            }
-
-            btn.addEventListener("click", (e) => {
-              e.stopPropagation();
-
-              // Double-check pending state at click time
-              if (this.state.pending) {
-                console.log("Action in progress - please complete it first");
-                return;
-              }
-
-              this.commands.execute({
-                type: "USE_ABILITY",
-                playerId: playerId,
-                payload: {
-                  playerId: playerId,
-                  columnIndex: columnIndex,
-                  position: position,
-                  abilityIndex: index,
-                },
-              });
-            });
-            abilities.appendChild(btn);
-          } else {
-            // Show disabled ability text
-            const text = this.createElement("span", "ability-text-disabled");
-
-            if (
-              card.name === "Rabble Rouser" &&
-              ability.effect === "punkdamage"
-            ) {
-              text.textContent = `Damage (if punk) (${ability.cost}💧)`;
-            } else {
-              text.textContent = `${ability.effect} (${ability.cost}💧)`;
-            }
-
-            // Add specific reason for blocking
-            if (this.state.pending) {
-              text.textContent += " [Action in Progress]";
+            if (card.type === "camp") {
+              canUseAbility = card.isReady && !card.isDestroyed;
             } else if (card.type === "person") {
-              if (!card.isReady) text.textContent += " [Not Ready]";
-              if (card.isDamaged) text.textContent += " [Damaged]";
-            } else if (card.type === "camp") {
-              if (!card.isReady) text.textContent += " [Used]";
-              if (card.isDestroyed) text.textContent += " [Destroyed]";
+              canUseAbility =
+                card.isReady && !card.isDamaged && !card.isDestroyed;
             }
 
-            if (playerId !== this.state.currentPlayer && !this.state.pending) {
-              text.textContent += " [Not Your Turn]";
-            }
+            // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION
+            if (
+              canUseAbility &&
+              playerId === this.state.currentPlayer &&
+              !this.state.pending
+            ) {
+              const btn = this.createElement("button", "ability-btn");
 
-            abilities.appendChild(text);
-          }
-        });
+              // Special text for Rabble Rouser's conditional ability
+              if (
+                card.name === "Rabble Rouser" &&
+                ability.effect === "punkdamage"
+              ) {
+                btn.textContent = `Damage (if punk) (${ability.cost}💧)`;
+              } else {
+                btn.textContent = `${ability.effect} (${ability.cost}💧)`;
+              }
+
+              btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+
+                // Double-check pending state at click time
+                if (this.state.pending) {
+                  console.log("Action in progress - please complete it first");
+                  return;
+                }
+
+                this.commands.execute({
+                  type: "USE_ABILITY",
+                  playerId: playerId,
+                  payload: {
+                    playerId: playerId,
+                    columnIndex: columnIndex,
+                    position: position,
+                    abilityIndex: index,
+                  },
+                });
+              });
+              abilities.appendChild(btn);
+            } else {
+              // Show disabled ability text
+              const text = this.createElement("span", "ability-text-disabled");
+
+              if (
+                card.name === "Rabble Rouser" &&
+                ability.effect === "punkdamage"
+              ) {
+                text.textContent = `Damage (if punk) (${ability.cost}💧)`;
+              } else {
+                text.textContent = `${ability.effect} (${ability.cost}💧)`;
+              }
+
+              // Add specific reason for blocking
+              if (this.state.pending) {
+                text.textContent += " [Action in Progress]";
+              } else if (card.type === "person") {
+                if (!card.isReady) text.textContent += " [Not Ready]";
+                if (card.isDamaged) text.textContent += " [Damaged]";
+              } else if (card.type === "camp") {
+                if (!card.isReady) text.textContent += " [Used]";
+                if (card.isDestroyed) text.textContent += " [Destroyed]";
+              }
+
+              if (
+                playerId !== this.state.currentPlayer &&
+                !this.state.pending
+              ) {
+                text.textContent += " [Not Your Turn]";
+              }
+
+              abilities.appendChild(text);
+            }
+          });
+        }
 
         // Add Argo's bonus damage ability if applicable
         if (hasArgoBonus) {
@@ -858,7 +864,7 @@ export class UIRenderer {
                   playerId: playerId,
                   columnIndex: columnIndex,
                   position: position,
-                  abilityIndex: card.abilities.length, // Use next index after normal abilities
+                  abilityIndex: card.abilities ? card.abilities.length : 0, // Handle case where no abilities
                   isArgoGranted: true,
                 },
               });

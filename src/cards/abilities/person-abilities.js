@@ -24,26 +24,14 @@ export const personAbilities = {
           return false;
         }
 
-        // Set up discard selection (need to discard 3 cards, but not Water Silo)
-        const discardableCards = player.hand.filter(
-          (card) => !card.isWaterSilo
-        );
-
-        if (discardableCards.length <= 3) {
-          // Must discard all non-Water Silo cards
-          console.log("Zeto Kahn: Discarding all non-Water Silo cards");
-          player.hand = player.hand.filter((card) => card.isWaterSilo);
-          discardableCards.forEach((card) => state.discard.push(card));
-          return true;
-        }
-
-        // Need to select which 3 to discard
+        // Always set up discard selection
         state.pending = {
           type: "zeto_discard_selection",
           source: context.source,
           sourcePlayerId: context.playerId,
           mustDiscard: 3,
           context,
+          parachuteBaseDamage: context.parachuteBaseDamage, // Preserve if from Parachute Base
         };
 
         console.log("Zeto Kahn: Select 3 cards to discard (not Water Silo)");

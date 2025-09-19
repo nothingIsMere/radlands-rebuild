@@ -1748,6 +1748,9 @@ export class CommandSystem {
           console.log(`Discarded ${card.name}`);
         }
 
+        // Store Parachute Base damage info before clearing pending
+        const parachuteBaseDamage = pending.parachuteBaseDamage;
+
         // Mark ability complete
         this.completeAbility(pending);
 
@@ -1755,6 +1758,19 @@ export class CommandSystem {
         this.state.pending = null;
 
         console.log("Zeto Kahn: Draw and discard complete");
+
+        // Apply Parachute Base damage if needed
+        if (parachuteBaseDamage) {
+          console.log(
+            "Zeto Kahn ability completed, applying Parachute Base damage"
+          );
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+
         return true;
       }
 

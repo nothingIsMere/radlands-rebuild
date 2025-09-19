@@ -110,6 +110,26 @@ export class CommandSystem {
     return damaged;
   }
 
+  checkForActiveArgo(playerId) {
+    const player = this.state.players[playerId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (
+          card &&
+          card.name === "Argo Yesky" &&
+          !card.isDamaged &&
+          !card.isDestroyed
+        ) {
+          return card;
+        }
+      }
+    }
+
+    return null;
+  }
+
   handleUseCampAbility(payload) {
     const { playerId, columnIndex } = payload;
     const camp = this.state.getCard(playerId, columnIndex, 0);
@@ -1039,7 +1059,8 @@ export class CommandSystem {
       return false;
     }
 
-    const { playerId, columnIndex, position, abilityIndex } = payload;
+    const { playerId, columnIndex, position, abilityIndex, isArgoGranted } =
+      payload;
 
     // Verify this is actually the current player's card
     if (playerId !== this.state.currentPlayer) {
@@ -1049,6 +1070,81 @@ export class CommandSystem {
 
     const card = this.state.getCard(playerId, columnIndex, position);
 
+    // Handle Argo's granted damage ability
+    if (isArgoGranted) {
+      // Check if Argo is still active
+      const argoCard = this.checkForActiveArgo(playerId);
+      if (!argoCard) {
+        console.log("Argo Yesky is no longer active");
+        return false;
+      }
+
+      // Check if card can use abilities
+      if (!card.isReady) {
+        console.log("Card has already used its ability this turn");
+        return false;
+      }
+
+      if (card.isDestroyed) {
+        console.log("Destroyed cards cannot use abilities");
+        return false;
+      }
+
+      if (card.type === "person" && card.isDamaged) {
+        console.log("Damaged people cannot use abilities");
+        return false;
+      }
+
+      // Check water cost (Argo's granted ability always costs 1)
+      const player = this.state.players[playerId];
+      if (player.water < 1) {
+        console.log("Not enough water for Argo's granted damage ability");
+        return false;
+      }
+
+      // Pay cost
+      player.water -= 1;
+      console.log(
+        `Paid 1 water for Argo's granted damage ability on ${card.name}`
+      );
+
+      // Execute Argo's damage ability
+      const argoAbility = { effect: "damage", cost: 1 };
+      const result = this.executeAbility(argoAbility, {
+        source: card,
+        playerId: playerId,
+        columnIndex: columnIndex,
+        position: position,
+        fromArgo: true,
+      });
+
+      // Check if ability failed to execute
+      if (result === false) {
+        // Refund the water
+        player.water += 1;
+        console.log("Argo ability could not be used, refunded 1 water");
+        return false;
+      }
+
+      // Check if ability created a pending state
+      if (this.state.pending) {
+        // Ability started a multi-step process - store card info in pending
+        this.state.pending.sourceCard = card;
+        this.state.pending.abilityUsed = argoAbility;
+        console.log(
+          "Argo ability started multi-step process, will mark not ready when completed"
+        );
+        this.notifyUI("PENDING_STATE_CREATED", true);
+      } else {
+        // Ability completed immediately - mark as not ready now
+        card.isReady = false;
+        this.state.turnEvents.abilityUsedThisTurn = true;
+      }
+
+      return true;
+    }
+
+    // Normal ability handling (not Argo-granted)
     if (!card || !card.abilities?.[abilityIndex]) {
       console.log("Card or ability not found");
       return false;

@@ -1,5 +1,25 @@
 // trait-handlers.js
 export const cardTraits = {
+  argoyesky: {
+    onEntry: (state, context) => {
+      // First, gain a punk
+      if (state.deck.length === 0) {
+        console.log("Argo Yesky: Cannot gain punk on entry - deck is empty");
+        return false;
+      }
+
+      // Set up punk placement
+      state.pending = {
+        type: "place_punk",
+        source: context.card,
+        sourcePlayerId: context.playerId,
+        fromArgoEntry: true,
+      };
+
+      console.log("Argo Yesky entry: Place a punk");
+      return true;
+    },
+  },
   karliblaze: {
     onEntry: (state, context) => {
       const card = state.getCard(

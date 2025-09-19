@@ -715,6 +715,35 @@ export class UIRenderer {
       if (card.abilities && card.abilities.length > 0) {
         const abilities = this.createElement("div", "ability-info");
 
+        // Check if Argo Yesky is giving this card an extra damage ability
+
+        let hasArgoBonus = false;
+        // Check for both person cards AND punks
+        if (
+          (card.type === "person" || card.isPunk) &&
+          playerId === this.state.currentPlayer
+        ) {
+          // Check for active Argo directly
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 0; pos < 3; pos++) {
+              const checkCard =
+                this.state.players[playerId].columns[col].getCard(pos);
+              if (
+                checkCard &&
+                checkCard.name === "Argo Yesky" &&
+                !checkCard.isDamaged &&
+                !checkCard.isDestroyed &&
+                checkCard.id !== card.id
+              ) {
+                // Don't give Argo his own bonus
+                hasArgoBonus = true;
+                break;
+              }
+            }
+            if (hasArgoBonus) break;
+          }
+        }
+
         card.abilities.forEach((ability, index) => {
           // Different ready conditions for camps vs people
           let canUseAbility = false;
@@ -796,6 +825,63 @@ export class UIRenderer {
             abilities.appendChild(text);
           }
         });
+
+        // Add Argo's bonus damage ability if applicable
+        if (hasArgoBonus) {
+          const canUseAbility =
+            card.isReady && !card.isDamaged && !card.isDestroyed;
+
+          if (
+            canUseAbility &&
+            playerId === this.state.currentPlayer &&
+            !this.state.pending
+          ) {
+            const btn = this.createElement(
+              "button",
+              "ability-btn argo-granted"
+            );
+            btn.textContent = `[Argo] Damage (1💧)`;
+
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+
+              if (this.state.pending) {
+                console.log("Action in progress - please complete it first");
+                return;
+              }
+
+              // Create a virtual ability index for Argo's granted ability
+              this.commands.execute({
+                type: "USE_ABILITY",
+                playerId: playerId,
+                payload: {
+                  playerId: playerId,
+                  columnIndex: columnIndex,
+                  position: position,
+                  abilityIndex: card.abilities.length, // Use next index after normal abilities
+                  isArgoGranted: true,
+                },
+              });
+            });
+            abilities.appendChild(btn);
+          } else {
+            const text = this.createElement(
+              "span",
+              "ability-text-disabled argo-granted"
+            );
+            text.textContent = `[Argo] Damage (1💧)`;
+
+            if (this.state.pending) {
+              text.textContent += " [Action in Progress]";
+            } else if (!card.isReady) {
+              text.textContent += " [Not Ready]";
+            } else if (card.isDamaged) {
+              text.textContent += " [Damaged]";
+            }
+
+            abilities.appendChild(text);
+          }
+        }
 
         cardDiv.appendChild(abilities);
       }

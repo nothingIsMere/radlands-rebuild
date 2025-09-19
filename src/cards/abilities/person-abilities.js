@@ -3,6 +3,22 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  argoyesky: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log("Argo Yesky: Select target to damage");
+        return true;
+      },
+    },
+  },
   karliblaze: {
     damage: {
       cost: 1,

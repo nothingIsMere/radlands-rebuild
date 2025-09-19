@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "argo_yesky_1",
+      name: "Argo Yesky",
+      type: "person",
+      cost: 3,
+      abilities: [{ effect: "damage", cost: 1 }],
+      junkEffect: "punk",
+    },
+    {
       id: "karli_blaze_1",
       name: "Karli Blaze",
       type: "person",
@@ -310,6 +318,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "argo_yesky_2",
+      name: "Argo Yesky",
+      type: "person",
+      cost: 3,
+      abilities: [{ effect: "damage", cost: 1 }],
+      junkEffect: "punk",
+    },
     {
       id: "karli_blaze_2",
       name: "Karli Blaze",

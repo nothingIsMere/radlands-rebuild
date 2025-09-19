@@ -11,12 +11,39 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
+  checkForActiveVera(playerId) {
+    const player = this.state.players[playerId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (
+          card &&
+          card.name === "Vera Vosh" &&
+          !card.isDamaged &&
+          !card.isDestroyed
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   completeAbility(pending) {
     if (pending?.sourceCard) {
-      pending.sourceCard.isReady = false;
+      // Check if we stored a Vera decision
+      if (!pending.shouldStayReady) {
+        pending.sourceCard.isReady = false;
+      }
       this.state.turnEvents.abilityUsedThisTurn = true;
       console.log(
-        `${pending.sourceCard.name} marked as not ready after ability completed`
+        `${pending.sourceCard.name} ${
+          pending.shouldStayReady
+            ? "stays ready (Vera trait)"
+            : "marked as not ready"
+        } after ability completed`
       );
     }
   }
@@ -1126,18 +1153,34 @@ export class CommandSystem {
         return false;
       }
 
+      // Check for Vera Vosh's trait
+      let shouldStayReady = false;
+      const hasActiveVera = this.checkForActiveVera(playerId);
+      if (
+        hasActiveVera &&
+        !this.state.turnEvents.veraFirstUseCards.includes(card.id)
+      ) {
+        // This is the first time this card has used an ability this turn with Vera active
+        shouldStayReady = true;
+        this.state.turnEvents.veraFirstUseCards.push(card.id);
+        console.log(`${card.name} stays ready due to Vera Vosh's trait!`);
+      }
+
       // Check if ability created a pending state
       if (this.state.pending) {
         // Ability started a multi-step process - store card info in pending
         this.state.pending.sourceCard = card;
         this.state.pending.abilityUsed = argoAbility;
+        this.state.pending.shouldStayReady = shouldStayReady;
         console.log(
           "Argo ability started multi-step process, will mark not ready when completed"
         );
         this.notifyUI("PENDING_STATE_CREATED", true);
       } else {
-        // Ability completed immediately - mark as not ready now
-        card.isReady = false;
+        // Ability completed immediately
+        if (!shouldStayReady) {
+          card.isReady = false;
+        }
         this.state.turnEvents.abilityUsedThisTurn = true;
       }
 
@@ -1201,19 +1244,35 @@ export class CommandSystem {
       return false;
     }
 
-    // NEW: Check if ability created a pending state that could be cancelled
+    // Check for Vera Vosh's trait
+    let shouldStayReady = false;
+    const hasActiveVera = this.checkForActiveVera(playerId);
+    if (
+      hasActiveVera &&
+      !this.state.turnEvents.veraFirstUseCards.includes(card.id)
+    ) {
+      // This is the first time this card has used an ability this turn with Vera active
+      shouldStayReady = true;
+      this.state.turnEvents.veraFirstUseCards.push(card.id);
+      console.log(`${card.name} stays ready due to Vera Vosh's trait!`);
+    }
+
+    // Check if ability created a pending state that could be cancelled
     if (this.state.pending) {
       // Ability started a multi-step process - store card info in pending
       this.state.pending.sourceCard = card;
       this.state.pending.abilityUsed = ability;
+      this.state.pending.shouldStayReady = shouldStayReady;
       console.log(
         "Ability started multi-step process, will mark not ready when completed"
       );
       // Add immediate UI update
       this.notifyUI("PENDING_STATE_CREATED", true);
     } else {
-      // Ability completed immediately - mark as not ready now
-      card.isReady = false;
+      // Ability completed immediately
+      if (!shouldStayReady) {
+        card.isReady = false;
+      }
       this.state.turnEvents.abilityUsedThisTurn = true;
     }
 
@@ -3721,6 +3780,7 @@ export class CommandSystem {
       peoplePlayedThisTurn: 0,
       eventResolvedThisTurn: false,
       abilityUsedThisTurn: false,
+      veraFirstUseCards: [],
     };
 
     // Switch player

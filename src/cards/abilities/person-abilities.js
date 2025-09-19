@@ -3,6 +3,52 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  veravosh: {
+    injure: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find valid injure targets (unprotected enemy people)
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              // Check if protected
+              if (!opponent.columns[col].isProtected(pos)) {
+                validTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Vera Vosh: No unprotected enemy people to injure");
+          return false;
+        }
+
+        state.pending = {
+          type: "injure",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+          validTargets: validTargets,
+        };
+
+        console.log(
+          `Vera Vosh: Select unprotected enemy person to injure (${validTargets.length} targets)`
+        );
+        return true;
+      },
+    },
+  },
   argoyesky: {
     damage: {
       cost: 1,

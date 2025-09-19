@@ -493,6 +493,29 @@ export class UIRenderer {
       }
     }
 
+    // Vera Vosh trait indicator
+    if (
+      card &&
+      card.name === "Vera Vosh" &&
+      !card.isDamaged &&
+      !card.isDestroyed
+    ) {
+      const trait = this.createElement("div", "vera-trait-active");
+      trait.textContent = "🔄 First ability use stays ready!";
+      cardDiv.appendChild(trait);
+    }
+
+    // Show if this card has already used Vera's trait
+    if (
+      card &&
+      card.type === "person" &&
+      this.state.turnEvents.veraFirstUseCards?.includes(card.id)
+    ) {
+      const usedVera = this.createElement("div", "vera-used");
+      usedVera.textContent = "✓ Vera bonus used";
+      cardDiv.appendChild(usedVera);
+    }
+
     if (this.state.pending?.type === "raiders_select_camp") {
       // Highlight camps that belong to the target player
       if (

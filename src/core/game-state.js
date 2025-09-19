@@ -22,6 +22,7 @@ export class GameState {
       peoplePlayedThisTurn: 0,
       eventResolvedThisTurn: false,
       abilityUsedThisTurn: false,
+      veraFirstUseCards: [],
     };
   }
 

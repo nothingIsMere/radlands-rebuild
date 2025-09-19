@@ -80,6 +80,22 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "doomsayer_1",
+      name: "Doomsayer",
+      type: "person",
+      cost: 1,
+      abilities: [{ effect: "conditionaldamage", cost: 1 }],
+      junkEffect: "card",
+    },
+    {
+      id: "zeto_kahn_1",
+      name: "Zeto Kahn",
+      type: "person",
+      cost: 3,
+      abilities: [{ effect: "drawdiscard", cost: 1 }],
+      junkEffect: "punk",
+    },
+    {
       id: "vera_vosh_1",
       name: "Vera Vosh",
       type: "person",
@@ -326,6 +342,22 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "doomsayer_2",
+      name: "Doomsayer",
+      type: "person",
+      cost: 1,
+      abilities: [{ effect: "conditionaldamage", cost: 1 }],
+      junkEffect: "card",
+    },
+    {
+      id: "zeto_kahn_2",
+      name: "Zeto Kahn",
+      type: "person",
+      cost: 3,
+      abilities: [{ effect: "drawdiscard", cost: 1 }],
+      junkEffect: "punk",
+    },
     {
       id: "vera_vosh_2",
       name: "Vera Vosh",

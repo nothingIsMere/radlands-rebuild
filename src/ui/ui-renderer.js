@@ -1098,6 +1098,78 @@ export class UIRenderer {
       return modal;
     }
 
+    // Handle Zeto Kahn discard selection
+    if (this.state.pending?.type === "zeto_discard_selection") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent =
+        "Zeto Kahn: Select 3 cards to discard (not Water Silo)";
+      content.appendChild(title);
+
+      const player = this.state.players[this.state.pending.sourcePlayerId];
+      const selectedCards = new Set();
+
+      const cardListDiv = this.createElement("div", "card-selection-list");
+
+      player.hand.forEach((card, index) => {
+        const cardDiv = this.createElement("div", "selectable-card");
+        cardDiv.textContent = `${card.name} (${card.cost}💧)`;
+
+        // Disable Water Silo
+        if (card.isWaterSilo) {
+          cardDiv.classList.add("disabled");
+          cardDiv.textContent += " [Cannot discard]";
+        } else {
+          cardDiv.addEventListener("click", () => {
+            if (selectedCards.has(card.id)) {
+              selectedCards.delete(card.id);
+              cardDiv.classList.remove("selected");
+            } else if (selectedCards.size < 3) {
+              selectedCards.add(card.id);
+              cardDiv.classList.add("selected");
+            }
+
+            // Update submit button
+            const submitBtn = content.querySelector(".submit-discard-btn");
+            if (submitBtn) {
+              submitBtn.disabled = selectedCards.size !== 3;
+              submitBtn.textContent = `Discard ${selectedCards.size}/3 cards`;
+            }
+          });
+        }
+
+        cardListDiv.appendChild(cardDiv);
+      });
+
+      content.appendChild(cardListDiv);
+
+      // Add submit button
+      const submitBtn = this.createElement("button", "submit-discard-btn");
+      submitBtn.textContent = "Discard 0/3 cards";
+      submitBtn.disabled = true;
+
+      submitBtn.addEventListener("click", () => {
+        if (selectedCards.size === 3) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            cardsToDiscard: Array.from(selectedCards),
+          });
+        }
+      });
+
+      content.appendChild(submitBtn);
+
+      // NO CANCEL BUTTON - player must complete the discard
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     // Handle Scientist's junk selection
     // In the scientist_select_junk case:
     if (

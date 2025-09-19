@@ -1714,6 +1714,50 @@ export class CommandSystem {
         return true;
       }
 
+      case "zeto_discard_selection": {
+        const { cardsToDiscard } = payload;
+        const pending = this.state.pending;
+
+        if (!cardsToDiscard || cardsToDiscard.length !== pending.mustDiscard) {
+          console.log(
+            `Must select exactly ${pending.mustDiscard} cards to discard`
+          );
+          return false;
+        }
+
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Verify all selected cards exist and aren't Water Silo
+        for (const cardId of cardsToDiscard) {
+          const card = player.hand.find((c) => c.id === cardId);
+          if (!card) {
+            console.log("Invalid card selected");
+            return false;
+          }
+          if (card.isWaterSilo) {
+            console.log("Cannot discard Water Silo");
+            return false;
+          }
+        }
+
+        // Discard the selected cards
+        for (const cardId of cardsToDiscard) {
+          const index = player.hand.findIndex((c) => c.id === cardId);
+          const card = player.hand.splice(index, 1)[0];
+          this.state.discard.push(card);
+          console.log(`Discarded ${card.name}`);
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        console.log("Zeto Kahn: Draw and discard complete");
+        return true;
+      }
+
       case "vanguard_counter": {
         console.log(
           "Vanguard counter target selected:",

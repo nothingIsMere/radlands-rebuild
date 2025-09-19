@@ -3,6 +3,90 @@ import { CONSTANTS } from "../../core/constants.js";
 // person-abilities.js
 
 export const personAbilities = {
+  zetokahn: {
+    drawdiscard: {
+      cost: 1,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Draw 3 cards
+        const cardsDrawn = [];
+        for (let i = 0; i < 3 && state.deck.length > 0; i++) {
+          const card = state.deck.shift();
+          player.hand.push(card);
+          cardsDrawn.push(card);
+        }
+
+        console.log(`Zeto Kahn: Drew ${cardsDrawn.length} cards`);
+
+        if (cardsDrawn.length === 0) {
+          console.log("Zeto Kahn: Deck was empty, no cards drawn");
+          return false;
+        }
+
+        // Set up discard selection (need to discard 3 cards, but not Water Silo)
+        const discardableCards = player.hand.filter(
+          (card) => !card.isWaterSilo
+        );
+
+        if (discardableCards.length <= 3) {
+          // Must discard all non-Water Silo cards
+          console.log("Zeto Kahn: Discarding all non-Water Silo cards");
+          player.hand = player.hand.filter((card) => card.isWaterSilo);
+          discardableCards.forEach((card) => state.discard.push(card));
+          return true;
+        }
+
+        // Need to select which 3 to discard
+        state.pending = {
+          type: "zeto_discard_selection",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          mustDiscard: 3,
+          context,
+        };
+
+        console.log("Zeto Kahn: Select 3 cards to discard (not Water Silo)");
+        return true;
+      },
+    },
+  },
+  doomsayer: {
+    conditionaldamage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if opponent has any events in their queue
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+
+        let hasEvents = false;
+        for (let i = 0; i < 3; i++) {
+          if (opponent.eventQueue[i]) {
+            hasEvents = true;
+            break;
+          }
+        }
+
+        if (!hasEvents) {
+          console.log(
+            "Doomsayer: Opponent has no events in queue, cannot damage"
+          );
+          return false;
+        }
+
+        // Set up damage targeting
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log("Doomsayer: Opponent has events - select target to damage");
+        return true;
+      },
+    },
+  },
   veravosh: {
     injure: {
       cost: 1,

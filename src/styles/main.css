@@ -1154,3 +1154,57 @@ body.has-pending .card.magnus-column-target {
   font-style: italic;
   margin-top: 2px;
 }
+
+.card-selection-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 20px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.selectable-card {
+  padding: 10px;
+  margin: 5px 0;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selectable-card:hover:not(.disabled) {
+  background: #f0f0f0;
+  border-color: #4caf50;
+}
+
+.selectable-card.selected {
+  background: #4caf50;
+  color: white;
+  border-color: #45a049;
+}
+
+.selectable-card.disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+.submit-discard-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.submit-discard-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}

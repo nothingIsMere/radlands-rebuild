@@ -51,7 +51,6 @@ export const campAbilities = {
     },
   },
 
-  // In camp-abilities.js
   parachutebase: {
     paradrop: {
       cost: 0,
@@ -66,16 +65,20 @@ export const campAbilities = {
           return false;
         }
 
-        // Set up selection state
+        // Set up selection state with camp reference from context
         state.pending = {
           type: "parachute_select_person",
           source: context.source,
+          sourceCard: context.campCard || context.source, // Get from context
+          shouldStayReady: context.veraDecision || false, // Get from context
           sourcePlayerId: context.playerId,
           campIndex: context.columnIndex,
           validPeople: validPeople.map((c) => c.id),
         };
 
         console.log("Parachute Base: Select person from hand to paradrop");
+        console.log("Camp reference preserved:", !!state.pending.sourceCard);
+        console.log("Vera decision preserved:", state.pending.shouldStayReady);
         return true;
       },
     },

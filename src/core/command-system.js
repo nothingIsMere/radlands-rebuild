@@ -209,31 +209,7 @@ export class CommandSystem {
       return false;
     }
 
-    // Pay cost
-    player.water -= ability.cost;
-    console.log(
-      `Paid ${ability.cost} water for ${camp.name}'s ${ability.effect} ability`
-    );
-
-    // Execute ability with the actual position for Juggernaut
-    const result = this.executeAbility(ability, {
-      source: camp,
-      playerId: playerId,
-      columnIndex: columnIndex,
-      position: campPosition, // Use actual position
-    });
-
-    // Check if ability failed to execute
-    if (result === false) {
-      // Refund the water
-      player.water += ability.cost;
-      console.log(
-        `Camp ability could not be used, refunded ${ability.cost} water`
-      );
-      return false;
-    }
-
-    // Check for Vera Vosh's trait (applies to camps too!)
+    // Check for Vera Vosh's trait BEFORE executing the ability
     let shouldStayReady = false;
     const hasActiveVera = this.checkForActiveVera(playerId);
     if (
@@ -243,7 +219,51 @@ export class CommandSystem {
       // This is the first time this camp has used an ability this turn with Vera active
       shouldStayReady = true;
       this.state.turnEvents.veraFirstUseCards.push(camp.id);
-      console.log(`${camp.name} stays ready due to Vera Vosh's trait!`);
+      console.log(`${camp.name} will stay ready due to Vera Vosh's trait!`);
+    }
+
+    // Pay cost
+    player.water -= ability.cost;
+    console.log(
+      `Paid ${ability.cost} water for ${camp.name}'s ${ability.effect} ability`
+    );
+
+    // Execute ability with the camp reference and Vera decision in context
+    const result = this.executeAbility(ability, {
+      source: camp,
+      playerId: playerId,
+      columnIndex: columnIndex,
+      position: campPosition,
+      campCard: camp,
+      veraDecision: shouldStayReady,
+    });
+
+    if (camp.name === "Parachute Base" && result !== false) {
+      // Parachute Base is special - mark it not ready immediately
+      // (unless Vera's trait applies)
+      if (!shouldStayReady) {
+        camp.isReady = false;
+        console.log("Parachute Base marked as not ready immediately");
+      }
+      // Don't need to track it in pending since we handled it here
+      return true;
+    }
+
+    // Check if ability failed to execute
+    if (result === false) {
+      // Refund the water
+      player.water += ability.cost;
+      console.log(
+        `Camp ability could not be used, refunded ${ability.cost} water`
+      );
+      // Also undo the Vera tracking
+      if (shouldStayReady) {
+        const index = this.state.turnEvents.veraFirstUseCards.indexOf(camp.id);
+        if (index > -1) {
+          this.state.turnEvents.veraFirstUseCards.splice(index, 1);
+        }
+      }
+      return false;
     }
 
     // Check if ability created a pending state
@@ -509,6 +529,27 @@ export class CommandSystem {
     }
 
     return result;
+  }
+
+  completeParachuteBase() {
+    // Find the Parachute Base camp that initiated this
+    // It should be stored in various places depending on the path
+    let parachuteCard = null;
+    let shouldStayReady = false;
+
+    // Check various places where we might have stored it
+    if (this.state.pending?.parachuteSourceCard) {
+      parachuteCard = this.state.pending.parachuteSourceCard;
+      shouldStayReady = this.state.pending.parachuteShouldStayReady;
+    } else if (this.state.pending?.sourceCard?.name === "Parachute Base") {
+      parachuteCard = this.state.pending.sourceCard;
+      shouldStayReady = this.state.pending.shouldStayReady;
+    }
+
+    if (parachuteCard && !shouldStayReady) {
+      parachuteCard.isReady = false;
+      console.log("Parachute Base marked as not ready after full completion");
+    }
   }
 
   resolveRestore(targetPlayer, targetColumn, targetPosition) {
@@ -3228,7 +3269,7 @@ export class CommandSystem {
         this.state.pending = {
           type: "parachute_place_person",
           source: pending.source,
-          sourceCard: pending.sourceCard,
+          sourceCard: pending.sourceCard || pending.source, // Ensure we keep the camp reference
           sourcePlayerId: pending.sourcePlayerId,
           selectedPerson: selectedCard,
           campIndex: pending.campIndex,
@@ -3488,7 +3529,13 @@ export class CommandSystem {
           // Mark Parachute Base as not ready (unless Vera's trait applies)
           if (pb.sourceCard && !pb.shouldStayReady) {
             pb.sourceCard.isReady = false;
-            console.log("Parachute Base marked as not ready");
+            console.log("Parachute Base marked as not ready", pb.sourceCard);
+          } else {
+            console.log("Failed to mark Parachute Base not ready:", {
+              hasSourceCard: !!pb.sourceCard,
+              shouldStayReady: pb.shouldStayReady,
+              sourceCard: pb.sourceCard,
+            });
           }
         }
 
@@ -3762,8 +3809,6 @@ export class CommandSystem {
   checkAndApplyParachuteBaseDamage() {
     if (this.state.pending?.parachuteBaseDamage) {
       const pbDamage = this.state.pending.parachuteBaseDamage;
-      const sourceCard = this.state.pending.parachuteSourceCard;
-      const shouldStayReady = this.state.pending.parachuteShouldStayReady;
 
       console.log("Applying Parachute Base damage", pbDamage);
 
@@ -3789,11 +3834,8 @@ export class CommandSystem {
       // Clear pending
       this.state.pending = null;
 
-      // Mark Parachute Base as not ready (unless Vera's trait applies)
-      if (sourceCard && !shouldStayReady) {
-        sourceCard.isReady = false;
-        console.log("Parachute Base marked as not ready after full completion");
-      }
+      // Complete Parachute Base
+      this.completeParachuteBase();
 
       return true;
     }

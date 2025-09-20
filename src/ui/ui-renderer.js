@@ -285,6 +285,8 @@ export class UIRenderer {
   renderEventQueue(player, playerId) {
     const queue = this.createElement("div", "event-queue");
 
+    console.log(`Rendering ${playerId} event queue:`, player.eventQueue);
+
     // Check if player has an event card selected
     const hasEventSelected =
       this.selectedCard?.cardType === "event" &&
@@ -412,6 +414,18 @@ export class UIRenderer {
     if (this.state.pending?.type === "parachute_place_person") {
     }
     const cardDiv = this.createElement("div", "card");
+
+    if (this.state.pending?.type === "banish_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("banish-target");
+      }
+    }
 
     if (
       this.state.pending?.type === "parachute_place_person" &&

@@ -557,12 +557,65 @@ export class CommandSystem {
 
     // Get event details from registry
     const eventName = card.name.toLowerCase().replace(/\s+/g, "");
+    console.log("Looking for event:", eventName);
+
     const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
 
     if (!eventDef) {
       console.log(`Unknown event: ${card.name}`);
-      return false;
+      console.log(
+        "Available events:",
+        Object.keys(window.cardRegistry?.eventAbilities || {})
+      );
+
+      // Fallback - use the card's own properties if no definition found
+      const queueNumber = card.queueNumber || 1;
+      const cost = card.cost || 0;
+
+      // Check cost
+      if (player.water < cost) {
+        console.log("Not enough water for event");
+        return false;
+      }
+
+      // Try to place in queue
+      const desiredSlot = queueNumber - 1;
+
+      if (!player.eventQueue[desiredSlot]) {
+        player.eventQueue[desiredSlot] = card;
+      } else {
+        let placed = false;
+        for (let i = desiredSlot + 1; i < 3; i++) {
+          if (!player.eventQueue[i]) {
+            player.eventQueue[i] = card;
+            placed = true;
+            break;
+          }
+        }
+
+        if (!placed) {
+          console.log("Event queue is full!");
+          return false;
+        }
+      }
+
+      // Pay cost and remove from hand
+      player.water -= cost;
+      player.hand.splice(cardIndex, 1);
+
+      console.log(`Placed ${card.name} in event queue (no handler found)`);
+      return true;
     }
+
+    console.log("Found event definition:", eventDef);
+
+    console.log(
+      "About to check cost. Player water:",
+      player.water,
+      "Event cost:",
+      eventDef.cost
+    );
+    console.log("About to check queue number:", eventDef.queueNumber);
 
     // Check cost
     if (player.water < eventDef.cost) {
@@ -571,6 +624,7 @@ export class CommandSystem {
     }
 
     const queueNumber = eventDef.queueNumber;
+    console.log(`Event ${card.name} has queue number ${queueNumber}`);
 
     if (queueNumber === 0) {
       // Instant event - resolve immediately
@@ -588,7 +642,10 @@ export class CommandSystem {
         eventCard: card,
       };
 
+      console.log("Calling event handler");
       const result = eventDef.effect.handler(this.state, context);
+      console.log("Event handler returned:", result);
+      console.log("Pending state after handler:", this.state.pending);
 
       // If no pending was created, discard the event
       if (!this.state.pending) {
@@ -599,15 +656,24 @@ export class CommandSystem {
     }
 
     // Queue placement logic for non-instant events
-    const desiredSlot = queueNumber - 1;
+    const desiredSlot = queueNumber - 1; // Convert queue number to array index
+    console.log(
+      `Trying to place in slot ${desiredSlot} (queue ${queueNumber})`
+    );
 
     if (!player.eventQueue[desiredSlot]) {
+      // Desired slot is empty
       player.eventQueue[desiredSlot] = card;
+      console.log(`Placed ${card.name} in slot ${desiredSlot}`);
     } else {
+      // Desired slot is occupied, find next available slot
       let placed = false;
       for (let i = desiredSlot + 1; i < 3; i++) {
         if (!player.eventQueue[i]) {
           player.eventQueue[i] = card;
+          console.log(
+            `Slot ${desiredSlot} occupied, placed ${card.name} in slot ${i}`
+          );
           placed = true;
           break;
         }
@@ -619,11 +685,20 @@ export class CommandSystem {
       }
     }
 
-    // Pay cost and remove from hand
+    // Pay cost
     player.water -= eventDef.cost;
-    player.hand.splice(cardIndex, 1);
+    console.log(`Paid ${eventDef.cost} water for ${card.name}`);
 
-    console.log(`Placed ${card.name} in event queue`);
+    // Remove from hand
+    player.hand.splice(cardIndex, 1);
+    console.log(`Removed ${card.name} from hand`);
+
+    console.log(`Successfully placed ${card.name} in event queue`);
+    console.log(
+      "Current event queue:",
+      player.eventQueue.map((e) => e?.name || "empty")
+    );
+
     return true;
   }
 
@@ -1201,66 +1276,6 @@ export class CommandSystem {
     return true;
   }
 
-  playEvent(playerId, card, cardIndex) {
-    const player = this.state.players[playerId];
-
-    // Get event details from registry
-    const eventName = card.name.toLowerCase().replace(/\s+/g, "");
-    console.log("Looking for event:", eventName);
-
-    const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
-
-    if (!eventDef) {
-      console.log(`Unknown event: ${card.name}`);
-      console.log(
-        "Available events:",
-        Object.keys(window.cardRegistry?.eventAbilities || {})
-      );
-      return false;
-    }
-
-    console.log("Found event definition:", eventDef);
-
-    // Check cost
-    if (player.water < eventDef.cost) {
-      console.log("Not enough water for event");
-      return false;
-    }
-
-    const queueNumber = eventDef.queueNumber;
-
-    if (queueNumber === 0) {
-      // Instant event - resolve immediately
-      console.log(`Playing instant event: ${card.name}`);
-
-      // Pay cost
-      player.water -= eventDef.cost;
-
-      // Remove from hand
-      player.hand.splice(cardIndex, 1);
-
-      // Execute effect
-      const context = {
-        playerId: playerId,
-        eventCard: card,
-      };
-
-      console.log("Calling event handler");
-      const result = eventDef.effect.handler(this.state, context);
-      console.log("Event handler returned:", result);
-      console.log("Pending state after handler:", this.state.pending);
-
-      // If no pending was created, discard the event
-      if (!this.state.pending) {
-        this.state.discard.push(card);
-      }
-
-      return result;
-    }
-
-    // Rest of the queue placement logic...
-  }
-
   determinePosition(column, requestedPosition) {
     // Handle placement logic for columns
     const emptySlots = [];
@@ -1637,6 +1652,97 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "banish_destroy": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Banish");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Banish can only destroy enemy people");
+          return false;
+        }
+
+        // Destroy the target outright
+        target.isDestroyed = true;
+
+        if (target.type === "person") {
+          // Handle person destruction
+          if (target.isPunk) {
+            const returnCard = {
+              id: target.id,
+              name: target.originalName || target.name,
+              type: target.type,
+              cost: target.cost,
+              abilities: target.abilities,
+              junkEffect: target.junkEffect,
+            };
+            this.state.deck.unshift(returnCard);
+            console.log(`Banish destroyed punk (returned to deck)`);
+          } else {
+            this.state.discard.push(target);
+            console.log(`Banish destroyed ${target.name}`);
+          }
+
+          // Remove from column
+          const column = this.state.players[targetPlayer].columns[targetColumn];
+          column.setCard(targetPosition, null);
+
+          // Move card in front back if needed
+          if (targetPosition < 2) {
+            const cardInFront = column.getCard(targetPosition + 1);
+            if (cardInFront) {
+              column.setCard(targetPosition, cardInFront);
+              column.setCard(targetPosition + 1, null);
+            }
+          }
+        } else if (target.type === "camp") {
+          console.log(
+            `Banish destroyed ${target.name} camp (ignoring protection)`
+          );
+        }
+
+        // Discard the event card
+        if (this.state.pending.eventCard) {
+          this.state.discard.push(this.state.pending.eventCard);
+        }
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Check for game end
+        this.checkGameEnd();
+
+        console.log("Banish event resolved");
+
+        // If we're in events phase, continue with phase progression
+        if (this.state.phase === "events") {
+          // Advance remaining events
+          const player = this.state.players[this.state.currentPlayer];
+          for (let i = 0; i < 2; i++) {
+            player.eventQueue[i] = player.eventQueue[i + 1];
+          }
+          player.eventQueue[2] = null;
+
+          // Continue to replenish
+          this.continueToReplenishPhase();
+        }
+
+        return true;
+      }
       case "interrogate_keep": {
         const { cardToKeep } = payload;
         const pending = this.state.pending;
@@ -4180,10 +4286,43 @@ export class CommandSystem {
         // Don't continue with normal phase progression - wait for selection
         return;
       } else {
-        // Normal event resolution
-        // TODO: Handle other event types
-        this.state.discard.push(event);
-        player.eventQueue[0] = null;
+        // Look up event definition for non-Raiders events
+        const eventName = event.name.toLowerCase().replace(/\s+/g, "");
+        const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
+
+        if (eventDef?.effect?.handler) {
+          console.log(`Resolving ${event.name} event effect`);
+
+          // Remove from queue first
+          player.eventQueue[0] = null;
+
+          // Execute the event effect
+          const context = {
+            playerId: this.state.currentPlayer,
+            eventCard: event,
+          };
+
+          const result = eventDef.effect.handler(this.state, context);
+
+          // Check if event created a pending state
+          if (this.state.pending) {
+            // Event needs target selection, wait for it
+            console.log(`${event.name} event waiting for target selection`);
+            this.notifyUI("EVENT_PENDING_TARGET", null);
+            return; // Don't advance phase yet
+          } else {
+            // Event completed immediately, discard it
+            // (Note: event might already be discarded by handler)
+            if (!this.state.discard.includes(event)) {
+              this.state.discard.push(event);
+            }
+          }
+        } else {
+          // No handler found, just discard
+          console.log(`No handler for ${event.name}, discarding`);
+          player.eventQueue[0] = null;
+          this.state.discard.push(event);
+        }
       }
     }
 

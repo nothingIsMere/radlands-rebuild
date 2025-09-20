@@ -109,6 +109,16 @@ export class UIRenderer {
     turn.textContent = `Turn: ${this.state.turnNumber}`;
     infoBar.appendChild(turn);
 
+    if (this.state.turnEvents?.highGroundActive) {
+      const highGroundIndicator = this.createElement(
+        "div",
+        "highground-active"
+      );
+      highGroundIndicator.textContent =
+        "⚔️ HIGH GROUND ACTIVE - All opponent cards are UNPROTECTED!";
+      infoBar.appendChild(highGroundIndicator);
+    }
+
     return infoBar;
   }
 
@@ -120,6 +130,16 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "highground_place_person":
+          const personName = this.state.pending.selectedPerson.name;
+          const remaining = this.state.pending.collectedPeople.length;
+          if (remaining > 0) {
+            message.textContent = `⚔️ High Ground: Place ${personName} (${remaining} more after this)`;
+          } else {
+            message.textContent = `⚔️ High Ground: Place ${personName} (last one!)`;
+          }
+          overlay.classList.add("highground-placement");
+          break;
         case "famine_select_keep":
           const selectingPlayer = this.state.pending.currentSelectingPlayer;
           if (selectingPlayer === this.state.currentPlayer) {
@@ -434,6 +454,28 @@ export class UIRenderer {
     if (this.state.pending?.type === "parachute_place_person") {
     }
     const cardDiv = this.createElement("div", "card");
+
+    // In renderCard for highlighting placement targets:
+    if (this.state.pending?.type === "highground_place_person") {
+      if (playerId === this.state.pending.playerId && position > 0) {
+        cardDiv.classList.add("highground-placement-target");
+
+        if (!card) {
+          cardDiv.classList.add("highground-placement-empty");
+        } else {
+          const otherSlot = position === 1 ? 2 : 1;
+          const otherCard =
+            this.state.players[playerId].columns[columnIndex].getCard(
+              otherSlot
+            );
+          if (!otherCard) {
+            cardDiv.classList.add("highground-placement-pushable");
+          }
+        }
+      }
+    }
+
+    // Update click handlers for highground_place_person instead of highground_rearrange
 
     if (
       this.state.pending?.type === "uprising_place_punks" &&
@@ -794,6 +836,21 @@ export class UIRenderer {
         );
 
         if (
+          this.state.pending?.type === "highground_place_person" &&
+          playerId === this.state.pending.playerId &&
+          position > 0
+        ) {
+          console.log("High Ground placement clicked");
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
+
+        if (
           this.state.pending?.type === "uprising_place_punks" &&
           playerId === this.state.pending.sourcePlayerId
         ) {
@@ -1082,6 +1139,23 @@ export class UIRenderer {
         );
 
         if (
+          this.state.pending?.type === "highground_place_person" &&
+          playerId === this.state.pending.playerId &&
+          position > 0
+        ) {
+          console.log(
+            "High Ground placement clicked (occupied slot - will try push)"
+          );
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
+
+        if (
           this.state.pending?.type === "uprising_place_punks" &&
           playerId === this.state.pending.sourcePlayerId
         ) {
@@ -1144,6 +1218,51 @@ export class UIRenderer {
     console.log("renderAbilitySelection called");
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
+
+    if (this.state.pending?.type === "highground_select_person") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "High Ground: Select person to place";
+      content.appendChild(title);
+
+      const subtitle = this.createElement("div", "modal-subtitle");
+      subtitle.textContent = `${this.state.pending.collectedPeople.length} people to place`;
+      content.appendChild(subtitle);
+
+      const buttonContainer = this.createElement(
+        "div",
+        "person-selection-grid"
+      );
+
+      this.state.pending.collectedPeople.forEach((person) => {
+        const btn = this.createElement("button", "person-select-btn");
+        btn.textContent = person.name;
+
+        // Add extra info if relevant
+        if (person.isDamaged) {
+          btn.textContent += " (Damaged)";
+          btn.classList.add("damaged");
+        }
+
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            personId: person.id,
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
+
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
 
     if (this.state.pending?.type === "interrogate_keep") {
       const modal = this.createElement("div", "ability-selection-modal");
@@ -1614,6 +1733,17 @@ export class UIRenderer {
 
     // Check protection (unless ability ignores it, like Sniper)
     const column = this.state.players[playerId].columns[columnIndex];
+
+    // CHECK FOR HIGH GROUND EFFECT HERE
+    if (this.state.turnEvents?.highGroundActive) {
+      // During High Ground, opponent's cards are never protected
+      const opponentId = this.state.currentPlayer === "left" ? "right" : "left";
+      if (playerId === opponentId) {
+        return true; // All opponent cards can be targeted during High Ground
+      }
+    }
+
+    // Normal protection check
     if (!this.state.pending.allowProtected && column.isProtected(position)) {
       return false;
     }

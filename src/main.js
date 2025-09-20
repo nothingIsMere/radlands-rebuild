@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "highground_1",
+      name: "High Ground",
+      type: "event",
+      cost: 0,
+      queueNumber: 1,
+      junkEffect: "water",
+    },
+    {
       id: "bombardment_1",
       name: "Bombardment",
       type: "event",
@@ -414,6 +422,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "highground_2",
+      name: "High Ground",
+      type: "event",
+      cost: 0,
+      queueNumber: 1,
+      junkEffect: "water",
+    },
     {
       id: "bombardment_2",
       name: "Bombardment",

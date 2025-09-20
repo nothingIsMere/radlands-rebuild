@@ -1315,3 +1315,89 @@ body.has-pending .card.famine-keep-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.card.highground-placement-target {
+  animation: pulse-blue 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px dashed #2196f3;
+}
+
+.pending-overlay.highground-rearrange .pending-message-banner {
+  background: linear-gradient(135deg, #2196f3 0%, #21cbf3 100%);
+}
+
+.highground-active {
+  background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+  color: #000;
+  padding: 8px 16px;
+  font-weight: bold;
+  text-align: center;
+  animation: pulse 1s infinite;
+}
+
+body.has-pending .card.highground-placement-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.card.highground-placement-target {
+  cursor: pointer;
+}
+
+.card.highground-placement-empty {
+  animation: pulse-blue 1s infinite;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px dashed #2196f3;
+}
+
+.card.highground-placement-pushable {
+  animation: pulse-yellow 1s infinite;
+  box-shadow: 0 0 10px #ffc107;
+  border: 2px dashed #ffc107;
+}
+
+.card.highground-placement-pushable::after {
+  content: "PUSH";
+  position: absolute;
+  top: -15px;
+  right: -5px;
+  background: #ffc107;
+  color: #000;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.card.highground-placement-blocked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.person-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.person-select-btn {
+  padding: 15px;
+  font-size: 14px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.person-select-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.person-select-btn.damaged {
+  background: #ff5722;
+}

@@ -662,46 +662,54 @@ export const personAbilities = {
 
   assassin: {
     destroy: {
-      cost: 2,
       handler: (state, context) => {
-        // Find all unprotected enemy people
+        console.log("Assassin ability: Destroy unprotected enemy person");
+
         const opponentId = context.playerId === "left" ? "right" : "left";
         const opponent = state.players[opponentId];
         const validTargets = [];
 
         for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
+          for (let pos = 1; pos <= 2; pos++) {
             const card = opponent.columns[col].getCard(pos);
             if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if protected
-              if (!opponent.columns[col].isProtected(pos)) {
+              // Check if High Ground is active
+              if (state.turnEvents?.highGroundActive) {
+                // During High Ground, ALL enemy people can be targeted
                 validTargets.push({
                   playerId: opponentId,
                   columnIndex: col,
                   position: pos,
                   card,
                 });
+              } else {
+                // Normal rules - check protection
+                if (!opponent.columns[col].isProtected(pos)) {
+                  validTargets.push({
+                    playerId: opponentId,
+                    columnIndex: col,
+                    position: pos,
+                    card,
+                  });
+                }
               }
             }
           }
         }
 
         if (validTargets.length === 0) {
-          console.log("Assassin: No unprotected enemy people to destroy");
+          console.log("No valid targets for Assassin");
           return false;
         }
 
-        // Set up targeting for destroy
         state.pending = {
           type: "assassin_destroy",
-          source: context.source,
           sourcePlayerId: context.playerId,
-          context,
           validTargets: validTargets,
         };
 
         console.log(
-          `Assassin: Select an unprotected enemy person to destroy (${validTargets.length} targets)`
+          `Assassin: Select enemy person to destroy (${validTargets.length} targets)`
         );
         return true;
       },

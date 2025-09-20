@@ -137,6 +137,21 @@ export class CommandSystem {
     return damaged;
   }
 
+  checkProtection(playerId, columnIndex, position) {
+    // High Ground overrides ALL protection for the opponent
+    if (this.state.turnEvents?.highGroundActive) {
+      const opponentId = this.state.currentPlayer === "left" ? "right" : "left";
+      if (playerId === opponentId) {
+        console.log("High Ground active - target is unprotected");
+        return false; // Not protected during High Ground
+      }
+    }
+
+    // Normal protection check
+    const column = this.state.players[playerId].columns[columnIndex];
+    return column.isProtected(position);
+  }
+
   checkForActiveArgo(playerId) {
     const player = this.state.players[playerId];
 
@@ -316,14 +331,25 @@ export class CommandSystem {
 
     const column = this.state.players[targetPlayer].columns[targetColumn];
 
-    // Check protection (unless ability ignores it OR it's Parachute self-damage)
-    if (
-      !pending.allowProtected &&
-      pending.type !== "parachute_damage_self" && // ADD THIS CONDITION
-      column.isProtected(targetPosition)
-    ) {
-      console.log(`Cannot damage protected ${target.name}`);
-      return false;
+    // Check protection (unless ability ignores it OR it's Parachute self-damage OR High Ground is active)
+    if (!pending.allowProtected && pending.type !== "parachute_damage_self") {
+      // Check if High Ground makes this unprotected
+      if (this.state.turnEvents?.highGroundActive) {
+        const opponentId =
+          this.state.currentPlayer === "left" ? "right" : "left";
+        if (targetPlayer === opponentId) {
+          console.log("High Ground active - target is unprotected");
+          // Don't block the damage - High Ground makes it unprotected
+        } else if (column.isProtected(targetPosition)) {
+          // High Ground doesn't affect your own cards
+          console.log(`Cannot damage protected ${target.name}`);
+          return false;
+        }
+      } else if (column.isProtected(targetPosition)) {
+        // Normal protection check when High Ground isn't active
+        console.log(`Cannot damage protected ${target.name}`);
+        return false;
+      }
     }
 
     // Apply damage using the helper
@@ -1797,6 +1823,116 @@ export class CommandSystem {
 
         return true;
       }
+
+      case "highground_select_person": {
+        const pending = this.state.pending;
+        const { personId } = payload;
+
+        // Find the selected person
+        const selectedIndex = pending.collectedPeople.findIndex(
+          (p) => p.id === personId
+        );
+        if (selectedIndex === -1) {
+          console.log("Invalid person selection");
+          return false;
+        }
+
+        const selectedPerson = pending.collectedPeople.splice(
+          selectedIndex,
+          1
+        )[0];
+
+        // Move to placement mode
+        this.state.pending = {
+          type: "highground_place_person",
+          playerId: pending.playerId,
+          selectedPerson: selectedPerson,
+          collectedPeople: pending.collectedPeople,
+          eventCard: pending.eventCard,
+        };
+
+        console.log(`High Ground: Now place ${selectedPerson.name}`);
+        return true;
+      }
+
+      case "highground_place_person": {
+        const pending = this.state.pending;
+
+        if (targetPlayer !== pending.playerId) {
+          console.log("Must place in your own columns");
+          return false;
+        }
+
+        if (targetPosition === 0) {
+          console.log("Cannot place in camp slots");
+          return false;
+        }
+
+        const column =
+          this.state.players[pending.playerId].columns[targetColumn];
+        const existingCard = column.getCard(targetPosition);
+
+        // Handle push mechanics
+        if (existingCard) {
+          const pushToPosition = targetPosition === 1 ? 2 : 1;
+          const cardInPushPosition = column.getCard(pushToPosition);
+
+          if (cardInPushPosition) {
+            console.log("Cannot place - both slots occupied");
+            return false;
+          }
+
+          column.setCard(pushToPosition, existingCard);
+          console.log(
+            `Pushed ${existingCard.name} to position ${pushToPosition}`
+          );
+        }
+
+        // Place the person
+        column.setCard(targetPosition, pending.selectedPerson);
+        console.log(
+          `Placed ${pending.selectedPerson.name} at column ${targetColumn}, position ${targetPosition}`
+        );
+
+        // Check if more people to place
+        if (pending.collectedPeople.length > 0) {
+          // Go back to selection
+          this.state.pending = {
+            type: "highground_select_person",
+            playerId: pending.playerId,
+            collectedPeople: pending.collectedPeople,
+            eventCard: pending.eventCard,
+          };
+          console.log(
+            `High Ground: Select next person (${pending.collectedPeople.length} remaining)`
+          );
+        } else {
+          // All placed - activate effect
+          console.log(
+            "High Ground: All cards placed, opponent's cards are unprotected!"
+          );
+          this.state.turnEvents.highGroundActive = true;
+
+          if (pending.eventCard) {
+            this.state.discard.push(pending.eventCard);
+          }
+
+          this.state.pending = null;
+
+          // Continue phase if needed
+          if (this.state.phase === "events") {
+            const player = this.state.players[this.state.currentPlayer];
+            for (let i = 0; i < 2; i++) {
+              player.eventQueue[i] = player.eventQueue[i + 1];
+            }
+            player.eventQueue[2] = null;
+            this.continueToReplenishPhase();
+          }
+        }
+
+        return true;
+      }
+
       case "uprising_place_punks": {
         const pending = this.state.pending;
         const player = this.state.players[pending.sourcePlayerId];
@@ -4554,6 +4690,7 @@ export class CommandSystem {
       eventResolvedThisTurn: false,
       abilityUsedThisTurn: false,
       veraFirstUseCards: [],
+      highGroundActive: false,
     };
 
     // Switch player

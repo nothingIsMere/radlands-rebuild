@@ -1,6 +1,58 @@
 // event-abilities.js
 export const eventAbilities = {
-  // In event-abilities.js, add this to the eventAbilities object:
+  highground: {
+    cost: 0,
+    queueNumber: 1,
+    junkEffect: "water",
+    effect: {
+      handler: (state, context) => {
+        console.log("High Ground event resolving!");
+
+        const playerId = context.playerId;
+        const player = state.players[playerId];
+
+        // Collect all the player's people
+        let collectedPeople = [];
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              collectedPeople.push({
+                ...card,
+                originalColumn: col,
+                originalPosition: pos,
+              });
+              // Clear the slot
+              player.columns[col].setCard(pos, null);
+            }
+          }
+        }
+
+        if (collectedPeople.length === 0) {
+          console.log("High Ground: No people to rearrange");
+          // Still apply unprotected effect
+          state.turnEvents.highGroundActive = true;
+          if (context.eventCard) {
+            state.discard.push(context.eventCard);
+          }
+          return true;
+        }
+
+        // Set up selection mode
+        state.pending = {
+          type: "highground_select_person",
+          playerId: playerId,
+          collectedPeople: collectedPeople,
+          eventCard: context.eventCard,
+        };
+
+        console.log(
+          `High Ground: Select which person to place first (${collectedPeople.length} total)`
+        );
+        return true;
+      },
+    },
+  },
 
   bombardment: {
     cost: 4,

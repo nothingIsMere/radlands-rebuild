@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "bombardment_1",
+      name: "Bombardment",
+      type: "event",
+      cost: 4,
+      queueNumber: 3,
+      junkEffect: "restore",
+    },
+    {
       id: "famine_1",
       name: "Famine",
       type: "event",
@@ -407,6 +415,14 @@ function setupTestGame() {
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
     {
+      id: "bombardment_2",
+      name: "Bombardment",
+      type: "event",
+      cost: 4,
+      queueNumber: 3,
+      junkEffect: "restore",
+    },
+    {
       id: "famine_2",
       name: "Famine",
       type: "event",
@@ -690,6 +706,14 @@ function setupTestGame() {
     { id: "deck_6", name: "Deck Healer", type: "person", cost: 1 },
     { id: "deck_7", name: "Deck Tank", type: "person", cost: 3 },
     { id: "deck_8", name: "Deck Support", type: "person", cost: 2 },
+    { id: "deck_9", name: "Deck Scout", type: "person", cost: 1 },
+    { id: "deck_10", name: "Deck Muse", type: "person", cost: 1 },
+    { id: "deck_11", name: "Deck Fighter", type: "person", cost: 2 },
+    { id: "deck_12", name: "Deck Guard", type: "person", cost: 2 },
+    { id: "deck_13", name: "Deck Sniper", type: "person", cost: 3 },
+    { id: "deck_14", name: "Deck Healer", type: "person", cost: 1 },
+    { id: "deck_15", name: "Deck Tank", type: "person", cost: 3 },
+    { id: "deck_16", name: "Deck Support", type: "person", cost: 2 },
   ].map((card) => ensureJunkEffect(card));
 
   // Start in actions phase

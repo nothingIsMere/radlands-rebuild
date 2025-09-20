@@ -2,6 +2,75 @@
 export const eventAbilities = {
   // In event-abilities.js, add this to the eventAbilities object:
 
+  bombardment: {
+    cost: 4,
+    queueNumber: 3, // Goes to queue slot 3
+    junkEffect: "restore",
+    effect: {
+      handler: (state, context) => {
+        console.log("Bombardment event resolving!");
+
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        let destroyedCamps = 0;
+
+        // First, damage all opponent's camps
+        for (let col = 0; col < 3; col++) {
+          const camp = opponent.columns[col].getCard(0);
+          if (camp && camp.type === "camp" && !camp.isDestroyed) {
+            if (camp.isDamaged) {
+              camp.isDestroyed = true;
+              destroyedCamps++;
+              console.log(`Bombardment destroyed ${camp.name} camp!`);
+            } else {
+              camp.isDamaged = true;
+              console.log(`Bombardment damaged ${camp.name} camp`);
+            }
+          } else if (camp && camp.isDestroyed) {
+            // Count already destroyed camps for card draw
+            destroyedCamps++;
+          }
+        }
+
+        // Draw 1 card for each destroyed camp (including previously destroyed ones)
+        const player = state.players[context.playerId];
+        console.log(
+          `Bombardment: Drawing ${destroyedCamps} cards for destroyed camps`
+        );
+
+        for (let i = 0; i < destroyedCamps && state.deck.length > 0; i++) {
+          const drawnCard = state.deck.shift();
+          player.hand.push(drawnCard);
+          console.log(`Bombardment: Drew ${drawnCard.name}`);
+        }
+
+        // Check for game end
+        let allCampsDestroyed = true;
+        for (let col = 0; col < 3; col++) {
+          const camp = opponent.columns[col].getCard(0);
+          if (camp && !camp.isDestroyed) {
+            allCampsDestroyed = false;
+            break;
+          }
+        }
+
+        if (allCampsDestroyed) {
+          state.phase = "game_over";
+          state.winner = context.playerId;
+          console.log(`${context.playerId} wins by Bombardment!`);
+        }
+
+        // Discard the event
+        if (context.eventCard) {
+          state.discard.push(context.eventCard);
+        }
+
+        console.log(`Bombardment complete: ${destroyedCamps} camps destroyed`);
+        return true;
+      },
+    },
+  },
+
   famine: {
     cost: 1,
     queueNumber: 1, // Goes to queue slot 1

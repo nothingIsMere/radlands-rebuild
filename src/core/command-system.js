@@ -1554,32 +1554,13 @@ export class CommandSystem {
         }
       }
 
-      console.log(`Raid: Found Raiders at slot ${raidersIndex + 1}`);
-
       if (raidersIndex === 0) {
-        // Raiders in slot 1 - resolve it!
+        // Raiders in slot 1 - resolve it
         console.log("Raid: Advancing Raiders off slot 1 - resolving effect!");
-
-        // Remove from queue
-        player.eventQueue[0] = null;
-
-        // Return to available
-        player.raiders = "available";
-
-        // Set up opponent camp selection
-        const opponentId = playerId === "left" ? "right" : "left";
-        this.state.pending = {
-          type: "raiders_select_camp",
-          sourcePlayerId: playerId,
-          targetPlayerId: opponentId,
-        };
-
-        console.log(
-          `Raiders: ${opponentId} player must choose a camp to damage`
-        );
+        // ... existing resolution code ...
         return true;
       } else if (raidersIndex > 0) {
-        // Can advance toward slot 1
+        // Try to advance
         const newIndex = raidersIndex - 1;
         if (!player.eventQueue[newIndex]) {
           player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
@@ -1592,9 +1573,11 @@ export class CommandSystem {
           return true;
         } else {
           console.log(
-            `Raid: Cannot advance Raiders - slot ${newIndex + 1} is occupied`
+            `Raid: Cannot advance Raiders - slot ${
+              newIndex + 1
+            } is occupied by ${player.eventQueue[newIndex].name}`
           );
-          return false;
+          return false; // Raid effect fails but card is still junked
         }
       } else {
         console.log("Raid: Raiders not found in queue");

@@ -741,8 +741,8 @@ export class CommandSystem {
       isFaceDown: true,
       isReady: false,
       isDamaged: false,
-      // Store the original for when flipped
       originalName: topCard.name,
+      originalCard: { ...topCard }, // Store complete original card
       name: "Punk", // Override name for display
     };
 
@@ -1664,7 +1664,7 @@ export class CommandSystem {
           `Took ${topCard.name} from deck to make punk ${pending.punksRemaining}`
         );
 
-        // Create punk from the card (face-down)
+        // Create punk from top card
         const punk = {
           ...topCard,
           isPunk: true,
@@ -1672,7 +1672,8 @@ export class CommandSystem {
           isReady: false,
           isDamaged: false,
           originalName: topCard.name,
-          name: "Punk", // Override name for display
+          originalCard: { ...topCard }, // Store complete original card
+          name: "Punk",
         };
 
         // Check for Karli Blaze's trait

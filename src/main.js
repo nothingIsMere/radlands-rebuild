@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: `truce_1}`,
+      name: "Truce",
+      type: "event",
+      cost: 2,
+      queueNumber: 0, // Instant!
+      junkEffect: "water",
+    },
+    {
       id: `uprising_1}`,
       name: "Uprising",
       type: "event",
@@ -390,6 +398,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: `truce_2}`,
+      name: "Truce",
+      type: "event",
+      cost: 2,
+      queueNumber: 0, // Instant!
+      junkEffect: "water",
+    },
     {
       id: `uprising_2}`,
       name: "Uprising",

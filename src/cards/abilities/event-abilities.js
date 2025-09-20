@@ -1,5 +1,81 @@
 // event-abilities.js
 export const eventAbilities = {
+  // In event-abilities.js, add this to the eventAbilities object:
+
+  truce: {
+    cost: 2,
+    queueNumber: 0, // Instant event - resolves immediately
+    junkEffect: "water",
+    effect: {
+      handler: (state, context) => {
+        console.log("Truce event resolving - returning all people to hands!");
+
+        let returnedCount = 0;
+
+        // Process both players
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+
+          // Process each column from front to back to handle removal properly
+          for (let col = 0; col < 3; col++) {
+            // Process positions 2, then 1 (front to back)
+            for (let pos = 2; pos >= 1; pos--) {
+              const card = player.columns[col].getCard(pos);
+
+              if (card && card.type === "person" && !card.isDestroyed) {
+                // Handle punks - reveal them when returning to hand
+                if (card.isPunk) {
+                  const revealedCard = {
+                    id: card.id,
+                    name: card.originalName || "Unknown Card",
+                    type: "person",
+                    cost: card.originalCard?.cost || card.cost || 0,
+                    abilities:
+                      card.originalCard?.abilities || card.abilities || [],
+                    junkEffect:
+                      card.originalCard?.junkEffect || card.junkEffect,
+                  };
+                  player.hand.push(revealedCard);
+                  console.log(
+                    `Truce: Punk revealed as ${revealedCard.name} and returned to ${playerId}'s hand`
+                  );
+                } else {
+                  // Normal person returns as-is
+                  const returnCard = {
+                    id: card.id,
+                    name: card.name,
+                    type: card.type,
+                    cost: card.cost,
+                    abilities: card.abilities,
+                    junkEffect: card.junkEffect,
+                  };
+                  player.hand.push(returnCard);
+                  console.log(
+                    `Truce: ${card.name} returned to ${playerId}'s hand`
+                  );
+                }
+
+                // Remove from column
+                player.columns[col].setCard(pos, null);
+                returnedCount++;
+              }
+            }
+          }
+        }
+
+        console.log(
+          `Truce complete: ${returnedCount} people returned to hands`
+        );
+
+        // Discard the event (instant events should discard themselves)
+        if (context.eventCard) {
+          state.discard.push(context.eventCard);
+        }
+
+        return true;
+      },
+    },
+  },
   uprising: {
     cost: 1,
     queueNumber: 2, // Goes to queue slot 2

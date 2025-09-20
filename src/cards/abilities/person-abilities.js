@@ -596,11 +596,18 @@ export const personAbilities = {
           return false;
         }
 
+        // PRESERVE the shouldStayReady value if it exists
+        const preservedShouldStayReady = state.pending?.shouldStayReady;
+
         // Set up targeting for camp destruction
         state.pending = {
           type: "molgur_destroy_camp",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
+          sourceColumn: context.columnIndex,
+          sourcePosition: context.position,
+          shouldStayReady: preservedShouldStayReady, // PRESERVE THIS VALUE
           context,
           validTargets: validTargets,
         };

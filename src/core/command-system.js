@@ -2908,7 +2908,6 @@ export class CommandSystem {
         return true;
       }
       case "molgur_destroy_camp": {
-        // Verify it's a valid target
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>
             t.playerId === targetPlayer &&
@@ -2934,11 +2933,25 @@ export class CommandSystem {
         // Store Parachute Base damage info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-        // Destroy the camp outright (no damage state)
+        // Destroy the camp outright
         target.isDestroyed = true;
         console.log(
           `Molgur Stang destroyed ${target.name} (ignoring protection and damage state)`
         );
+
+        // Use the shouldStayReady decision that was made in handleUseAbility
+        const shouldStayReady = this.state.pending?.shouldStayReady;
+
+        if (this.state.pending.sourceCard) {
+          if (shouldStayReady) {
+            console.log(
+              "Molgur Stang stays ready due to Vera Vosh's trait (decision from ability use)"
+            );
+          } else {
+            this.state.pending.sourceCard.isReady = false;
+            console.log("Molgur Stang marked as not ready");
+          }
+        }
 
         // Clear pending
         this.state.pending = null;
@@ -2960,6 +2973,7 @@ export class CommandSystem {
 
         return true;
       }
+
       case "parachute_select_ability": {
         const pending = this.state.pending;
         const abilityIndex = payload.abilityIndex;

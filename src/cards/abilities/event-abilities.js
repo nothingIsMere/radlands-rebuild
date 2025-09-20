@@ -1,5 +1,93 @@
 // event-abilities.js
 export const eventAbilities = {
+  strafe: {
+    cost: 2,
+    queueNumber: 0, // Instant event!
+    junkEffect: "card",
+    effect: {
+      handler: (state, context) => {
+        console.log(
+          "Strafe event resolving - injuring all unprotected enemies!"
+        );
+
+        // Determine opponent
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+
+        let injuredCount = 0;
+        let destroyedCount = 0;
+
+        // Process each column
+        for (let col = 0; col < 3; col++) {
+          // Process from front to back to avoid movement issues
+          for (let pos = 2; pos >= 0; pos--) {
+            const card = opponent.columns[col].getCard(pos);
+
+            // Only affect unprotected people
+            if (card && card.type === "person" && !card.isDestroyed) {
+              // Check if protected
+              if (!opponent.columns[col].isProtected(pos)) {
+                // Apply injury
+                if (card.isDamaged || card.isPunk) {
+                  // Destroy it
+                  card.isDestroyed = true;
+
+                  if (card.isPunk) {
+                    const returnCard = {
+                      id: card.id,
+                      name: card.originalName || "Unknown Card",
+                      type: "person",
+                      cost: card.cost || 0,
+                      abilities: card.abilities || [],
+                      junkEffect: card.junkEffect,
+                    };
+                    state.deck.unshift(returnCard);
+                    console.log(`Strafe destroyed punk`);
+                  } else {
+                    state.discard.push(card);
+                    console.log(`Strafe destroyed ${card.name}`);
+                  }
+
+                  // Remove from column
+                  opponent.columns[col].setCard(pos, null);
+
+                  // Move card in front back
+                  if (pos < 2) {
+                    const cardInFront = opponent.columns[col].getCard(pos + 1);
+                    if (cardInFront) {
+                      opponent.columns[col].setCard(pos, cardInFront);
+                      opponent.columns[col].setCard(pos + 1, null);
+                    }
+                  }
+
+                  destroyedCount++;
+                } else {
+                  // Just damage it
+                  card.isDamaged = true;
+                  card.isReady = false;
+                  console.log(`Strafe injured ${card.name}`);
+                  injuredCount++;
+                }
+              } else {
+                console.log(`${card.name} is protected, Strafe can't hit it`);
+              }
+            }
+          }
+        }
+
+        console.log(
+          `Strafe complete: ${injuredCount} injured, ${destroyedCount} destroyed`
+        );
+
+        // Discard the event (instant events should discard themselves)
+        if (context.eventCard) {
+          state.discard.push(context.eventCard);
+        }
+
+        return true;
+      },
+    },
+  },
   radiation: {
     cost: 2,
     queueNumber: 1,

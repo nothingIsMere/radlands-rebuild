@@ -60,6 +60,34 @@ export class UIRenderer {
     this.container.appendChild(gameContainer);
   }
 
+  handleEventPlacement(playerId, slotClicked) {
+    console.log("Event placement clicked:", playerId, slotClicked);
+    console.log("Selected card:", this.selectedCard);
+
+    if (!this.selectedCard || this.selectedCard.cardType !== "event") {
+      console.log("No event selected or wrong type");
+      return;
+    }
+
+    const eventCard = this.selectedCard.card;
+    console.log("Playing event:", eventCard.name);
+
+    // Execute PLAY_CARD command for the event
+    this.commands.execute({
+      type: "PLAY_CARD",
+      playerId: playerId,
+      payload: {
+        playerId: playerId,
+        cardId: eventCard.id,
+        targetColumn: null,
+        targetPosition: null,
+      },
+    });
+
+    // Clear selection
+    this.selectedCard = null;
+  }
+
   renderGameInfo() {
     const infoBar = this.createElement("div", "game-info");
 
@@ -257,19 +285,40 @@ export class UIRenderer {
   renderEventQueue(player, playerId) {
     const queue = this.createElement("div", "event-queue");
 
-    // For left player, render slots in reverse order (3, 2, 1)
-    // For right player, render in normal order (1, 2, 3)
+    // Check if player has an event card selected
+    const hasEventSelected =
+      this.selectedCard?.cardType === "event" &&
+      this.selectedCard?.playerId === playerId &&
+      this.state.currentPlayer === playerId &&
+      this.state.phase === "actions" &&
+      !this.state.pending;
+
+    console.log("Has event selected?", hasEventSelected);
+    console.log("Selected card details:", this.selectedCard);
+
     const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
 
     slotOrder.forEach((i) => {
       const slot = this.createElement("div", "event-slot");
 
-      // Add slot number (visual number, not array index)
+      // Make slot clickable if event selected
+      if (hasEventSelected) {
+        slot.classList.add("event-slot-clickable");
+        slot.style.cursor = "pointer"; // Make it visually obvious
+        slot.title = "Click to play event here";
+
+        slot.addEventListener("click", (e) => {
+          e.stopPropagation();
+          console.log("Event slot clicked!", i);
+          this.handleEventPlacement(playerId, i);
+        });
+      }
+
+      // Rest of the slot rendering...
       const slotNumber = this.createElement("div", "event-slot-number");
       slotNumber.textContent = i + 1;
       slot.appendChild(slotNumber);
 
-      // Add event if present
       const event = player.eventQueue[i];
       if (event) {
         const eventCard = this.createElement("div", "event-card");
@@ -995,6 +1044,81 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    if (this.state.pending?.type === "interrogate_keep") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Interrogate: Choose 1 card to KEEP";
+      content.appendChild(title);
+
+      const subtitle = this.createElement("div", "modal-subtitle");
+      subtitle.textContent = "The other 3 will be discarded";
+      subtitle.style.fontSize = "14px";
+      subtitle.style.color = "#666";
+      subtitle.style.marginBottom = "10px";
+      content.appendChild(subtitle);
+
+      const pending = this.state.pending;
+      let selectedCard = null;
+
+      const cardListDiv = this.createElement("div", "card-selection-list");
+
+      // Only show the 4 cards that were drawn
+      pending.drawnCards.forEach((card) => {
+        const cardDiv = this.createElement("div", "selectable-card");
+        cardDiv.textContent = `${card.name} (${card.cost || 0}💧)`;
+
+        if (card.junkEffect) {
+          cardDiv.textContent += ` [Junk: ${card.junkEffect}]`;
+        }
+
+        cardDiv.addEventListener("click", () => {
+          // Clear previous selection
+          const allCards = cardListDiv.querySelectorAll(".selectable-card");
+          allCards.forEach((c) => c.classList.remove("selected"));
+
+          // Select this card
+          cardDiv.classList.add("selected");
+          selectedCard = card.id;
+
+          // Enable submit button
+          const submitBtn = content.querySelector(".submit-keep-btn");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Keep ${card.name}`;
+          }
+        });
+
+        cardListDiv.appendChild(cardDiv);
+      });
+
+      content.appendChild(cardListDiv);
+
+      const submitBtn = this.createElement("button", "submit-keep-btn");
+      submitBtn.textContent = "Select a card to keep";
+      submitBtn.disabled = true;
+
+      submitBtn.addEventListener("click", () => {
+        if (selectedCard) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            cardToKeep: selectedCard,
+          });
+        }
+      });
+
+      content.appendChild(submitBtn);
+
+      // No cancel button - must complete the effect
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     // Handle Mutant mode selection
     if (this.state.pending?.type === "mutant_choose_mode") {
       const modal = this.createElement("div", "ability-selection-modal");
@@ -1402,6 +1526,8 @@ export class UIRenderer {
     player.hand.forEach((card, index) => {
       const cardDiv = this.createElement("div", "hand-card");
 
+      cardDiv.setAttribute("data-card-type", card.type);
+
       if (
         this.selectedCard?.playerId === playerId &&
         this.selectedCard?.index === index
@@ -1428,12 +1554,17 @@ export class UIRenderer {
         // Normal card click handling (only if not in Parachute Base mode)
         cardDiv.addEventListener("click", () => {
           if (this.state.currentPlayer === playerId) {
-            // If this card is already selected, deselect it
             if (this.selectedCard?.card?.id === card.id) {
+              console.log("Deselecting card:", card.name);
               this.selectedCard = null;
             } else {
-              // Select by card ID, not index
-              this.selectedCard = { playerId, card, cardId: card.id };
+              console.log("Selecting card:", card.name, "Type:", card.type);
+              this.selectedCard = {
+                playerId,
+                card,
+                cardId: card.id,
+                cardType: card.type,
+              };
             }
             this.render();
           }
@@ -1459,6 +1590,9 @@ export class UIRenderer {
       // Check if selected
       if (this.selectedCard?.card?.id === card.id) {
         cardDiv.classList.add("selected");
+        if (card.type === "event") {
+          cardDiv.classList.add("event-selected");
+        }
       }
 
       // Right-click to junk

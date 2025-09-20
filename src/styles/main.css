@@ -1208,3 +1208,23 @@ body.has-pending .card.magnus-column-target {
   background: #ccc;
   cursor: not-allowed;
 }
+
+.event-slot-clickable {
+  cursor: pointer;
+  border-color: #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  transition: all 0.2s;
+}
+
+.event-slot-clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+/* Visual feedback when event is selected */
+.hand-card.selected[data-card-type="event"] {
+  background: #ff9800;
+  color: white;
+  border-color: #f57c00;
+}

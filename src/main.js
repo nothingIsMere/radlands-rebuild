@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "interrogate_1",
+      name: "Interrogate",
+      type: "event",
+      cost: 1,
+      queueNumber: 0,
+      junkEffect: "water",
+    },
+    {
       id: "doomsayer_1",
       name: "Doomsayer",
       type: "person",
@@ -342,6 +350,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "interrogate_2",
+      name: "Interrogate",
+      type: "event",
+      cost: 1,
+      queueNumber: 0,
+      junkEffect: "water",
+    },
     {
       id: "doomsayer_2",
       name: "Doomsayer",

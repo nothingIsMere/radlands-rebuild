@@ -1,6 +1,7 @@
 import { personAbilities } from "./abilities/person-abilities.js";
 import { campAbilities } from "./abilities/camp-abilities.js";
 import { cardTraits } from "./abilities/trait-handlers.js";
+import { eventAbilities } from "./abilities/event-abilities.js";
 
 export class CardRegistry {
   constructor() {
@@ -29,6 +30,15 @@ export class CardRegistry {
     // Register traits
     Object.entries(cardTraits).forEach(([name, handler]) => {
       this.traits.set(name.toLowerCase(), handler);
+    });
+
+    // Register event abilities
+    this.eventAbilities = eventAbilities;
+
+    console.log("Registering event abilities:", Object.keys(eventAbilities));
+
+    Object.entries(eventAbilities).forEach(([name, handler]) => {
+      this.abilities.set(`event_${name.toLowerCase()}`, handler);
     });
   }
 

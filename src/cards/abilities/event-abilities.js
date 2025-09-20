@@ -1,5 +1,89 @@
 // event-abilities.js
 export const eventAbilities = {
+  radiation: {
+    cost: 2,
+    queueNumber: 1,
+    junkEffect: "raid",
+    effect: {
+      handler: (state, context) => {
+        console.log("Radiation event resolving - injuring ALL people!");
+
+        let destroyedCount = 0;
+        let injuredCount = 0;
+
+        // Process both players
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+
+          // Process each column
+          for (let col = 0; col < 3; col++) {
+            // CRITICAL: Process from front to back (position 2, then 1, then 0)
+            // This way, when we destroy a card and others slide back, we've already
+            // processed the cards that would slide
+            for (let pos = 2; pos >= 0; pos--) {
+              const card = player.columns[col].getCard(pos);
+
+              // Only affect people (including punks), not camps
+              if (card && card.type === "person" && !card.isDestroyed) {
+                if (card.isDamaged || card.isPunk) {
+                  // Destroy it
+                  card.isDestroyed = true;
+
+                  // Handle punk vs normal person
+                  if (card.isPunk) {
+                    const returnCard = {
+                      id: card.id,
+                      name: card.originalName || "Unknown Card",
+                      type: "person",
+                      cost: card.cost || 0,
+                      abilities: card.abilities || [],
+                      junkEffect: card.junkEffect,
+                    };
+                    state.deck.unshift(returnCard);
+                    console.log(`Radiation destroyed punk`);
+                  } else {
+                    state.discard.push(card);
+                    console.log(`Radiation destroyed ${card.name}`);
+                  }
+
+                  // Remove from column
+                  player.columns[col].setCard(pos, null);
+
+                  // Move card in front back (if we're at pos 0 or 1)
+                  if (pos < 2) {
+                    const cardInFront = player.columns[col].getCard(pos + 1);
+                    if (cardInFront) {
+                      player.columns[col].setCard(pos, cardInFront);
+                      player.columns[col].setCard(pos + 1, null);
+                    }
+                  }
+
+                  destroyedCount++;
+                } else {
+                  // Just damage it
+                  card.isDamaged = true;
+                  card.isReady = false;
+                  console.log(`Radiation injured ${card.name}`);
+                  injuredCount++;
+                }
+              }
+            }
+          }
+        }
+
+        console.log(
+          `Radiation complete: ${injuredCount} injured, ${destroyedCount} destroyed`
+        );
+
+        // Discard the event
+        if (context.eventCard) {
+          state.discard.push(context.eventCard);
+        }
+
+        return true;
+      },
+    },
+  },
   banish: {
     cost: 1,
     queueNumber: 1, // Goes in queue slot 1

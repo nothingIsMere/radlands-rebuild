@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "radiation_1",
+      name: "Radiation",
+      type: "event",
+      cost: 2,
+      queueNumber: 1,
+      junkEffect: "raid",
+    },
+    {
       id: "banish_1",
       name: "Banish",
       type: "event",
@@ -358,6 +366,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "radiation_2",
+      name: "Radiation",
+      type: "event",
+      cost: 2,
+      queueNumber: 1,
+      junkEffect: "raid",
+    },
     {
       id: "banish_2",
       name: "Banish",

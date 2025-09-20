@@ -1251,3 +1251,24 @@ body.has-pending .card.magnus-column-target {
   pointer-events: none;
   z-index: 10;
 }
+
+.card.napalm-column-target {
+  animation: pulse-orange 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 15px #ff4500;
+  border: 3px solid #ff4500;
+}
+
+.card.napalm-column-target::after {
+  content: "NAPALM TARGET";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff4500;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+}

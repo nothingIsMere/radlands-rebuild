@@ -427,6 +427,18 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "napalm_select_column") {
+      if (
+        this.state.pending.validColumns.includes(columnIndex) &&
+        playerId === this.state.pending.targetPlayerId &&
+        card &&
+        card.type === "person" &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("napalm-column-target");
+      }
+    }
+
     if (
       this.state.pending?.type === "parachute_place_person" &&
       playerId === this.state.pending.sourcePlayerId

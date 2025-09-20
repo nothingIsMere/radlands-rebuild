@@ -1,5 +1,58 @@
 // event-abilities.js
 export const eventAbilities = {
+  napalm: {
+    cost: 2,
+    queueNumber: 1, // Goes to queue slot 1
+    junkEffect: "restore",
+    effect: {
+      handler: (state, context) => {
+        console.log("Napalm event resolving!");
+
+        // Find which enemy columns have at least one person
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+        const validColumns = [];
+
+        for (let col = 0; col < 3; col++) {
+          let hasPeople = false;
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              hasPeople = true;
+              break;
+            }
+          }
+          if (hasPeople) {
+            validColumns.push(col);
+          }
+        }
+
+        if (validColumns.length === 0) {
+          console.log("Napalm: No enemy columns with people");
+          // Still discard the event
+          if (context.eventCard) {
+            state.discard.push(context.eventCard);
+          }
+          return true;
+        }
+
+        // Set up column selection
+        state.pending = {
+          type: "napalm_select_column",
+          source: context.eventCard,
+          sourcePlayerId: context.playerId,
+          targetPlayerId: opponentId,
+          validColumns: validColumns,
+          eventCard: context.eventCard,
+        };
+
+        console.log(
+          `Napalm: Select enemy column to destroy (${validColumns.length} columns have people)`
+        );
+        return true;
+      },
+    },
+  },
   strafe: {
     cost: 2,
     queueNumber: 0, // Instant event!

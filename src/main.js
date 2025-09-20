@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "napalm_1",
+      name: "Napalm",
+      type: "event",
+      cost: 2,
+      queueNumber: 1,
+      junkEffect: "restore",
+    },
+    {
       id: "strafe_1",
       name: "Strafe",
       type: "event",
@@ -374,6 +382,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "napalm_2",
+      name: "Napalm",
+      type: "event",
+      cost: 2,
+      queueNumber: 1,
+      junkEffect: "restore",
+    },
     {
       id: "strafe_2",
       name: "Strafe",

@@ -1635,6 +1635,103 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "uprising_place_punks": {
+        const pending = this.state.pending;
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Verify this is the player's own slot
+        if (targetPlayer !== pending.sourcePlayerId) {
+          console.log("Must place punks in your own columns");
+          return false;
+        }
+
+        const column = player.columns[targetColumn];
+
+        // Check if deck has cards
+        if (this.state.deck.length === 0) {
+          console.log("Cannot place punk - deck is empty");
+          // Discard event and clear pending
+          if (pending.eventCard) {
+            this.state.discard.push(pending.eventCard);
+          }
+          this.state.pending = null;
+          return false;
+        }
+
+        // Take the top card from the deck
+        const topCard = this.state.deck.shift();
+        console.log(
+          `Took ${topCard.name} from deck to make punk ${pending.punksRemaining}`
+        );
+
+        // Create punk from the card (face-down)
+        const punk = {
+          ...topCard,
+          isPunk: true,
+          isFaceDown: true,
+          isReady: false,
+          isDamaged: false,
+          originalName: topCard.name,
+          name: "Punk", // Override name for display
+        };
+
+        // Check for Karli Blaze's trait
+        const hasActiveKarli = this.checkForActiveKarli(pending.sourcePlayerId);
+        if (hasActiveKarli) {
+          punk.isReady = true;
+          console.log("Punk enters play ready due to Karli Blaze's trait!");
+        }
+
+        // Try to place with push
+        if (!this.placeCardWithPush(column, targetPosition, punk)) {
+          // If can't place, return card to deck
+          this.state.deck.unshift(topCard);
+          console.log("Couldn't place punk, returned card to deck");
+          return false;
+        }
+
+        console.log(
+          `Uprising: Placed punk at column ${targetColumn}, position ${targetPosition}`
+        );
+
+        // Check if more punks to place
+        if (pending.punksRemaining > 1) {
+          // Set up for next punk
+          this.state.pending = {
+            type: "uprising_place_punks",
+            sourcePlayerId: pending.sourcePlayerId,
+            punksRemaining: pending.punksRemaining - 1,
+            eventCard: pending.eventCard,
+          };
+          console.log(
+            `Uprising: Place punk ${pending.punksRemaining - 1} remaining`
+          );
+        } else {
+          // All punks placed, discard event
+          console.log("Uprising: All punks placed");
+          if (pending.eventCard) {
+            this.state.discard.push(pending.eventCard);
+          }
+
+          // Clear pending
+          this.state.pending = null;
+
+          // If we're in events phase, continue with phase progression
+          if (this.state.phase === "events") {
+            // Advance remaining events
+            const player = this.state.players[this.state.currentPlayer];
+            for (let i = 0; i < 2; i++) {
+              player.eventQueue[i] = player.eventQueue[i + 1];
+            }
+            player.eventQueue[2] = null;
+
+            // Continue to replenish
+            this.continueToReplenishPhase();
+          }
+        }
+
+        return true;
+      }
       case "napalm_select_column": {
         // Napalm needs a column selection, infer from the clicked position
         const targetCol = targetColumn;

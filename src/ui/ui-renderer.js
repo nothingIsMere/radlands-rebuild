@@ -120,6 +120,16 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "uprising_place_punks":
+          const punksLeft = this.state.pending.punksRemaining;
+          if (punksLeft === 1) {
+            message.textContent = "🎯 Uprising: Place your LAST punk";
+          } else {
+            message.textContent = `🎯 Uprising: Place a punk (${punksLeft} left to place)`;
+          }
+          overlay.classList.add("uprising-placement");
+          break;
+
         case "cultleader_select_destroy":
           message.textContent =
             "💀 Cult Leader: Select one of YOUR people to destroy";
@@ -414,6 +424,19 @@ export class UIRenderer {
     if (this.state.pending?.type === "parachute_place_person") {
     }
     const cardDiv = this.createElement("div", "card");
+
+    if (
+      this.state.pending?.type === "uprising_place_punks" &&
+      playerId === this.state.pending.sourcePlayerId
+    ) {
+      // Highlight ALL slots in player's own columns for placement
+      cardDiv.classList.add("uprising-placement-target");
+
+      // Add extra visual cue for empty slots
+      if (!card) {
+        cardDiv.classList.add("uprising-placement-empty");
+      }
+    }
 
     if (this.state.pending?.type === "banish_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(
@@ -746,6 +769,19 @@ export class UIRenderer {
           "Empty slot clicked, pending type:",
           this.state.pending?.type
         );
+
+        if (
+          this.state.pending?.type === "uprising_place_punks" &&
+          playerId === this.state.pending.sourcePlayerId
+        ) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
         // Handle punk placement from junk effect
         if (
           this.state.pending?.type === "place_punk" &&
@@ -1021,6 +1057,22 @@ export class UIRenderer {
           "Occupied slot clicked, pending type:",
           this.state.pending?.type
         );
+
+        if (
+          this.state.pending?.type === "uprising_place_punks" &&
+          playerId === this.state.pending.sourcePlayerId
+        ) {
+          console.log(
+            "Clicking occupied slot for Uprising punk placement (will push)"
+          );
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
 
         // Handle pending targeting
         if (this.state.pending) {

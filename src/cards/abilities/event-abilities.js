@@ -1,5 +1,68 @@
 // event-abilities.js
 export const eventAbilities = {
+  uprising: {
+    cost: 1,
+    queueNumber: 2, // Goes to queue slot 2
+    junkEffect: "injure",
+    effect: {
+      handler: (state, context) => {
+        console.log("Uprising event resolving - gaining punks!");
+
+        const player = state.players[context.playerId];
+
+        // Count current people (including punks)
+        let currentPeopleCount = 0;
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            // Only slots 1 and 2 hold people
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              currentPeopleCount++;
+            }
+          }
+        }
+
+        console.log(`Current people count: ${currentPeopleCount}`);
+
+        // Calculate how many punks we can actually gain
+        const maxPunks = Math.min(3, 6 - currentPeopleCount);
+
+        if (maxPunks === 0) {
+          console.log("Uprising: Already at 6 people limit, no punks gained");
+          // Still discard the event
+          if (context.eventCard) {
+            state.discard.push(context.eventCard);
+          }
+          return true;
+        }
+
+        // Check if deck has enough cards
+        if (state.deck.length === 0) {
+          console.log("Uprising: Deck is empty, no punks can be gained");
+          if (context.eventCard) {
+            state.discard.push(context.eventCard);
+          }
+          return true;
+        }
+
+        const punksToGain = Math.min(maxPunks, state.deck.length);
+        console.log(
+          `Uprising: Will gain ${punksToGain} punk${punksToGain > 1 ? "s" : ""}`
+        );
+
+        // Set up placement for first punk
+        state.pending = {
+          type: "uprising_place_punks",
+          sourcePlayerId: context.playerId,
+          punksRemaining: punksToGain,
+          eventCard: context.eventCard,
+        };
+
+        console.log(`Uprising: Place punk 1 of ${punksToGain}`);
+        return true;
+      },
+    },
+  },
   napalm: {
     cost: 2,
     queueNumber: 1, // Goes to queue slot 1

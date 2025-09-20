@@ -758,7 +758,8 @@ body.has-pending .card.sniper-target,
 body.has-pending .card.pyromaniac-target,
 body.has-pending .card.molgur-target,
 body.has-pending .card.mutant-restore-target,
-body.has-pending .card.mutant-damage-target {
+body.has-pending .card.mutant-damage-target,
+body.has-pending .card.uprising-placement-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }

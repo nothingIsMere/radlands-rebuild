@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "famine_1",
+      name: "Famine",
+      type: "event",
+      cost: 1,
+      queueNumber: 1,
+      junkEffect: "injure",
+    },
+    {
       id: `truce_1}`,
       name: "Truce",
       type: "event",
@@ -398,6 +406,14 @@ function setupTestGame() {
 
   // RIGHT PLAYER HAND (similar cards for testing)
   gameState.players.right.hand = [
+    {
+      id: "famine_2",
+      name: "Famine",
+      type: "event",
+      cost: 1,
+      queueNumber: 1,
+      junkEffect: "injure",
+    },
     {
       id: `truce_2}`,
       name: "Truce",

@@ -120,6 +120,16 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "famine_select_keep":
+          const selectingPlayer = this.state.pending.currentSelectingPlayer;
+          if (selectingPlayer === this.state.currentPlayer) {
+            message.textContent =
+              "☠️ FAMINE: Choose ONE person to keep (all others will be destroyed!)";
+          } else {
+            message.textContent = `⏳ Waiting for ${selectingPlayer.toUpperCase()} to choose which person to keep...`;
+          }
+          overlay.classList.add("famine-selection");
+          break;
         case "uprising_place_punks":
           const punksLeft = this.state.pending.punksRemaining;
           if (punksLeft === 1) {
@@ -435,6 +445,19 @@ export class UIRenderer {
       // Add extra visual cue for empty slots
       if (!card) {
         cardDiv.classList.add("uprising-placement-empty");
+      }
+    }
+
+    if (this.state.pending?.type === "famine_select_keep") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("famine-keep-target");
       }
     }
 

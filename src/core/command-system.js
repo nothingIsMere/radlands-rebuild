@@ -1635,6 +1635,168 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "famine_select_keep": {
+        const pending = this.state.pending;
+
+        // Verify the selected target is valid
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid person to keep");
+          return false;
+        }
+
+        const selectedCard = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        console.log(
+          `Famine: ${targetPlayer} chose to keep ${selectedCard.name}`
+        );
+
+        // Destroy all OTHER people belonging to this player
+        const player = this.state.players[pending.currentSelectingPlayer];
+        let destroyedCount = 0;
+
+        // Process from front to back to avoid issues
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 2; pos >= 1; pos--) {
+            const card = player.columns[col].getCard(pos);
+
+            // Skip the selected card to keep
+            if (col === targetColumn && pos === targetPosition) {
+              continue;
+            }
+
+            if (card && card.type === "person" && !card.isDestroyed) {
+              // Destroy this person
+              card.isDestroyed = true;
+
+              if (card.isPunk) {
+                // Return punk to deck
+                const returnCard = {
+                  id: card.id,
+                  name: card.originalName || card.name,
+                  type: card.originalCard?.type || card.type,
+                  cost: card.originalCard?.cost || card.cost,
+                  abilities: card.originalCard?.abilities || card.abilities,
+                  junkEffect: card.originalCard?.junkEffect || card.junkEffect,
+                };
+                this.state.deck.unshift(returnCard);
+                console.log(`Famine destroyed punk (returned to deck)`);
+              } else {
+                this.state.discard.push(card);
+                console.log(`Famine destroyed ${card.name}`);
+              }
+
+              // Remove from column
+              player.columns[col].setCard(pos, null);
+
+              // Move card in front back if needed
+              if (pos === 1) {
+                const cardInFront = player.columns[col].getCard(2);
+                if (cardInFront) {
+                  player.columns[col].setCard(1, cardInFront);
+                  player.columns[col].setCard(2, null);
+                }
+              }
+
+              destroyedCount++;
+            }
+          }
+        }
+
+        console.log(
+          `Famine: ${pending.currentSelectingPlayer} destroyed ${destroyedCount} people`
+        );
+
+        // Check if we need the other player to select
+        if (
+          !pending.activePlayerDone &&
+          pending.currentSelectingPlayer === pending.activePlayerId
+        ) {
+          // Active player just finished, now check if opponent needs to select
+          const opponentId =
+            pending.activePlayerId === "left" ? "right" : "left";
+          const opponent = this.state.players[opponentId];
+          let opponentPeople = [];
+
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 1; pos <= 2; pos++) {
+              const card = opponent.columns[col].getCard(pos);
+              if (card && card.type === "person" && !card.isDestroyed) {
+                opponentPeople.push({
+                  card,
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                });
+              }
+            }
+          }
+
+          if (opponentPeople.length <= 1) {
+            console.log(
+              `Famine: ${opponentId} has ${opponentPeople.length} people, no selection needed`
+            );
+            // Done with Famine
+            if (pending.eventCard) {
+              this.state.discard.push(pending.eventCard);
+            }
+            this.state.pending = null;
+
+            // Continue event phase if needed
+            if (this.state.phase === "events") {
+              const player = this.state.players[this.state.currentPlayer];
+              for (let i = 0; i < 2; i++) {
+                player.eventQueue[i] = player.eventQueue[i + 1];
+              }
+              player.eventQueue[2] = null;
+              this.continueToReplenishPhase();
+            }
+          } else {
+            // Opponent needs to select
+            this.state.pending = {
+              type: "famine_select_keep",
+              currentSelectingPlayer: opponentId,
+              activePlayerId: pending.activePlayerId,
+              validTargets: opponentPeople,
+              eventCard: pending.eventCard,
+              activePlayerDone: true,
+            };
+
+            console.log(
+              `Famine: Now ${opponentId} must select one person to keep`
+            );
+          }
+        } else {
+          // All done
+          console.log("Famine: All selections complete");
+
+          if (pending.eventCard) {
+            this.state.discard.push(pending.eventCard);
+          }
+          this.state.pending = null;
+
+          // Continue event phase if needed
+          if (this.state.phase === "events") {
+            const player = this.state.players[this.state.currentPlayer];
+            for (let i = 0; i < 2; i++) {
+              player.eventQueue[i] = player.eventQueue[i + 1];
+            }
+            player.eventQueue[2] = null;
+            this.continueToReplenishPhase();
+          }
+        }
+
+        return true;
+      }
       case "uprising_place_punks": {
         const pending = this.state.pending;
         const player = this.state.players[pending.sourcePlayerId];

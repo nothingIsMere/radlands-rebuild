@@ -1273,3 +1273,45 @@ body.has-pending .card.magnus-column-target {
   font-size: 10px;
   font-weight: bold;
 }
+
+/* Famine selection */
+.card.famine-keep-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 15px #4caf50;
+  border: 3px solid #4caf50;
+}
+
+.card.famine-keep-target::after {
+  content: "KEEP";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4caf50;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.pending-overlay.famine-selection .pending-message-banner {
+  background: linear-gradient(135deg, #8b0000 0%, #000000 100%);
+  animation: pulse-urgent 0.5s infinite;
+}
+
+@keyframes pulse-urgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+body.has-pending .card.famine-keep-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

@@ -2,6 +2,99 @@
 export const eventAbilities = {
   // In event-abilities.js, add this to the eventAbilities object:
 
+  famine: {
+    cost: 1,
+    queueNumber: 1, // Goes to queue slot 1
+    junkEffect: "injure",
+    effect: {
+      handler: (state, context) => {
+        console.log("Famine event resolving!");
+
+        const activePlayerId = context.playerId;
+
+        // Count people for active player first
+        const activePlayer = state.players[activePlayerId];
+        let activePeople = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = activePlayer.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              activePeople.push({
+                card,
+                playerId: activePlayerId,
+                columnIndex: col,
+                position: pos,
+              });
+            }
+          }
+        }
+
+        if (activePeople.length <= 1) {
+          console.log(
+            `${activePlayerId} has ${activePeople.length} people, no selection needed`
+          );
+
+          // Now check opponent
+          const opponentId = activePlayerId === "left" ? "right" : "left";
+          const opponent = state.players[opponentId];
+          let opponentPeople = [];
+
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 1; pos <= 2; pos++) {
+              const card = opponent.columns[col].getCard(pos);
+              if (card && card.type === "person" && !card.isDestroyed) {
+                opponentPeople.push({
+                  card,
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                });
+              }
+            }
+          }
+
+          if (opponentPeople.length <= 1) {
+            console.log(
+              `${opponentId} has ${opponentPeople.length} people, no selection needed`
+            );
+            // No one needs to select, discard event
+            if (context.eventCard) {
+              state.discard.push(context.eventCard);
+            }
+            return true;
+          }
+
+          // Only opponent needs to select
+          state.pending = {
+            type: "famine_select_keep",
+            currentSelectingPlayer: opponentId,
+            activePlayerId: activePlayerId, // Who played the event
+            validTargets: opponentPeople,
+            eventCard: context.eventCard,
+            activePlayerDone: true, // Active player had nothing to select
+          };
+
+          console.log(`Famine: ${opponentId} must select one person to keep`);
+          return true;
+        }
+
+        // Active player needs to select first
+        state.pending = {
+          type: "famine_select_keep",
+          currentSelectingPlayer: activePlayerId,
+          activePlayerId: activePlayerId,
+          validTargets: activePeople,
+          eventCard: context.eventCard,
+          activePlayerDone: false,
+        };
+
+        console.log(`Famine: ${activePlayerId} must select one person to keep`);
+        return true;
+      },
+    },
+  },
+
   truce: {
     cost: 2,
     queueNumber: 0, // Instant event - resolves immediately

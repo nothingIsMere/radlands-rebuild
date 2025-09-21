@@ -5,6 +5,8 @@
  * The ready state tracking is automatic - no special handling needed in individual camp handlers
  */
 
+import { TargetValidator } from "../../core/target-validator.js";
+
 export const campAbilities = {
   juggernaut: {
     move: {
@@ -41,10 +43,6 @@ export const campAbilities = {
         }
 
         console.log(`Juggernaut should now be at position ${nextPosition}`);
-
-        // NOTE: Vera Vosh trait handling for camps
-        // The camp's ready state is handled in handleUseCampAbility
-        // which will check for Vera's trait when marking camps not ready
 
         return true;
       },
@@ -84,9 +82,39 @@ export const campAbilities = {
     },
   },
 
-  // In command-system, add handlers for each step:
-  // Step 1: Select person from hand
-  // Step 2: Select where to play them
-  // Step 3: Automatically trigger their ability
-  // Step 4: Automatically damage them
+  railgun: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find valid damage targets (unprotected enemy cards)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false, // Standard damage respects protection
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Railgun: No valid targets to damage");
+          return false;
+        }
+
+        // Set up damage targeting
+        state.pending = {
+          type: "damage", // Uses existing damage handler
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Railgun: Select target to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
 };

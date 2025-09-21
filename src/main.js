@@ -66,7 +66,7 @@ function setupTestGame() {
     id: "camp_left_2",
     name: "Railgun",
     type: "camp",
-    campDraw: 0,
+    campDraw: 0, // Railgun has 0 camp draw
     abilities: [
       {
         effect: "damage",

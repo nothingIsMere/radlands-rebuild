@@ -48,18 +48,15 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Juggernaut",
+    name: "Outpost",
     type: "camp",
-    campDraw: 0,
+    campDraw: 1, // Outpost has 1 camp draw
     abilities: [
-      {
-        effect: "move",
-        cost: 1,
-      },
+      { effect: "raid", cost: 2 },
+      { effect: "restore", cost: 2 },
     ],
     isReady: true,
     isDamaged: false,
-    moveCount: 0,
   });
 
   gameState.players.left.columns[2].setCard(0, {
@@ -386,19 +383,16 @@ function setupTestGame() {
   // RIGHT PLAYER SETUP (mirror configuration)
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
-    id: "camp_right_0",
-    name: "Juggernaut",
+    id: "camp_right_1",
+    name: "Outpost",
     type: "camp",
-    campDraw: 0,
+    campDraw: 1, // Outpost has 1 camp draw
     abilities: [
-      {
-        effect: "move",
-        cost: 1,
-      },
+      { effect: "raid", cost: 2 },
+      { effect: "restore", cost: 2 },
     ],
     isReady: true,
     isDamaged: false,
-    moveCount: 0,
   });
 
   gameState.players.right.columns[1].setCard(0, {

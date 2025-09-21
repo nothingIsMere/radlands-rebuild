@@ -8,6 +8,137 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  outpost: {
+    raid: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Same raid logic as Garage and Victory Totem
+        if (player.raiders === "available") {
+          const desiredSlot = 1; // Raiders goes to slot 2 (index 1)
+
+          // Find first available slot at or behind desired position
+          let targetSlot = -1;
+          if (!player.eventQueue[desiredSlot]) {
+            targetSlot = desiredSlot;
+          } else {
+            for (let i = desiredSlot + 1; i < 3; i++) {
+              if (!player.eventQueue[i]) {
+                targetSlot = i;
+                break;
+              }
+            }
+          }
+
+          if (targetSlot === -1) {
+            console.log("Outpost: Cannot place Raiders - event queue is full");
+            return false;
+          }
+
+          player.eventQueue[targetSlot] = {
+            id: `${context.playerId}_raiders`,
+            name: "Raiders",
+            isRaiders: true,
+            queueNumber: 2,
+          };
+          player.raiders = "in_queue";
+          console.log(
+            `Outpost: Raiders placed in event queue at slot ${targetSlot + 1}`
+          );
+          return true;
+        } else if (player.raiders === "in_queue") {
+          // Find and advance/resolve Raiders
+          let raidersIndex = -1;
+          for (let i = 0; i < 3; i++) {
+            if (player.eventQueue[i]?.isRaiders) {
+              raidersIndex = i;
+              break;
+            }
+          }
+
+          if (raidersIndex === 0) {
+            // Resolve Raiders
+            console.log(
+              "Outpost: Advancing Raiders off slot 1 - resolving effect!"
+            );
+            player.eventQueue[0] = null;
+            player.raiders = "available";
+
+            const opponentId = context.playerId === "left" ? "right" : "left";
+            state.pending = {
+              type: "raiders_select_camp",
+              sourcePlayerId: context.playerId,
+              targetPlayerId: opponentId,
+            };
+
+            console.log(
+              `Raiders: ${opponentId} player must choose a camp to damage`
+            );
+            return true;
+          } else if (raidersIndex > 0) {
+            const newIndex = raidersIndex - 1;
+            if (!player.eventQueue[newIndex]) {
+              player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
+              player.eventQueue[raidersIndex] = null;
+              console.log(
+                `Outpost: Advanced Raiders from slot ${
+                  raidersIndex + 1
+                } to slot ${newIndex + 1}`
+              );
+              return true;
+            } else {
+              console.log(
+                `Outpost: Cannot advance Raiders - slot ${
+                  newIndex + 1
+                } is occupied`
+              );
+              return false;
+            }
+          }
+        } else {
+          console.log("Outpost: Raiders already used this game");
+          return false;
+        }
+      },
+    },
+
+    restore: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find damaged cards (your own)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true, // Protection irrelevant for restoration
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Outpost: No damaged cards to restore");
+          return false;
+        }
+
+        state.pending = {
+          type: "restore",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Outpost: Select damaged card to restore (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   victorytotem: {
     damage: {
       cost: 2,

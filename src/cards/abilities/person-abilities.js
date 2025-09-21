@@ -522,7 +522,7 @@ export const personAbilities = {
     damagecamp: {
       cost: 1,
       handler: (state, context) => {
-        // Find unprotected enemy camps
+        // Find enemy camps (unprotected normally, or all during High Ground)
         const opponentId = context.playerId === "left" ? "right" : "left";
         const opponent = state.players[opponentId];
         const validTargets = [];
@@ -531,23 +531,35 @@ export const personAbilities = {
           // Camps are always at position 0
           const camp = opponent.columns[col].getCard(0);
           if (camp && camp.type === "camp" && !camp.isDestroyed) {
-            // Check if unprotected (no cards in front)
-            const hasProtection =
-              opponent.columns[col].getCard(1) ||
-              opponent.columns[col].getCard(2);
-            if (!hasProtection) {
+            // Check if High Ground is active
+            if (state.turnEvents?.highGroundActive) {
+              // During High Ground, ALL enemy camps can be targeted
               validTargets.push({
                 playerId: opponentId,
                 columnIndex: col,
                 position: 0,
                 card: camp,
               });
+            } else {
+              // Normal rules - check if unprotected (no cards in front)
+              const hasProtection =
+                opponent.columns[col].getCard(1) ||
+                opponent.columns[col].getCard(2);
+
+              if (!hasProtection) {
+                validTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: 0,
+                  card: camp,
+                });
+              }
             }
           }
         }
 
         if (validTargets.length === 0) {
-          console.log("Pyromaniac: No unprotected enemy camps to damage");
+          console.log("Pyromaniac: No valid enemy camps to damage");
           return false;
         }
 
@@ -560,8 +572,12 @@ export const personAbilities = {
           validTargets: validTargets,
         };
 
+        const targetDesc = state.turnEvents?.highGroundActive
+          ? "any enemy camp (High Ground active!)"
+          : "an unprotected enemy camp";
+
         console.log(
-          `Pyromaniac: Select an unprotected enemy camp to damage (${validTargets.length} targets)`
+          `Pyromaniac: Select ${targetDesc} to damage (${validTargets.length} targets)`
         );
         return true;
       },
@@ -1162,7 +1178,7 @@ export const personAbilities = {
     injure: {
       cost: 1,
       handler: (state, context) => {
-        // Find valid targets - unprotected enemy people only
+        // Find valid targets - unprotected enemy people (or all during High Ground)
         const opponentId = context.playerId === "left" ? "right" : "left";
         const opponent = state.players[opponentId];
         const validTargets = [];
@@ -1171,8 +1187,17 @@ export const personAbilities = {
           for (let pos = 0; pos < 3; pos++) {
             const card = opponent.columns[col].getCard(pos);
             if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if protected
-              if (!opponent.columns[col].isProtected(pos)) {
+              // Check if High Ground is active
+              if (state.turnEvents?.highGroundActive) {
+                // During High Ground, ALL enemy people can be targeted
+                validTargets.push({
+                  playerId: opponentId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              } else if (!opponent.columns[col].isProtected(pos)) {
+                // Normal rules - only unprotected
                 validTargets.push({
                   playerId: opponentId,
                   columnIndex: col,
@@ -1185,7 +1210,7 @@ export const personAbilities = {
         }
 
         if (validTargets.length === 0) {
-          console.log("Vigilante: No unprotected enemy people to injure");
+          console.log("Vigilante: No valid enemy people to injure");
           return false;
         }
 
@@ -1197,8 +1222,12 @@ export const personAbilities = {
           validTargets: validTargets,
         };
 
+        const targetDesc = state.turnEvents?.highGroundActive
+          ? "any enemy person (High Ground active!)"
+          : "an unprotected enemy person";
+
         console.log(
-          `Vigilante: Select an unprotected enemy person to injure (${validTargets.length} targets)`
+          `Vigilante: Select ${targetDesc} to injure (${validTargets.length} targets)`
         );
         return true;
       },

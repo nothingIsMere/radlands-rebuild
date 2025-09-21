@@ -80,6 +80,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "vigilante_1",
+      name: "Vigilante",
+      type: "person",
+      cost: 1,
+      junkEffect: "raid",
+      abilities: [{ effect: "injure", cost: 1 }],
+    },
+    {
       id: "highground_1",
       name: "High Ground",
       type: "event",

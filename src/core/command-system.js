@@ -302,6 +302,26 @@ export class CommandSystem {
     return true;
   }
 
+  checkForActiveZetoKahn(playerId) {
+    const player = this.state.players[playerId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (
+          card &&
+          card.name === "Zeto Kahn" &&
+          !card.isDamaged &&
+          !card.isDestroyed
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   resolveDamage(targetPlayer, targetColumn, targetPosition) {
     const pending = this.state.pending;
 
@@ -595,13 +615,34 @@ export class CommandSystem {
       );
 
       // Fallback - use the card's own properties if no definition found
-      const queueNumber = card.queueNumber || 1;
+      let queueNumber = card.queueNumber || 1;
       const cost = card.cost || 0;
 
       // Check cost
       if (player.water < cost) {
         console.log("Not enough water for event");
         return false;
+      }
+
+      // Check for Zeto Kahn's trait (first event of turn becomes instant)
+      if (
+        !this.state.turnEvents.firstEventPlayedThisTurn &&
+        this.checkForActiveZetoKahn(playerId)
+      ) {
+        console.log(
+          `Zeto Kahn's trait: ${card.name} becomes instant (queue 0)!`
+        );
+        queueNumber = 0;
+      }
+
+      if (queueNumber === 0) {
+        // Instant due to Zeto
+        player.water -= cost;
+        player.hand.splice(cardIndex, 1);
+        this.state.discard.push(card);
+        this.state.turnEvents.firstEventPlayedThisTurn = true;
+        console.log(`${card.name} resolved instantly due to Zeto Kahn`);
+        return true;
       }
 
       // Try to place in queue
@@ -628,6 +669,7 @@ export class CommandSystem {
       // Pay cost and remove from hand
       player.water -= cost;
       player.hand.splice(cardIndex, 1);
+      this.state.turnEvents.firstEventPlayedThisTurn = true;
 
       console.log(`Placed ${card.name} in event queue (no handler found)`);
       return true;
@@ -649,10 +691,23 @@ export class CommandSystem {
       return false;
     }
 
-    const queueNumber = eventDef.queueNumber;
-    console.log(`Event ${card.name} has queue number ${queueNumber}`);
+    // Determine effective queue number
+    let effectiveQueueNumber = eventDef.queueNumber;
 
-    if (queueNumber === 0) {
+    // Check for Zeto Kahn's trait (first event of turn becomes instant)
+    if (
+      !this.state.turnEvents.firstEventPlayedThisTurn &&
+      this.checkForActiveZetoKahn(playerId)
+    ) {
+      console.log(`Zeto Kahn's trait: ${card.name} becomes instant (queue 0)!`);
+      effectiveQueueNumber = 0;
+    }
+
+    console.log(
+      `Event ${card.name} has effective queue number ${effectiveQueueNumber}`
+    );
+
+    if (effectiveQueueNumber === 0) {
       // Instant event - resolve immediately
       console.log(`Playing instant event: ${card.name}`);
 
@@ -661,6 +716,9 @@ export class CommandSystem {
 
       // Remove from hand
       player.hand.splice(cardIndex, 1);
+
+      // Mark that an event was played this turn
+      this.state.turnEvents.firstEventPlayedThisTurn = true;
 
       // Execute effect
       const context = {
@@ -682,9 +740,9 @@ export class CommandSystem {
     }
 
     // Queue placement logic for non-instant events
-    const desiredSlot = queueNumber - 1; // Convert queue number to array index
+    const desiredSlot = effectiveQueueNumber - 1; // Convert queue number to array index
     console.log(
-      `Trying to place in slot ${desiredSlot} (queue ${queueNumber})`
+      `Trying to place in slot ${desiredSlot} (queue ${effectiveQueueNumber})`
     );
 
     if (!player.eventQueue[desiredSlot]) {
@@ -718,6 +776,9 @@ export class CommandSystem {
     // Remove from hand
     player.hand.splice(cardIndex, 1);
     console.log(`Removed ${card.name} from hand`);
+
+    // Mark that an event was played this turn
+    this.state.turnEvents.firstEventPlayedThisTurn = true;
 
     console.log(`Successfully placed ${card.name} in event queue`);
     console.log(
@@ -4705,6 +4766,7 @@ export class CommandSystem {
       abilityUsedThisTurn: false,
       veraFirstUseCards: [],
       highGroundActive: false,
+      firstEventPlayedThisTurn: false,
     };
 
     // Switch player

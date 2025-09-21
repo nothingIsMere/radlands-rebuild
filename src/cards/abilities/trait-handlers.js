@@ -1,5 +1,11 @@
 // trait-handlers.js
 export const cardTraits = {
+  // In trait-handlers.js, add:
+
+  zetokahn: {
+    // This is a passive trait that modifies event playing, not an entry effect
+    modifiesEventQueue: true,
+  },
   doomsayer: {
     onEntry: (state, context) => {
       console.log("Doomsayer enters play - moving opponent's events back!");

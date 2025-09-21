@@ -11,6 +11,56 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
+  // Add to command-system.js:
+  findValidTargets(sourcePlayerId, options = {}) {
+    const {
+      enemyOnly = true,
+      peopleOnly = false,
+      campsOnly = false,
+      ignoreProtection = false,
+      requireDamaged = false,
+      requireUndamaged = false,
+    } = options;
+
+    const targets = [];
+    const checkPlayer = enemyOnly
+      ? sourcePlayerId === "left"
+        ? "right"
+        : "left"
+      : sourcePlayerId;
+
+    const player = this.state.players[checkPlayer];
+
+    for (let col = 0; col < 3; col++) {
+      const positions = campsOnly ? [0] : peopleOnly ? [1, 2] : [0, 1, 2];
+
+      for (const pos of positions) {
+        const card = player.columns[col].getCard(pos);
+        if (!card || card.isDestroyed) continue;
+
+        if (requireDamaged && !card.isDamaged) continue;
+        if (requireUndamaged && card.isDamaged) continue;
+
+        // Protection check
+        const isProtected =
+          !ignoreProtection &&
+          !this.state.turnEvents?.highGroundActive &&
+          player.columns[col].isProtected(pos);
+
+        if (!isProtected) {
+          targets.push({
+            playerId: checkPlayer,
+            columnIndex: col,
+            position: pos,
+            card,
+          });
+        }
+      }
+    }
+
+    return targets;
+  }
+
   checkForActiveVera(playerId) {
     const player = this.state.players[playerId];
 

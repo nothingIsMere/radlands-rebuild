@@ -8,6 +8,90 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  reactor: {
+    destroyall: {
+      cost: 2,
+      handler: (state, context) => {
+        console.log("Reactor: Destroying self and all people!");
+
+        // First, destroy Reactor itself
+        const reactor = state.getCard(context.playerId, context.columnIndex, 0);
+        if (reactor) {
+          reactor.isDestroyed = true;
+          console.log("Reactor destroyed itself");
+        }
+
+        // Now destroy ALL people (both players)
+        let destroyedCount = 0;
+
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+
+          // Process from front to back to handle removal properly
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 2; pos >= 1; pos--) {
+              const card = player.columns[col].getCard(pos);
+
+              if (card && card.type === "person" && !card.isDestroyed) {
+                card.isDestroyed = true;
+
+                // Handle punk vs normal person
+                if (card.isPunk) {
+                  const returnCard = {
+                    id: card.id,
+                    name: card.originalName || card.name,
+                    type: card.originalCard?.type || card.type,
+                    cost: card.originalCard?.cost || card.cost,
+                    abilities: card.originalCard?.abilities || card.abilities,
+                    junkEffect:
+                      card.originalCard?.junkEffect || card.junkEffect,
+                  };
+                  state.deck.unshift(returnCard);
+                  console.log("Reactor destroyed punk (returned to deck)");
+                } else {
+                  state.discard.push(card);
+                  console.log(`Reactor destroyed ${card.name}`);
+                }
+
+                // Remove from column
+                player.columns[col].setCard(pos, null);
+
+                // Move card in front back if needed
+                if (pos === 1) {
+                  const cardInFront = player.columns[col].getCard(2);
+                  if (cardInFront) {
+                    player.columns[col].setCard(1, cardInFront);
+                    player.columns[col].setCard(2, null);
+                  }
+                }
+
+                destroyedCount++;
+              }
+            }
+          }
+        }
+
+        console.log(`Reactor: Destroyed itself and ${destroyedCount} people`);
+
+        // Check for game end (in case Reactor was the third destroyed camp)
+        let destroyedCamps = 0;
+        const player = state.players[context.playerId];
+        for (let col = 0; col < 3; col++) {
+          const camp = player.columns[col].getCard(0);
+          if (camp?.isDestroyed) destroyedCamps++;
+        }
+
+        if (destroyedCamps === 3) {
+          state.phase = "game_over";
+          state.winner = context.playerId === "left" ? "right" : "left";
+          console.log(`${state.winner} wins - Reactor caused self-defeat!`);
+        }
+
+        return true;
+      },
+    },
+  },
+
   outpost: {
     raid: {
       cost: 2,

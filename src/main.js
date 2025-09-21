@@ -32,16 +32,11 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    id: "camp_left_1",
-    name: "Garage",
+    id: "camp_right_0",
+    name: "Reactor",
     type: "camp",
-    campDraw: 0, // Garage has 0 camp draw
-    abilities: [
-      {
-        effect: "raid",
-        cost: 1,
-      },
-    ],
+    campDraw: 1, // Reactor has 1 camp draw
+    abilities: [{ effect: "destroyall", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -409,16 +404,11 @@ function setupTestGame() {
   });
 
   gameState.players.right.columns[2].setCard(0, {
-    id: "camp_right_1",
-    name: "Garage",
+    id: "camp_right_3",
+    name: "Reactor",
     type: "camp",
-    campDraw: 0, // Garage has 0 camp draw
-    abilities: [
-      {
-        effect: "raid",
-        cost: 1,
-      },
-    ],
+    campDraw: 1, // Reactor has 1 camp draw
+    abilities: [{ effect: "destroyall", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

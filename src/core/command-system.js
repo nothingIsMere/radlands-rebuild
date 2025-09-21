@@ -1056,33 +1056,16 @@ export class CommandSystem {
         break;
 
       case "restore":
-        // Find ALL damaged cards (both players)
+        // Find ONLY damaged cards belonging to the current player
         const restoreTargets = [];
 
-        // Check own cards
+        // Check ONLY own cards (not opponent's)
         for (let col = 0; col < 3; col++) {
           for (let pos = 0; pos < 3; pos++) {
             const targetCard = player.columns[col].getCard(pos);
             if (targetCard && targetCard.isDamaged && !targetCard.isDestroyed) {
               restoreTargets.push({
-                playerId: playerId,
-                columnIndex: col,
-                position: pos,
-                card: targetCard,
-              });
-            }
-          }
-        }
-
-        // Check opponent's cards
-        const enemyId = playerId === "left" ? "right" : "left";
-        const enemy = this.state.players[enemyId];
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const targetCard = enemy.columns[col].getCard(pos);
-            if (targetCard && targetCard.isDamaged && !targetCard.isDestroyed) {
-              restoreTargets.push({
-                playerId: enemyId,
+                playerId: playerId, // Only own cards
                 columnIndex: col,
                 position: pos,
                 card: targetCard,
@@ -1105,7 +1088,7 @@ export class CommandSystem {
           validTargets: restoreTargets,
         };
         console.log(
-          `Select damaged card to restore (${restoreTargets.length} targets)`
+          `Select YOUR damaged card to restore (${restoreTargets.length} targets)`
         );
         break;
 
@@ -1616,6 +1599,29 @@ export class CommandSystem {
     const player = this.state.players[playerId];
 
     if (player.raiders === "available") {
+      // Check for Zeto Kahn's trait BEFORE placing Raiders
+      if (
+        !this.state.turnEvents.firstEventPlayedThisTurn &&
+        this.checkForActiveZetoKahn(playerId)
+      ) {
+        console.log("Zeto Kahn's trait: Raiders resolves immediately!");
+
+        // Mark that an event was played this turn
+        this.state.turnEvents.firstEventPlayedThisTurn = true;
+
+        // Resolve Raiders immediately
+        const opponentId = playerId === "left" ? "right" : "left";
+        this.state.pending = {
+          type: "raiders_select_camp",
+          sourcePlayerId: playerId,
+          targetPlayerId: opponentId,
+        };
+
+        console.log(
+          `Raiders (instant due to Zeto): ${opponentId} player must choose a camp to damage`
+        );
+        return true;
+      }
       // Place raiders in queue at slot 2 (index 1)
       const slotIndex = 1;
       if (!player.eventQueue[slotIndex]) {
@@ -1626,6 +1632,8 @@ export class CommandSystem {
           queueNumber: 2,
         };
         player.raiders = "in_queue";
+        // Mark that an event was played this turn
+        this.state.turnEvents.firstEventPlayedThisTurn = true;
         console.log("Raid: Raiders placed in event queue at slot 2");
         return true;
       }

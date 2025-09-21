@@ -32,14 +32,14 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    id: "camp_left_0",
-    name: "Parachute Base",
+    id: "camp_left_1",
+    name: "Garage",
     type: "camp",
-    campDraw: 1,
+    campDraw: 0, // Garage has 0 camp draw
     abilities: [
       {
-        effect: "paradrop",
-        cost: 0,
+        effect: "raid",
+        cost: 1,
       },
     ],
     isReady: true,
@@ -47,7 +47,7 @@ function setupTestGame() {
   });
 
   gameState.players.left.columns[1].setCard(0, {
-    id: "camp_left_1",
+    id: "camp_left_2",
     name: "Juggernaut",
     type: "camp",
     campDraw: 0,
@@ -63,7 +63,7 @@ function setupTestGame() {
   });
 
   gameState.players.left.columns[2].setCard(0, {
-    id: "camp_left_2",
+    id: "camp_left_3",
     name: "Railgun",
     type: "camp",
     campDraw: 0, // Railgun has 0 camp draw
@@ -419,11 +419,16 @@ function setupTestGame() {
   });
 
   gameState.players.right.columns[2].setCard(0, {
-    id: "camp_right_2",
-    name: "Oasis",
+    id: "camp_right_1",
+    name: "Garage",
     type: "camp",
-    campDraw: 1,
-    abilities: [], // Oasis has a trait, not an ability
+    campDraw: 0, // Garage has 0 camp draw
+    abilities: [
+      {
+        effect: "raid",
+        cost: 1,
+      },
+    ],
     isReady: true,
     isDamaged: false,
   });

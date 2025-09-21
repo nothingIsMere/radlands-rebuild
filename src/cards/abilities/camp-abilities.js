@@ -117,4 +117,90 @@ export const campAbilities = {
       },
     },
   },
+
+  garage: {
+    raid: {
+      cost: 1,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Execute raid (same logic as junking for raid effect)
+        if (player.raiders === "available") {
+          // Place raiders in queue at slot 2 (index 1)
+          const slotIndex = 1;
+          if (!player.eventQueue[slotIndex]) {
+            player.eventQueue[slotIndex] = {
+              id: `${context.playerId}_raiders`,
+              name: "Raiders",
+              isRaiders: true,
+              queueNumber: 2,
+            };
+            player.raiders = "in_queue";
+            console.log("Garage: Raiders placed in event queue at slot 2");
+            return true;
+          }
+          console.log("Garage: Cannot place Raiders - slot 2 occupied");
+          return false;
+        } else if (player.raiders === "in_queue") {
+          // Find where Raiders currently is
+          let raidersIndex = -1;
+          for (let i = 0; i < 3; i++) {
+            if (player.eventQueue[i]?.isRaiders) {
+              raidersIndex = i;
+              break;
+            }
+          }
+
+          if (raidersIndex === 0) {
+            // Raiders in slot 1 - resolve it immediately!
+            console.log(
+              "Garage: Advancing Raiders off slot 1 - resolving effect!"
+            );
+
+            // Remove from queue
+            player.eventQueue[0] = null;
+
+            // Return to available
+            player.raiders = "available";
+
+            // Set up opponent camp selection
+            const opponentId = context.playerId === "left" ? "right" : "left";
+            state.pending = {
+              type: "raiders_select_camp",
+              sourcePlayerId: context.playerId,
+              targetPlayerId: opponentId,
+            };
+
+            console.log(
+              `Raiders: ${opponentId} player must choose a camp to damage`
+            );
+            return true;
+          } else if (raidersIndex > 0) {
+            // Try to advance
+            const newIndex = raidersIndex - 1;
+            if (!player.eventQueue[newIndex]) {
+              player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
+              player.eventQueue[raidersIndex] = null;
+              console.log(
+                `Garage: Advanced Raiders from slot ${
+                  raidersIndex + 1
+                } to slot ${newIndex + 1}`
+              );
+              return true;
+            } else {
+              console.log(
+                `Garage: Cannot advance Raiders - slot ${
+                  newIndex + 1
+                } is occupied`
+              );
+              return false;
+            }
+          }
+        } else {
+          console.log("Garage: Raiders already used this game");
+          return false;
+        }
+      },
+    },
+  },
 };

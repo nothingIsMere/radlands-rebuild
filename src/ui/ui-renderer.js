@@ -991,6 +991,11 @@ export class UIRenderer {
               btn.addEventListener("click", (e) => {
                 e.stopPropagation();
 
+                console.log("=== UI BUTTON CLICK ===");
+                console.log("Card name:", card.name);
+                console.log("Ability index being sent:", index);
+                console.log("Ability effect:", ability.effect);
+
                 if (this.state.pending) {
                   console.log("Action in progress - please complete it first");
                   return;
@@ -1005,6 +1010,7 @@ export class UIRenderer {
                       playerId: playerId,
                       columnIndex: columnIndex,
                       position: position, // Include actual position for Juggernaut
+                      abilityIndex: index, // <-- ADD THIS
                     },
                   });
                 } else if (card.type === "camp") {
@@ -1016,6 +1022,7 @@ export class UIRenderer {
                       playerId: playerId,
                       columnIndex: columnIndex,
                       position: 0,
+                      abilityIndex: index, // <-- ADD THIS
                     },
                   });
                 } else {

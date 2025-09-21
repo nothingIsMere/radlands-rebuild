@@ -8,6 +8,141 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  victorytotem: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Victory Totem: No valid targets to damage");
+          return false;
+        }
+
+        // Set up damage targeting
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Victory Totem: Select target to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+
+    raid: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // EXACT SAME LOGIC AS GARAGE
+        if (player.raiders === "available") {
+          const desiredSlot = 1; // Raiders goes to slot 2 (index 1)
+
+          // Find first available slot at or behind desired position
+          let targetSlot = -1;
+          if (!player.eventQueue[desiredSlot]) {
+            targetSlot = desiredSlot;
+          } else {
+            for (let i = desiredSlot + 1; i < 3; i++) {
+              if (!player.eventQueue[i]) {
+                targetSlot = i;
+                break;
+              }
+            }
+          }
+
+          if (targetSlot === -1) {
+            console.log(
+              "Victory Totem: Cannot place Raiders - event queue is full"
+            );
+            return false;
+          }
+
+          player.eventQueue[targetSlot] = {
+            id: `${context.playerId}_raiders`,
+            name: "Raiders",
+            isRaiders: true,
+            queueNumber: 2,
+          };
+          player.raiders = "in_queue";
+          console.log(
+            `Victory Totem: Raiders placed in event queue at slot ${
+              targetSlot + 1
+            }`
+          );
+          return true;
+        } else if (player.raiders === "in_queue") {
+          // Find and advance Raiders
+          let raidersIndex = -1;
+          for (let i = 0; i < 3; i++) {
+            if (player.eventQueue[i]?.isRaiders) {
+              raidersIndex = i;
+              break;
+            }
+          }
+
+          if (raidersIndex === 0) {
+            // Raiders in slot 1 - resolve it
+            console.log(
+              "Victory Totem: Advancing Raiders off slot 1 - resolving effect!"
+            );
+
+            player.eventQueue[0] = null;
+            player.raiders = "available";
+
+            const opponentId = context.playerId === "left" ? "right" : "left";
+            state.pending = {
+              type: "raiders_select_camp",
+              sourcePlayerId: context.playerId,
+              targetPlayerId: opponentId,
+            };
+
+            console.log(
+              `Raiders: ${opponentId} player must choose a camp to damage`
+            );
+            return true;
+          } else if (raidersIndex > 0) {
+            const newIndex = raidersIndex - 1;
+            if (!player.eventQueue[newIndex]) {
+              player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
+              player.eventQueue[raidersIndex] = null;
+              console.log(
+                `Victory Totem: Advanced Raiders from slot ${
+                  raidersIndex + 1
+                } to slot ${newIndex + 1}`
+              );
+              return true;
+            } else {
+              console.log(
+                `Victory Totem: Cannot advance Raiders - slot ${
+                  newIndex + 1
+                } is occupied`
+              );
+              return false;
+            }
+          }
+        } else {
+          console.log("Victory Totem: Raiders already used this game");
+          return false;
+        }
+      },
+    },
+  },
+
   juggernaut: {
     move: {
       cost: 1,
@@ -124,23 +259,41 @@ export const campAbilities = {
       handler: (state, context) => {
         const player = state.players[context.playerId];
 
-        // Execute raid (same logic as junking for raid effect)
         if (player.raiders === "available") {
-          // Place raiders in queue at slot 2 (index 1)
-          const slotIndex = 1;
-          if (!player.eventQueue[slotIndex]) {
-            player.eventQueue[slotIndex] = {
-              id: `${context.playerId}_raiders`,
-              name: "Raiders",
-              isRaiders: true,
-              queueNumber: 2,
-            };
-            player.raiders = "in_queue";
-            console.log("Garage: Raiders placed in event queue at slot 2");
-            return true;
+          // Raiders has queue number 2, so tries for slot 2 (index 1)
+          const desiredSlot = 1;
+
+          // Find first available slot at or behind desired position
+          let targetSlot = -1;
+          if (!player.eventQueue[desiredSlot]) {
+            targetSlot = desiredSlot;
+          } else {
+            // Check slots behind (higher indices)
+            for (let i = desiredSlot + 1; i < 3; i++) {
+              if (!player.eventQueue[i]) {
+                targetSlot = i;
+                break;
+              }
+            }
           }
-          console.log("Garage: Cannot place Raiders - slot 2 occupied");
-          return false;
+
+          if (targetSlot === -1) {
+            console.log("Garage: Cannot place Raiders - event queue is full");
+            return false;
+          }
+
+          // Place Raiders in the target slot
+          player.eventQueue[targetSlot] = {
+            id: `${context.playerId}_raiders`,
+            name: "Raiders",
+            isRaiders: true,
+            queueNumber: 2,
+          };
+          player.raiders = "in_queue";
+          console.log(
+            `Garage: Raiders placed in event queue at slot ${targetSlot + 1}`
+          );
+          return true;
         } else if (player.raiders === "in_queue") {
           // Find where Raiders currently is
           let raidersIndex = -1;

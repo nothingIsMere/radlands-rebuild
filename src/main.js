@@ -64,14 +64,12 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Railgun",
+    name: "Victory Totem",
     type: "camp",
-    campDraw: 0, // Railgun has 0 camp draw
+    campDraw: 1, // Victory Totem has 1 camp draw
     abilities: [
-      {
-        effect: "damage",
-        cost: 2,
-      },
+      { effect: "damage", cost: 2 },
+      { effect: "raid", cost: 2 },
     ],
     isReady: true,
     isDamaged: false,
@@ -404,15 +402,13 @@ function setupTestGame() {
   });
 
   gameState.players.right.columns[1].setCard(0, {
-    id: "camp_right_1",
-    name: "Parachute Base",
+    id: "camp_right_2",
+    name: "Victory Totem",
     type: "camp",
-    campDraw: 1,
+    campDraw: 1, // Victory Totem has 1 camp draw
     abilities: [
-      {
-        effect: "paradrop",
-        cost: 0,
-      },
+      { effect: "damage", cost: 2 },
+      { effect: "raid", cost: 2 },
     ],
     isReady: true,
     isDamaged: false,

@@ -187,7 +187,12 @@ export class CommandSystem {
       return false;
     }
 
-    const { playerId, columnIndex, position } = payload;
+    const { playerId, columnIndex, position, abilityIndex = 0 } = payload;
+
+    console.log("=== CAMP ABILITY DEBUG ===");
+    console.log("Payload:", payload);
+    console.log("AbilityIndex received:", abilityIndex);
+    console.log("Camp position:", position);
 
     // Verify it's the current player's turn
     if (playerId !== this.state.currentPlayer) {
@@ -214,10 +219,10 @@ export class CommandSystem {
       return false;
     }
 
-    // Get the camp's first ability (camps typically have one ability)
-    const ability = camp.abilities?.[0];
+    // Get the specific ability by index
+    const ability = camp.abilities?.[abilityIndex];
     if (!ability) {
-      console.log("Camp has no abilities");
+      console.log(`Camp has no ability at index ${abilityIndex}`);
       return false;
     }
 
@@ -1605,23 +1610,43 @@ export class CommandSystem {
         );
         return true;
       }
-      // Place raiders in queue at slot 2 (index 1)
-      const slotIndex = 1;
-      if (!player.eventQueue[slotIndex]) {
-        player.eventQueue[slotIndex] = {
-          id: `${playerId}_raiders`,
-          name: "Raiders",
-          isRaiders: true,
-          queueNumber: 2,
-        };
-        player.raiders = "in_queue";
-        // Mark that an event was played this turn
-        this.state.turnEvents.firstEventPlayedThisTurn = true;
-        console.log("Raid: Raiders placed in event queue at slot 2");
-        return true;
+
+      // Raiders has queue number 2, so tries for slot 2 (index 1)
+      const desiredSlot = 1;
+
+      // Find first available slot at or behind desired position
+      let targetSlot = -1;
+      if (!player.eventQueue[desiredSlot]) {
+        targetSlot = desiredSlot;
+      } else {
+        // Check slots behind (higher indices)
+        for (let i = desiredSlot + 1; i < 3; i++) {
+          if (!player.eventQueue[i]) {
+            targetSlot = i;
+            break;
+          }
+        }
       }
-      console.log("Raid: Cannot place Raiders - slot 2 occupied");
-      return false;
+
+      if (targetSlot === -1) {
+        console.log("Raid: Cannot place Raiders - event queue is full");
+        return false;
+      }
+
+      // Place Raiders in the target slot
+      player.eventQueue[targetSlot] = {
+        id: `${playerId}_raiders`,
+        name: "Raiders",
+        isRaiders: true,
+        queueNumber: 2,
+      };
+      player.raiders = "in_queue";
+      // Mark that an event was played this turn
+      this.state.turnEvents.firstEventPlayedThisTurn = true;
+      console.log(
+        `Raid: Raiders placed in event queue at slot ${targetSlot + 1}`
+      );
+      return true;
     } else if (player.raiders === "in_queue") {
       // Find where Raiders currently is
       let raidersIndex = -1;
@@ -1635,7 +1660,7 @@ export class CommandSystem {
       if (raidersIndex === 0) {
         // Raiders in slot 1 - resolve it
         console.log("Raid: Advancing Raiders off slot 1 - resolving effect!");
-        // ... existing resolution code ...
+        // ... rest of resolution code ...
         return true;
       } else if (raidersIndex > 0) {
         // Try to advance
@@ -1655,7 +1680,7 @@ export class CommandSystem {
               newIndex + 1
             } is occupied by ${player.eventQueue[newIndex].name}`
           );
-          return false; // Raid effect fails but card is still junked
+          return false;
         }
       } else {
         console.log("Raid: Raiders not found in queue");
@@ -1713,6 +1738,143 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "scud_launcher_damage": {
+        // Verify the selecting player is the target (opponent chooses)
+        if (targetPlayer !== this.state.pending.targetPlayerId) {
+          console.log("Opponent must choose the target");
+          return false;
+        }
+
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target");
+          return false;
+        }
+
+        // Apply damage
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        this.applyDamageToCard(
+          target,
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        console.log(
+          `Scud Launcher: ${targetPlayer} chose ${target.name} to damage`
+        );
+
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+        this.state.pending = null;
+
+        return true;
+      }
+
+      case "catapult_damage": {
+        // Apply damage to selected target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        this.applyDamageToCard(
+          target,
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Now destroy one of your people
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        const peopleTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              peopleTargets.push({
+                playerId: this.state.pending.sourcePlayerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        this.state.pending = {
+          type: "catapult_destroy_own",
+          sourcePlayerId: this.state.pending.sourcePlayerId,
+          validTargets: peopleTargets,
+          sourceCard: this.state.pending.source,
+        };
+
+        console.log("Catapult: Now select your person to destroy");
+        return true;
+      }
+
+      case "catapult_destroy_own": {
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Must select your own person");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        target.isDestroyed = true;
+
+        // Handle destruction
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        this.destroyPerson(
+          this.state.players[targetPlayer],
+          column,
+          targetPosition,
+          target
+        );
+
+        console.log(`Catapult: Destroyed ${target.name}`);
+
+        // Mark ability complete
+        if (this.state.pending.sourceCard) {
+          this.state.pending.sourceCard.isReady = false;
+        }
+
+        this.state.pending = null;
+        return true;
+      }
       case "famine_select_keep": {
         const pending = this.state.pending;
 

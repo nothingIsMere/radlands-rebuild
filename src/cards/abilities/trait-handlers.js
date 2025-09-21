@@ -1,5 +1,50 @@
 // trait-handlers.js
 export const cardTraits = {
+  doomsayer: {
+    onEntry: (state, context) => {
+      console.log("Doomsayer enters play - moving opponent's events back!");
+
+      const opponentId = context.playerId === "left" ? "right" : "left";
+      const opponent = state.players[opponentId];
+      let movedCount = 0;
+
+      // Process from back to front (slot 3 to slot 1) to avoid conflicts
+      // Remember: index 2 = slot 3, index 1 = slot 2, index 0 = slot 1
+      for (let i = 2; i >= 0; i--) {
+        if (opponent.eventQueue[i]) {
+          // Try to move back one slot (higher index)
+          const targetSlot = i + 1;
+
+          // Check if we can move it back (slot must be empty and in bounds)
+          if (targetSlot <= 2 && !opponent.eventQueue[targetSlot]) {
+            // Move the event back
+            opponent.eventQueue[targetSlot] = opponent.eventQueue[i];
+            opponent.eventQueue[i] = null;
+            console.log(
+              `Moved ${opponent.eventQueue[targetSlot].name} from slot ${
+                i + 1
+              } to slot ${targetSlot + 1}`
+            );
+            movedCount++;
+          } else {
+            console.log(
+              `Cannot move ${opponent.eventQueue[i].name} back - slot ${
+                targetSlot + 1
+              } is occupied or out of bounds`
+            );
+          }
+        }
+      }
+
+      if (movedCount > 0) {
+        console.log(`Doomsayer: Moved ${movedCount} opponent event(s) back`);
+      } else {
+        console.log("Doomsayer: No opponent events could be moved back");
+      }
+
+      return true;
+    },
+  },
   argoyesky: {
     onEntry: (state, context) => {
       // First, gain a punk

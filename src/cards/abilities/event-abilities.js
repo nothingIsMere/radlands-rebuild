@@ -1,3 +1,5 @@
+import { TargetValidator } from "../../core/target-validator.js";
+
 // event-abilities.js
 export const eventAbilities = {
   highground: {
@@ -406,6 +408,7 @@ export const eventAbilities = {
       },
     },
   },
+
   strafe: {
     cost: 2,
     queueNumber: 0, // Instant event!
@@ -416,68 +419,74 @@ export const eventAbilities = {
           "Strafe event resolving - injuring all unprotected enemies!"
         );
 
-        // Determine opponent
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
+        // Find all unprotected enemy people
+        const targets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requirePerson: true,
+            allowProtected: false, // Strafe respects protection
+          }
+        );
 
         let injuredCount = 0;
         let destroyedCount = 0;
 
-        // Process each column
-        for (let col = 0; col < 3; col++) {
-          // Process from front to back to avoid movement issues
-          for (let pos = 2; pos >= 0; pos--) {
-            const card = opponent.columns[col].getCard(pos);
+        // Process targets from back to front to handle removal properly
+        // Sort by position descending within each column
+        targets.sort((a, b) => {
+          if (a.columnIndex === b.columnIndex) {
+            return b.position - a.position;
+          }
+          return a.columnIndex - b.columnIndex;
+        });
 
-            // Only affect unprotected people
-            if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if protected
-              if (!opponent.columns[col].isProtected(pos)) {
-                // Apply injury
-                if (card.isDamaged || card.isPunk) {
-                  // Destroy it
-                  card.isDestroyed = true;
+        // Process each target
+        for (const target of targets) {
+          const card = target.card;
+          const opponent = state.players[target.playerId];
+          const column = opponent.columns[target.columnIndex];
 
-                  if (card.isPunk) {
-                    const returnCard = {
-                      id: card.id,
-                      name: card.originalName || "Unknown Card",
-                      type: "person",
-                      cost: card.cost || 0,
-                      abilities: card.abilities || [],
-                      junkEffect: card.junkEffect,
-                    };
-                    state.deck.unshift(returnCard);
-                    console.log(`Strafe destroyed punk`);
-                  } else {
-                    state.discard.push(card);
-                    console.log(`Strafe destroyed ${card.name}`);
-                  }
+          // Apply injury
+          if (card.isDamaged || card.isPunk) {
+            // Destroy it
+            card.isDestroyed = true;
 
-                  // Remove from column
-                  opponent.columns[col].setCard(pos, null);
+            if (card.isPunk) {
+              const returnCard = {
+                id: card.id,
+                name: card.originalName || "Unknown Card",
+                type: "person",
+                cost: card.cost || 0,
+                abilities: card.abilities || [],
+                junkEffect: card.junkEffect,
+              };
+              state.deck.unshift(returnCard);
+              console.log(`Strafe destroyed punk`);
+            } else {
+              state.discard.push(card);
+              console.log(`Strafe destroyed ${card.name}`);
+            }
 
-                  // Move card in front back
-                  if (pos < 2) {
-                    const cardInFront = opponent.columns[col].getCard(pos + 1);
-                    if (cardInFront) {
-                      opponent.columns[col].setCard(pos, cardInFront);
-                      opponent.columns[col].setCard(pos + 1, null);
-                    }
-                  }
+            // Remove from column
+            column.setCard(target.position, null);
 
-                  destroyedCount++;
-                } else {
-                  // Just damage it
-                  card.isDamaged = true;
-                  card.isReady = false;
-                  console.log(`Strafe injured ${card.name}`);
-                  injuredCount++;
-                }
-              } else {
-                console.log(`${card.name} is protected, Strafe can't hit it`);
+            // Move card in front back
+            if (target.position < 2) {
+              const cardInFront = column.getCard(target.position + 1);
+              if (cardInFront) {
+                column.setCard(target.position, cardInFront);
+                column.setCard(target.position + 1, null);
               }
             }
+
+            destroyedCount++;
+          } else {
+            // Just damage it
+            card.isDamaged = true;
+            card.isReady = false;
+            console.log(`Strafe injured ${card.name}`);
+            injuredCount++;
           }
         }
 
@@ -494,6 +503,7 @@ export const eventAbilities = {
       },
     },
   },
+
   radiation: {
     cost: 2,
     queueNumber: 1,
@@ -587,25 +597,14 @@ export const eventAbilities = {
         console.log("Banish event resolving!");
 
         // Find ALL enemy PEOPLE (not camps, but ignoring protection)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            // Only target people (including punks), not camps
-            if (card && card.type === "person" && !card.isDestroyed) {
-              // Banish ignores protection
-              validTargets.push({
-                playerId: opponentId,
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requirePerson: true,
+            allowProtected: true, // Banish ignores protection
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Banish: No enemy people to destroy");
@@ -632,6 +631,7 @@ export const eventAbilities = {
       },
     },
   },
+
   interrogate: {
     cost: 1,
     queueNumber: 0,

@@ -1,5 +1,6 @@
 import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
+import { TargetValidator } from "../core/target-validator.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -11,54 +12,12 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
-  // Add to command-system.js:
   findValidTargets(sourcePlayerId, options = {}) {
-    const {
-      enemyOnly = true,
-      peopleOnly = false,
-      campsOnly = false,
-      ignoreProtection = false,
-      requireDamaged = false,
-      requireUndamaged = false,
-    } = options;
-
-    const targets = [];
-    const checkPlayer = enemyOnly
-      ? sourcePlayerId === "left"
-        ? "right"
-        : "left"
-      : sourcePlayerId;
-
-    const player = this.state.players[checkPlayer];
-
-    for (let col = 0; col < 3; col++) {
-      const positions = campsOnly ? [0] : peopleOnly ? [1, 2] : [0, 1, 2];
-
-      for (const pos of positions) {
-        const card = player.columns[col].getCard(pos);
-        if (!card || card.isDestroyed) continue;
-
-        if (requireDamaged && !card.isDamaged) continue;
-        if (requireUndamaged && card.isDamaged) continue;
-
-        // Protection check
-        const isProtected =
-          !ignoreProtection &&
-          !this.state.turnEvents?.highGroundActive &&
-          player.columns[col].isProtected(pos);
-
-        if (!isProtected) {
-          targets.push({
-            playerId: checkPlayer,
-            columnIndex: col,
-            position: pos,
-            card,
-          });
-        }
-      }
-    }
-
-    return targets;
+    return TargetValidator.findValidTargets(
+      this.state,
+      sourcePlayerId,
+      options
+    );
   }
 
   checkForActiveVera(playerId) {
@@ -188,18 +147,15 @@ export class CommandSystem {
   }
 
   checkProtection(playerId, columnIndex, position) {
-    // High Ground overrides ALL protection for the opponent
-    if (this.state.turnEvents?.highGroundActive) {
-      const opponentId = this.state.currentPlayer === "left" ? "right" : "left";
-      if (playerId === opponentId) {
-        console.log("High Ground active - target is unprotected");
-        return false; // Not protected during High Ground
+    return !TargetValidator.canTarget(
+      this.state,
+      playerId,
+      columnIndex,
+      position,
+      {
+        allowProtected: false,
       }
-    }
-
-    // Normal protection check
-    const column = this.state.players[playerId].columns[columnIndex];
-    return column.isProtected(position);
+    );
   }
 
   checkForActiveArgo(playerId) {
@@ -1061,31 +1017,15 @@ export class CommandSystem {
         break;
 
       case "injure":
-        // Find valid injure targets (unprotected enemy people)
-        const opponentId = playerId === "left" ? "right" : "left";
-        const opponent = this.state.players[opponentId];
-        const injureTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const targetCard = opponent.columns[col].getCard(pos);
-            if (
-              targetCard &&
-              targetCard.type === "person" &&
-              !targetCard.isDestroyed
-            ) {
-              // Check if protected
-              if (!opponent.columns[col].isProtected(pos)) {
-                injureTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card: targetCard,
-                });
-              }
-            }
+        // Find valid injure targets using TargetValidator
+        const injureTargets = TargetValidator.findValidTargets(
+          this.state,
+          playerId,
+          {
+            requirePerson: true,
+            allowProtected: false,
           }
-        }
+        );
 
         if (injureTargets.length === 0) {
           console.log("No valid targets to injure");
@@ -1097,7 +1037,7 @@ export class CommandSystem {
           type: "junk_injure",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card,
+          junkCard: card, // Store the junk card reference
           validTargets: injureTargets,
         };
         console.log(
@@ -1107,22 +1047,15 @@ export class CommandSystem {
 
       case "restore":
         // Find ONLY damaged cards belonging to the current player
-        const restoreTargets = [];
-
-        // Check ONLY own cards (not opponent's)
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const targetCard = player.columns[col].getCard(pos);
-            if (targetCard && targetCard.isDamaged && !targetCard.isDestroyed) {
-              restoreTargets.push({
-                playerId: playerId, // Only own cards
-                columnIndex: col,
-                position: pos,
-                card: targetCard,
-              });
-            }
+        const restoreTargets = TargetValidator.findValidTargets(
+          this.state,
+          playerId,
+          {
+            allowOwn: true, // Only your own cards
+            requireDamaged: true, // Only damaged cards
+            allowProtected: true, // Protection is irrelevant for restoration
           }
-        }
+        );
 
         if (restoreTargets.length === 0) {
           console.log("No damaged cards to restore");
@@ -1134,7 +1067,7 @@ export class CommandSystem {
           type: "junk_restore",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card,
+          junkCard: card, // Store the junk card reference
           validTargets: restoreTargets,
         };
         console.log(
@@ -3377,6 +3310,7 @@ export class CommandSystem {
 
         return result;
       }
+
       case "junk_restore": {
         // Check if this is a valid target
         const isValidTarget = this.state.pending.validTargets?.some(
@@ -3479,6 +3413,22 @@ export class CommandSystem {
       }
 
       case "junk_injure": {
+        // Verify it's a valid target
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid injure target");
+          return false;
+        }
+
+        // Store the junk card reference before clearing pending
+        const junkCard = this.state.pending?.junkCard;
+
         // Set up a damage pending state for the injure
         this.state.pending = {
           type: "damage",
@@ -3486,15 +3436,20 @@ export class CommandSystem {
           source: this.state.pending.source,
         };
 
-        const junkCard = this.state.pending?.junkCard;
-        if (junkCard) {
-          // Discard the card after successful restore
+        // Resolve the damage
+        const result = this.resolveDamage(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+
+        // Discard the junk card after successful resolution
+        if (result && junkCard) {
           this.state.discard.push(junkCard);
-          console.log(`Discarded ${junkCard.name} after restore`);
+          console.log(`Discarded ${junkCard.name} after injure`);
         }
 
-        // Now resolve it as damage (which will handle destruction properly)
-        return this.resolveDamage(targetPlayer, targetColumn, targetPosition);
+        return result;
       }
 
       case "damage":

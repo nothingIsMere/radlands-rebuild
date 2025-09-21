@@ -1,4 +1,5 @@
 import { CONSTANTS } from "../../core/constants.js";
+import { TargetValidator } from "../../core/target-validator.js";
 
 // person-abilities.js
 
@@ -62,15 +63,34 @@ export const personAbilities = {
           return false;
         }
 
+        // Find all valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log(
+            "Doomsayer: Opponent has events but no valid targets to damage"
+          );
+          return false;
+        }
+
         // Set up damage targeting
         state.pending = {
           type: "damage",
           source: context.source,
           sourcePlayerId: context.playerId,
+          validTargets: validTargets,
           context,
         };
 
-        console.log("Doomsayer: Opponent has events - select target to damage");
+        console.log(
+          `Doomsayer: Opponent has events - select target to damage (${validTargets.length} available)`
+        );
         return true;
       },
     },
@@ -79,27 +99,13 @@ export const personAbilities = {
     injure: {
       cost: 1,
       handler: (state, context) => {
-        // Find valid injure targets (unprotected enemy people)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if protected
-              if (!opponent.columns[col].isProtected(pos)) {
-                validTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requirePerson: true,
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Vera Vosh: No unprotected enemy people to injure");
@@ -125,14 +131,26 @@ export const personAbilities = {
     damage: {
       cost: 1,
       handler: (state, context) => {
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Argo Yesky: No valid targets");
+          return false;
+        }
+
         state.pending = {
           type: "damage",
           source: context.source,
           sourcePlayerId: context.playerId,
+          validTargets, // Add this for consistency
           context,
         };
-
-        console.log("Argo Yesky: Select target to damage");
         return true;
       },
     },
@@ -141,14 +159,31 @@ export const personAbilities = {
     damage: {
       cost: 1,
       handler: (state, context) => {
+        // Find all valid targets (unprotected enemy cards)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Karli Blaze: No valid targets to damage");
+          return false;
+        }
+
         state.pending = {
           type: "damage",
           source: context.source,
           sourcePlayerId: context.playerId,
+          validTargets: validTargets, // Include this for consistency
           context,
         };
 
-        console.log("Karli Blaze: Select target to damage");
+        console.log(
+          `Karli Blaze: Select target to damage (${validTargets.length} available)`
+        );
         return true;
       },
     },
@@ -204,22 +239,15 @@ export const personAbilities = {
       cost: 0,
       handler: (state, context) => {
         // Find all your people (including punks and Rescue Team itself)
-        const player = state.players[context.playerId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = player.columns[col].getCard(pos);
-            if (card && card.type === "person" && !card.isDestroyed) {
-              validTargets.push({
-                playerId: context.playerId,
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requirePerson: true,
+            allowProtected: true, // Protection doesn't matter for returning to hand
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Rescue Team: No people to return");
@@ -249,26 +277,13 @@ export const personAbilities = {
       cost: 1,
       handler: (state, context) => {
         // Find valid damage targets (unprotected enemy cards)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const damageTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            if (card && !card.isDestroyed) {
-              // Check if unprotected
-              if (!opponent.columns[col].isProtected(pos)) {
-                damageTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
-            }
+        const damageTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false, // Vanguard respects protection for initial damage
           }
-        }
+        );
 
         if (damageTargets.length === 0) {
           console.log("Vanguard: No valid targets to damage");
@@ -298,42 +313,24 @@ export const personAbilities = {
       cost: 0,
       handler: (state, context) => {
         // Find valid damage targets (unprotected enemy cards)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const damageTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = state.players[opponentId].columns[col].getCard(pos);
-            if (card && !card.isDestroyed) {
-              // Check if unprotected
-              if (!state.players[opponentId].columns[col].isProtected(pos)) {
-                damageTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
-            }
+        const damageTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
           }
-        }
+        );
 
         // Find valid restore targets (own damaged cards)
-        const restoreTargets = [];
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card =
-              state.players[context.playerId].columns[col].getCard(pos);
-            if (card && card.isDamaged && !card.isDestroyed) {
-              restoreTargets.push({
-                playerId: context.playerId,
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const restoreTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true, // Protection irrelevant for restoring own cards
           }
-        }
+        );
 
         // Must have at least one valid target (either damage or restore)
         if (damageTargets.length === 0 && restoreTargets.length === 0) {
@@ -411,27 +408,21 @@ export const personAbilities = {
       },
     },
   },
+
   cultleader: {
     destroyowndamage: {
       cost: 0,
       handler: (state, context) => {
         // Find all of player's own people
-        const player = state.players[context.playerId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = player.columns[col].getCard(pos);
-            if (card && card.type === "person" && !card.isDestroyed) {
-              validTargets.push({
-                playerId: context.playerId,
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requirePerson: true,
+            allowProtected: true, // Can destroy own protected people
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Cult Leader: No people to destroy");
@@ -523,40 +514,14 @@ export const personAbilities = {
       cost: 1,
       handler: (state, context) => {
         // Find enemy camps (unprotected normally, or all during High Ground)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          // Camps are always at position 0
-          const camp = opponent.columns[col].getCard(0);
-          if (camp && camp.type === "camp" && !camp.isDestroyed) {
-            // Check if High Ground is active
-            if (state.turnEvents?.highGroundActive) {
-              // During High Ground, ALL enemy camps can be targeted
-              validTargets.push({
-                playerId: opponentId,
-                columnIndex: col,
-                position: 0,
-                card: camp,
-              });
-            } else {
-              // Normal rules - check if unprotected (no cards in front)
-              const hasProtection =
-                opponent.columns[col].getCard(1) ||
-                opponent.columns[col].getCard(2);
-
-              if (!hasProtection) {
-                validTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: 0,
-                  card: camp,
-                });
-              }
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requireCamp: true,
+            allowProtected: state.turnEvents?.highGroundActive || false,
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Pyromaniac: No valid enemy camps to damage");
@@ -589,23 +554,14 @@ export const personAbilities = {
       cost: 1,
       handler: (state, context) => {
         // Find ALL enemy camps (ignores protection)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          // Camps are always at position 0
-          const camp = opponent.columns[col].getCard(0);
-          if (camp && camp.type === "camp" && !camp.isDestroyed) {
-            // Molgur can target ANY camp, protected or not
-            validTargets.push({
-              playerId: opponentId,
-              columnIndex: col,
-              position: 0,
-              card: camp,
-            });
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requireCamp: true,
+            allowProtected: true, // Molgur ignores protection
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Molgur Stang: No enemy camps to destroy");
@@ -641,24 +597,13 @@ export const personAbilities = {
       cost: 2,
       handler: (state, context) => {
         // Find ALL enemy cards (ignores protection, includes camps)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            if (card && !card.isDestroyed) {
-              // Sniper can target ANYTHING, protected or not
-              validTargets.push({
-                playerId: opponentId,
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: true, // Sniper ignores all protection
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Sniper: No targets available");
@@ -688,37 +633,15 @@ export const personAbilities = {
       handler: (state, context) => {
         console.log("Assassin ability: Destroy unprotected enemy person");
 
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 1; pos <= 2; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if High Ground is active
-              if (state.turnEvents?.highGroundActive) {
-                // During High Ground, ALL enemy people can be targeted
-                validTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              } else {
-                // Normal rules - check protection
-                if (!opponent.columns[col].isProtected(pos)) {
-                  validTargets.push({
-                    playerId: opponentId,
-                    columnIndex: col,
-                    position: pos,
-                    card,
-                  });
-                }
-              }
-            }
+        // Find enemy people (respects protection unless High Ground active)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requirePerson: true,
+            allowProtected: state.turnEvents?.highGroundActive || false,
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("No valid targets for Assassin");
@@ -985,22 +908,14 @@ export const personAbilities = {
       cost: 2,
       handler: (state, context) => {
         // Find damaged cards - ONLY CHECK OWN CARDS
-        const validTargets = [];
-        const player = state.players[context.playerId];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = player.columns[col].getCard(pos);
-            if (card && card.isDamaged && !card.isDestroyed) {
-              validTargets.push({
-                playerId: context.playerId, // Always own player
-                columnIndex: col,
-                position: pos,
-                card,
-              });
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Repair Bot: No damaged cards to restore");
@@ -1012,7 +927,7 @@ export const personAbilities = {
           source: context.source,
           sourcePlayerId: context.playerId,
           context,
-          validTargets: validTargets, // Already filtered to own cards only
+          validTargets: validTargets,
         };
 
         console.log(
@@ -1179,35 +1094,14 @@ export const personAbilities = {
       cost: 1,
       handler: (state, context) => {
         // Find valid targets - unprotected enemy people (or all during High Ground)
-        const opponentId = context.playerId === "left" ? "right" : "left";
-        const opponent = state.players[opponentId];
-        const validTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = opponent.columns[col].getCard(pos);
-            if (card && card.type === "person" && !card.isDestroyed) {
-              // Check if High Ground is active
-              if (state.turnEvents?.highGroundActive) {
-                // During High Ground, ALL enemy people can be targeted
-                validTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              } else if (!opponent.columns[col].isProtected(pos)) {
-                // Normal rules - only unprotected
-                validTargets.push({
-                  playerId: opponentId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
-            }
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requirePerson: true,
+            allowProtected: state.turnEvents?.highGroundActive || false,
           }
-        }
+        );
 
         if (validTargets.length === 0) {
           console.log("Vigilante: No valid enemy people to injure");

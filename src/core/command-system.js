@@ -4669,9 +4669,6 @@ export class CommandSystem {
           if (event.isRaiders) {
             player.raiders = "available";
 
-            // Set up opponent camp selection
-            const opponentId = eventPlayerId === "left" ? "right" : "left";
-
             // Mark Omen Clock complete first
             this.completeAbility(pending);
 
@@ -4694,8 +4691,11 @@ export class CommandSystem {
           if (eventDef?.effect?.handler) {
             console.log(`Omen Clock: Executing ${event.name} event effect`);
 
-            // Mark Omen Clock complete first
+            // Mark Omen Clock complete FIRST
             this.completeAbility(pending);
+
+            // Clear the Omen Clock pending state BEFORE executing the event
+            this.state.pending = null;
 
             // Execute the event effect (belongs to the event's owner)
             const eventContext = {
@@ -4705,11 +4705,9 @@ export class CommandSystem {
 
             const result = eventDef.effect.handler(this.state, eventContext);
 
-            // Check if event created a pending state
+            // If event didn't create a new pending state, discard it
             if (!this.state.pending) {
-              // Event completed immediately, discard it
               this.state.discard.push(event);
-              this.state.pending = null;
             }
             // If event created pending, it will handle its own discard
           } else {

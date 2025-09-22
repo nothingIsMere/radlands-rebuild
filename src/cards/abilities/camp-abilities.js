@@ -8,6 +8,72 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  pillbox: {
+    damage: {
+      cost: 3, // Base cost, will be reduced by destroyed camps
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Count destroyed camps
+        let destroyedCampCount = 0;
+        for (let col = 0; col < 3; col++) {
+          const camp = player.columns[col].getCard(0);
+          if (camp && camp.isDestroyed) {
+            destroyedCampCount++;
+          }
+        }
+
+        // Calculate actual cost (can go to 0)
+        const actualCost = Math.max(0, 3 - destroyedCampCount);
+
+        // Check if player can afford actual cost
+        if (player.water < actualCost) {
+          console.log(
+            `Pillbox: Need ${actualCost} water (base 3 - ${destroyedCampCount} destroyed camps)`
+          );
+          return false;
+        }
+
+        // Refund difference if we already paid full cost
+        const refund = 3 - actualCost;
+        if (refund > 0) {
+          player.water += refund;
+          console.log(
+            `Pillbox: Cost reduced by ${refund} for ${destroyedCampCount} destroyed camp(s)`
+          );
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          player.water += actualCost; // Full refund since we can't use ability
+          console.log("Pillbox: No valid targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Pillbox: Select target to damage (paid ${actualCost} water)`
+        );
+        return true;
+      },
+    },
+  },
   supplydepot: {
     drawdiscard: {
       cost: 2,

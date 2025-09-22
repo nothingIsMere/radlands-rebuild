@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Blood Bank",
+    name: "Pillbox",
     type: "camp",
-    campDraw: 1, // Blood Bank has 1 camp draw
-    abilities: [{ effect: "destroywater", cost: 0 }],
+    campDraw: 1, // Pillbox has 1 camp draw
+    abilities: [{ effect: "damage", cost: 3 }],
     isReady: true,
     isDamaged: false,
   });
@@ -393,10 +393,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Blood Bank",
+    name: "Pillbox",
     type: "camp",
-    campDraw: 1, // Blood Bank has 1 camp draw
-    abilities: [{ effect: "destroywater", cost: 0 }],
+    campDraw: 1, // Pillbox has 1 camp draw
+    abilities: [{ effect: "damage", cost: 3 }],
     isReady: true,
     isDamaged: false,
   });

@@ -55,13 +55,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Victory Totem",
+    name: "Mercenary Camp",
     type: "camp",
-    campDraw: 1, // Victory Totem has 1 camp draw
-    abilities: [
-      { effect: "damage", cost: 2 },
-      { effect: "raid", cost: 2 },
-    ],
+    campDraw: 0, // Mercenary Camp has 0 camp draw
+    abilities: [{ effect: "damagecamp", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -390,13 +387,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Victory Totem",
+    name: "Mercenary Camp",
     type: "camp",
-    campDraw: 1, // Victory Totem has 1 camp draw
-    abilities: [
-      { effect: "damage", cost: 2 },
-      { effect: "raid", cost: 2 },
-    ],
+    campDraw: 0, // Mercenary Camp has 0 camp draw
+    abilities: [{ effect: "damagecamp", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

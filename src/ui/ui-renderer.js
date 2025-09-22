@@ -493,7 +493,17 @@ export class UIRenderer {
       }
     }
 
-    // Update click handlers for highground_place_person instead of highground_rearrange
+    if (this.state.pending?.type === "mercenary_camp_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("mercenary-target");
+      }
+    }
 
     if (
       this.state.pending?.type === "uprising_place_punks" &&

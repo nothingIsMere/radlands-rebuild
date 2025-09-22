@@ -1738,6 +1738,50 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "mercenary_camp_damage": {
+        const isValidTarget = this.state.pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Mercenary Camp");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "camp") {
+          console.log("Must target a camp");
+          return false;
+        }
+
+        // Apply damage (ignoring protection)
+        if (target.isDamaged) {
+          target.isDestroyed = true;
+          console.log(`Mercenary Camp destroyed ${target.name}!`);
+        } else {
+          target.isDamaged = true;
+          console.log(`Mercenary Camp damaged ${target.name}`);
+        }
+
+        // Mark ability complete
+        this.completeAbility(this.state.pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Check for game end
+        this.checkGameEnd();
+
+        return true;
+      }
+
       case "atomic_garden_restore": {
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>

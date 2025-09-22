@@ -8,6 +8,61 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  mercenarycamp: {
+    damagecamp: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+        let peopleCount = 0;
+
+        // Count your people
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              peopleCount++;
+            }
+          }
+        }
+
+        if (peopleCount < 4) {
+          console.log(`Mercenary Camp: Need 4+ people (have ${peopleCount})`);
+          return false;
+        }
+
+        // Find ALL enemy camps (ignoring protection)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            requireCamp: true,
+            allowProtected: true, // Ignores protection!
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Mercenary Camp: No enemy camps to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "mercenary_camp_damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          allowProtected: true, // Important flag for damage resolution
+          context,
+        };
+
+        console.log(
+          `Mercenary Camp: Select ANY enemy camp to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   atomicgarden: {
     restoreready: {
       cost: 2,

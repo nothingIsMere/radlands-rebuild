@@ -8,7 +8,42 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after cannon:
+  // Add to camp-abilities.js, after theoctagon:
+
+  cache: {
+    raidpunk: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Check if deck has cards for the punk
+        if (state.deck.length === 0) {
+          console.log("Cache: Cannot use - deck is empty (need card for punk)");
+          return false;
+        }
+
+        // Check if Raiders is available or can be advanced
+        if (player.raiders !== "available" && player.raiders !== "in_queue") {
+          console.log("Cache: Raiders already used this game");
+          return false;
+        }
+
+        // Let player choose which effect to do first
+        state.pending = {
+          type: "cache_choose_order",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          context,
+        };
+
+        console.log(
+          "Cache: Choose which effect to do first - Raid or Gain Punk"
+        );
+        return true;
+      },
+    },
+  },
 
   theoctagon: {
     destroy: {

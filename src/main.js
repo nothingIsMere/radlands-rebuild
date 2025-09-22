@@ -54,10 +54,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Scavenger Camp",
+    name: "Cache",
     type: "camp",
-    campDraw: 1, // Scavenger Camp has 1 camp draw
-    abilities: [{ effect: "discardchoose", cost: 0 }],
+    campDraw: 1, // Cache has 1 camp draw
+    abilities: [{ effect: "raidpunk", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -374,10 +374,10 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "The Octagon",
+    name: "Cache",
     type: "camp",
-    campDraw: 0, // The Octagon has 0 camp draw
-    abilities: [{ effect: "destroy", cost: 1 }],
+    campDraw: 1, // Cache has 1 camp draw
+    abilities: [{ effect: "raidpunk", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

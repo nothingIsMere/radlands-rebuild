@@ -1934,6 +1934,317 @@ export class CommandSystem {
         return true;
       }
 
+      case "cache_choose_order": {
+        const { effectFirst } = payload;
+        const pending = this.state.pending;
+
+        if (
+          !effectFirst ||
+          (effectFirst !== "raid" && effectFirst !== "punk")
+        ) {
+          console.log("Must choose raid or punk first");
+          return false;
+        }
+
+        const player = this.state.players[pending.sourcePlayerId];
+
+        if (effectFirst === "raid") {
+          // Do raid first
+          console.log("Cache: Processing Raid first");
+
+          // Check if Raiders will resolve immediately
+          if (player.raiders === "in_queue") {
+            // Find where Raiders currently is
+            let raidersIndex = -1;
+            for (let i = 0; i < 3; i++) {
+              if (player.eventQueue[i]?.isRaiders) {
+                raidersIndex = i;
+                break;
+              }
+            }
+
+            if (raidersIndex === 0) {
+              // Raiders will resolve NOW
+              console.log(
+                "Cache: Raiders advancing off slot 1 - will resolve before punk"
+              );
+
+              // Remove from queue
+              player.eventQueue[0] = null;
+              player.raiders = "available";
+
+              // Set up opponent camp selection with Cache continuation
+              const opponentId =
+                pending.sourcePlayerId === "left" ? "right" : "left";
+              this.state.pending = {
+                type: "raiders_select_camp",
+                sourcePlayerId: pending.sourcePlayerId,
+                targetPlayerId: opponentId,
+                fromCache: true, // Flag to continue Cache after
+                cacheSourceCard: pending.sourceCard,
+                cacheContext: pending.context,
+              };
+
+              console.log(
+                `Raiders: ${opponentId} player must choose a camp to damage (Cache will continue after)`
+              );
+              return true;
+            }
+          }
+
+          // Raiders won't resolve immediately, just advance/place it
+          this.executeRaid(pending.sourcePlayerId);
+
+          // Now set up punk placement
+          this.state.pending = {
+            type: "place_punk",
+            source: pending.sourceCard,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            fromCache: true,
+          };
+
+          console.log("Cache: Raid processed, now place your punk");
+        } else {
+          // Do punk first, then raid
+          console.log("Cache: Processing Gain Punk first");
+
+          // Set up punk placement with a flag to raid after
+          this.state.pending = {
+            type: "place_punk",
+            source: pending.sourceCard,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            fromCache: true,
+            doRaidAfter: true,
+            cacheContext: pending.context,
+          };
+
+          console.log("Cache: Place your punk (will Raid after)");
+        }
+
+        return true;
+      }
+
+      case "place_punk": {
+        console.log("=== Processing place_punk target ===");
+
+        // Store info BEFORE resolving
+        const junkCard = this.state.pending?.junkCard;
+        const fromVanguardEntry = this.state.pending?.fromVanguardEntry;
+        const fromArgoEntry = this.state.pending?.fromArgoEntry;
+        const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
+        const sourceCard = this.state.pending?.sourceCard;
+        const fromCache = this.state.pending?.fromCache;
+        const doRaidAfter = this.state.pending?.doRaidAfter;
+        const cacheContext = this.state.pending?.cacheContext;
+        const sourcePlayerId = this.state.pending?.sourcePlayerId;
+        const fromScientist = this.state.pending?.fromScientist;
+        const scientistCard = this.state.pending?.scientistCard;
+
+        // Resolve the punk placement
+        const result = this.resolvePlacePunk(targetColumn, targetPosition);
+
+        // If successful and this was from a junk effect, discard the card
+        if (result && junkCard) {
+          this.state.discard.push(junkCard);
+          console.log(`Discarded ${junkCard.name} after placing punk`);
+        }
+
+        // Handle Cache's raid-after flag
+        if (result && fromCache) {
+          if (doRaidAfter) {
+            console.log("Cache: Punk placed, now executing Raid");
+
+            const player = this.state.players[sourcePlayerId];
+
+            // Check current Raiders state BEFORE executing raid
+            let willResolve = false;
+            if (player.raiders === "in_queue") {
+              // Find where Raiders currently is
+              let raidersIndex = -1;
+              for (let i = 0; i < 3; i++) {
+                if (player.eventQueue[i]?.isRaiders) {
+                  raidersIndex = i;
+                  break;
+                }
+              }
+
+              if (raidersIndex === 0) {
+                willResolve = true;
+              }
+            }
+
+            if (willResolve) {
+              // Raiders will resolve when we advance it
+              console.log(
+                "Cache: Raiders on slot 1 - will resolve immediately"
+              );
+
+              // Remove from queue
+              player.eventQueue[0] = null;
+              player.raiders = "available";
+
+              // Set up opponent camp selection
+              const opponentId = sourcePlayerId === "left" ? "right" : "left";
+              this.state.pending = {
+                type: "raiders_select_camp",
+                sourcePlayerId: sourcePlayerId,
+                targetPlayerId: opponentId,
+                fromCacheComplete: true, // Cache is done after this
+                cacheSourceCard: sourceCard,
+              };
+
+              console.log(
+                `Raiders: ${opponentId} player must choose a camp to damage (Cache complete)`
+              );
+              return true;
+            } else {
+              // Raiders won't resolve immediately, just place/advance normally
+              this.executeRaid(sourcePlayerId);
+
+              // Mark Cache complete after raid placement/advancement
+              if (sourceCard && sourceCard.type === "camp") {
+                sourceCard.isReady = false;
+                console.log("Cache marked as not ready after both effects");
+                this.state.turnEvents.abilityUsedThisTurn = true;
+              }
+              this.state.pending = null;
+            }
+          } else {
+            // No raid after, just mark Cache complete
+            if (sourceCard && sourceCard.type === "camp") {
+              sourceCard.isReady = false;
+              console.log("Cache marked as not ready after both effects");
+              this.state.turnEvents.abilityUsedThisTurn = true;
+            }
+            this.state.pending = null;
+          }
+
+          return result;
+        }
+
+        // Handle Scientist's junk effect
+        if (result && fromScientist && scientistCard) {
+          scientistCard.isReady = false;
+          console.log(
+            `${scientistCard.name} marked not ready after Scientist junk completed`
+          );
+          this.state.pending = null;
+          return result;
+        }
+
+        // Mark camp ability complete if this was from a camp (non-Cache camps)
+        if (result && sourceCard && sourceCard.type === "camp" && !fromCache) {
+          // Mark the camp as not ready (unless Vera trait applies)
+          if (!this.state.pending?.shouldStayReady) {
+            sourceCard.isReady = false;
+            console.log(
+              `${sourceCard.name} marked as not ready after placing punk`
+            );
+          }
+          this.state.turnEvents.abilityUsedThisTurn = true;
+        }
+
+        // Check if this was Vanguard's entry trait during Parachute Base
+        if (result && fromVanguardEntry && parachuteBaseContext) {
+          console.log(
+            "Vanguard entry punk placed, continuing Parachute Base sequence"
+          );
+
+          const pb = parachuteBaseContext;
+          const player = this.state.players[pb.sourcePlayerId];
+          const person = this.state.getCard(
+            pb.sourcePlayerId,
+            pb.targetColumn,
+            pb.targetSlot
+          );
+
+          if (!person) {
+            console.log("ERROR: Can't find Vanguard after entry trait");
+            this.state.pending = null;
+            return true;
+          }
+
+          // Now use Vanguard's actual ability if it has one
+          if (pb.hasAbility) {
+            console.log(
+              `Checking if player can afford Vanguard's ability (${pb.abilityCost} water)`
+            );
+
+            if (player.water >= pb.abilityCost) {
+              // Pay for the ability
+              player.water -= pb.abilityCost;
+              console.log(
+                `Parachute Base: Paid ${pb.abilityCost} water for Vanguard's damage ability`
+              );
+
+              // Execute the ability
+              const ability = person.abilities[0];
+              const abilityResult = this.executeAbility(ability, {
+                source: person,
+                playerId: pb.sourcePlayerId,
+                columnIndex: pb.targetColumn,
+                position: pb.targetSlot,
+                fromParachuteBase: true,
+              });
+
+              console.log(`Parachute Base: Executed Vanguard's damage ability`);
+
+              // Check if ability set up new pending
+              if (this.state.pending) {
+                console.log(
+                  "Vanguard ability set up damage targeting - adding Parachute damage info"
+                );
+                this.state.pending.parachuteBaseDamage = {
+                  targetPlayer: pb.sourcePlayerId,
+                  targetColumn: pb.targetColumn,
+                  targetPosition: pb.targetSlot,
+                };
+              } else {
+                // No pending, apply damage now
+                console.log(
+                  "Vanguard ability completed - applying Parachute damage"
+                );
+                this.applyParachuteBaseDamage(
+                  pb.sourcePlayerId,
+                  pb.targetColumn,
+                  pb.targetSlot
+                );
+              }
+            } else {
+              console.log(
+                `Not enough water for ability (need ${pb.abilityCost}, have ${player.water})`
+              );
+              this.applyParachuteBaseDamage(
+                pb.sourcePlayerId,
+                pb.targetColumn,
+                pb.targetSlot
+              );
+            }
+          } else {
+            console.log(
+              "Vanguard has no abilities - applying Parachute damage"
+            );
+            this.applyParachuteBaseDamage(
+              pb.sourcePlayerId,
+              pb.targetColumn,
+              pb.targetSlot
+            );
+          }
+        } else if (result && (fromVanguardEntry || fromArgoEntry)) {
+          // Normal entry trait punk placement (not from Parachute Base)
+          console.log("Entry trait punk placed");
+          this.state.pending = null;
+        } else {
+          // Normal punk placement
+          console.log("Normal punk placement completion");
+          this.state.pending = null;
+        }
+
+        return result;
+      }
+
       case "scavengercamp_select_discard": {
         const { cardToDiscard } = payload;
         const pending = this.state.pending;
@@ -4409,17 +4720,43 @@ export class CommandSystem {
           console.log(`Raiders damaged ${camp.name}!`);
         }
 
-        // Mark ability complete
+        // Check if this was from Cache
+        const fromCache = this.state.pending.fromCache;
+        const cacheSourceCard = this.state.pending.cacheSourceCard;
+        const cacheContext = this.state.pending.cacheContext;
+        const fromCacheComplete = this.state.pending.fromCacheComplete;
+
+        // Mark ability complete (for Raiders)
         this.completeAbility(this.state.pending);
 
-        // Clear pending
-        this.state.pending = null;
+        if (fromCache && !fromCacheComplete) {
+          // Continue with Cache's punk placement
+          console.log("Cache: Raiders resolved, now place your punk");
+
+          this.state.pending = {
+            type: "place_punk",
+            source: cacheSourceCard,
+            sourceCard: cacheSourceCard,
+            sourcePlayerId: cacheContext.playerId,
+            fromCache: true,
+          };
+        } else if (fromCacheComplete) {
+          // Cache is fully complete after this Raiders
+          if (cacheSourceCard && cacheSourceCard.type === "camp") {
+            cacheSourceCard.isReady = false;
+            console.log("Cache marked as not ready after Raiders resolution");
+          }
+          this.state.pending = null;
+        } else {
+          // Normal Raiders resolution
+          this.state.pending = null;
+        }
 
         // Check for game end
         this.checkGameEnd();
 
         // If we're in events phase, continue with the phase progression
-        if (this.state.phase === "events") {
+        if (this.state.phase === "events" && !this.state.pending) {
           // Advance remaining events
           const player = this.state.players[this.state.currentPlayer];
           for (let i = 0; i < 2; i++) {
@@ -5022,8 +5359,15 @@ export class CommandSystem {
         // Store info BEFORE resolving
         const junkCard = this.state.pending?.junkCard;
         const fromVanguardEntry = this.state.pending?.fromVanguardEntry;
+        const fromArgoEntry = this.state.pending?.fromArgoEntry;
         const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
-        const sourceCard = this.state.pending?.sourceCard; // ADD THIS - might be a camp
+        const sourceCard = this.state.pending?.sourceCard;
+        const fromCache = this.state.pending?.fromCache;
+        const doRaidAfter = this.state.pending?.doRaidAfter;
+        const cacheContext = this.state.pending?.cacheContext;
+        const sourcePlayerId = this.state.pending?.sourcePlayerId;
+        const fromScientist = this.state.pending?.fromScientist;
+        const scientistCard = this.state.pending?.scientistCard;
 
         // Resolve the punk placement
         const result = this.resolvePlacePunk(targetColumn, targetPosition);
@@ -5034,8 +5378,79 @@ export class CommandSystem {
           console.log(`Discarded ${junkCard.name} after placing punk`);
         }
 
-        // ADD THIS: Mark camp ability complete if this was from a camp
-        if (result && sourceCard && sourceCard.type === "camp") {
+        // Handle Cache's raid-after flag
+        if (result && fromCache) {
+          if (doRaidAfter) {
+            console.log("Cache: Punk placed, now executing Raid");
+
+            const player = this.state.players[sourcePlayerId];
+
+            // Check if Raiders will resolve immediately
+            if (player.raiders === "in_queue") {
+              let raidersIndex = -1;
+              for (let i = 0; i < 3; i++) {
+                if (player.eventQueue[i]?.isRaiders) {
+                  raidersIndex = i;
+                  break;
+                }
+              }
+
+              if (raidersIndex === 0) {
+                // Raiders will resolve NOW
+                console.log(
+                  "Cache: Raiders advancing off slot 1 - resolving immediately"
+                );
+
+                // Remove from queue
+                player.eventQueue[0] = null;
+                player.raiders = "available";
+
+                // Set up opponent camp selection
+                const opponentId = sourcePlayerId === "left" ? "right" : "left";
+                this.state.pending = {
+                  type: "raiders_select_camp",
+                  sourcePlayerId: sourcePlayerId,
+                  targetPlayerId: opponentId,
+                  fromCacheComplete: true, // Cache is done after this
+                  cacheSourceCard: sourceCard,
+                };
+
+                console.log(
+                  `Raiders: ${opponentId} player must choose a camp to damage (Cache complete)`
+                );
+                return true;
+              }
+            }
+
+            // Raiders won't resolve immediately, just execute raid normally
+            this.executeRaid(sourcePlayerId);
+          }
+
+          // Mark Cache ability complete (if not waiting for Raiders)
+          if (!this.state.pending) {
+            if (sourceCard && sourceCard.type === "camp") {
+              sourceCard.isReady = false;
+              console.log("Cache marked as not ready after both effects");
+              this.state.turnEvents.abilityUsedThisTurn = true;
+            }
+            this.state.pending = null;
+          }
+
+          return result;
+        }
+
+        // Handle Scientist's junk effect
+        if (result && fromScientist && scientistCard) {
+          scientistCard.isReady = false;
+          console.log(
+            `${scientistCard.name} marked not ready after Scientist junk completed`
+          );
+          this.state.pending = null;
+          return result;
+        }
+
+        // Mark camp ability complete if this was from a camp (non-Cache camps)
+        if (result && sourceCard && sourceCard.type === "camp" && !fromCache) {
           // Mark the camp as not ready (unless Vera trait applies)
           if (!this.state.pending?.shouldStayReady) {
             sourceCard.isReady = false;
@@ -5048,7 +5463,94 @@ export class CommandSystem {
 
         // Check if this was Vanguard's entry trait during Parachute Base
         if (result && fromVanguardEntry && parachuteBaseContext) {
-          // ... existing Vanguard code ...
+          console.log(
+            "Vanguard entry punk placed, continuing Parachute Base sequence"
+          );
+
+          const pb = parachuteBaseContext;
+          const player = this.state.players[pb.sourcePlayerId];
+          const person = this.state.getCard(
+            pb.sourcePlayerId,
+            pb.targetColumn,
+            pb.targetSlot
+          );
+
+          if (!person) {
+            console.log("ERROR: Can't find Vanguard after entry trait");
+            this.state.pending = null;
+            return true;
+          }
+
+          // Now use Vanguard's actual ability if it has one
+          if (pb.hasAbility) {
+            console.log(
+              `Checking if player can afford Vanguard's ability (${pb.abilityCost} water)`
+            );
+
+            if (player.water >= pb.abilityCost) {
+              // Pay for the ability
+              player.water -= pb.abilityCost;
+              console.log(
+                `Parachute Base: Paid ${pb.abilityCost} water for Vanguard's damage ability`
+              );
+
+              // Execute the ability
+              const ability = person.abilities[0];
+              const abilityResult = this.executeAbility(ability, {
+                source: person,
+                playerId: pb.sourcePlayerId,
+                columnIndex: pb.targetColumn,
+                position: pb.targetSlot,
+                fromParachuteBase: true,
+              });
+
+              console.log(`Parachute Base: Executed Vanguard's damage ability`);
+
+              // Check if ability set up new pending
+              if (this.state.pending) {
+                console.log(
+                  "Vanguard ability set up damage targeting - adding Parachute damage info"
+                );
+                this.state.pending.parachuteBaseDamage = {
+                  targetPlayer: pb.sourcePlayerId,
+                  targetColumn: pb.targetColumn,
+                  targetPosition: pb.targetSlot,
+                };
+              } else {
+                // No pending, apply damage now
+                console.log(
+                  "Vanguard ability completed - applying Parachute damage"
+                );
+                this.applyParachuteBaseDamage(
+                  pb.sourcePlayerId,
+                  pb.targetColumn,
+                  pb.targetSlot
+                );
+              }
+            } else {
+              console.log(
+                `Not enough water for ability (need ${pb.abilityCost}, have ${player.water})`
+              );
+              this.applyParachuteBaseDamage(
+                pb.sourcePlayerId,
+                pb.targetColumn,
+                pb.targetSlot
+              );
+            }
+          } else {
+            console.log(
+              "Vanguard has no abilities - applying Parachute damage"
+            );
+            this.applyParachuteBaseDamage(
+              pb.sourcePlayerId,
+              pb.targetColumn,
+              pb.targetSlot
+            );
+          }
+        } else if (result && (fromVanguardEntry || fromArgoEntry)) {
+          // Normal entry trait punk placement (not from Parachute Base)
+          console.log("Entry trait punk placed");
+          this.state.pending = null;
         } else {
           // Normal punk placement
           console.log("Normal punk placement completion");

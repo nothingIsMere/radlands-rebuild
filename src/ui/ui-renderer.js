@@ -1362,6 +1362,70 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    // Cache order choice
+    if (this.state.pending?.type === "cache_choose_order") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Cache: Choose which effect to do first";
+      content.appendChild(title);
+
+      const subtitle = this.createElement("div", "modal-subtitle");
+      subtitle.textContent = "You will do both, but order might matter";
+      subtitle.style.fontSize = "14px";
+      subtitle.style.color = "#666";
+      content.appendChild(subtitle);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      const raidBtn = this.createElement("button", "ability-select-btn");
+      raidBtn.textContent = "⚔️ Raid first, then Gain Punk";
+      raidBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          effectFirst: "raid",
+        });
+      });
+      buttonContainer.appendChild(raidBtn);
+
+      const punkBtn = this.createElement("button", "ability-select-btn");
+      punkBtn.textContent = "👤 Gain Punk first, then Raid";
+      punkBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          effectFirst: "punk",
+        });
+      });
+      buttonContainer.appendChild(punkBtn);
+
+      content.appendChild(buttonContainer);
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        // Refund the water
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        player.water += 2;
+
+        // Mark camp as ready again
+        if (this.state.pending.sourceCard) {
+          this.state.pending.sourceCard.isReady = true;
+        }
+
+        this.state.pending = null;
+        this.render();
+      });
+      buttonContainer.appendChild(cancelBtn);
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     // The Octagon opponent must destroy
     if (this.state.pending?.type === "octagon_opponent_destroy") {
       // Don't show a modal - just highlight valid targets on the board

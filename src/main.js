@@ -53,11 +53,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Oasis",
+    name: "Scavenger Camp",
     type: "camp",
-    campDraw: 1, // Oasis has 1 camp draw
-    abilities: [], // No active abilities
-    trait: "People cost 1 less in this column if no people present", // Just for reference
+    campDraw: 1, // Scavenger Camp has 1 camp draw
+    abilities: [{ effect: "discardchoose", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });
@@ -384,11 +383,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Oasis",
+    name: "Scavenger Camp",
     type: "camp",
-    campDraw: 1, // Oasis has 1 camp draw
-    abilities: [], // No active abilities
-    trait: "People cost 1 less in this column if no people present", // Just for reference
+    campDraw: 1, // Scavenger Camp has 1 camp draw
+    abilities: [{ effect: "discardchoose", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

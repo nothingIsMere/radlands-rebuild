@@ -1350,6 +1350,125 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    // Scavenger Camp discard selection
+    if (this.state.pending?.type === "scavengercamp_select_discard") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Scavenger Camp: Select a card to discard";
+      content.appendChild(title);
+
+      const pending = this.state.pending;
+      let selectedCard = null;
+
+      const cardListDiv = this.createElement("div", "card-selection-list");
+
+      pending.discardableCards.forEach((card) => {
+        const cardDiv = this.createElement("div", "selectable-card");
+        cardDiv.textContent = `${card.name} (${card.cost || 0}💧)`;
+
+        if (card.junkEffect) {
+          cardDiv.textContent += ` [Junk: ${card.junkEffect}]`;
+        }
+
+        cardDiv.addEventListener("click", () => {
+          const allCards = cardListDiv.querySelectorAll(".selectable-card");
+          allCards.forEach((c) => c.classList.remove("selected"));
+
+          cardDiv.classList.add("selected");
+          selectedCard = card.id;
+
+          const submitBtn = content.querySelector(".submit-discard-btn");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Discard ${card.name}`;
+          }
+        });
+
+        cardListDiv.appendChild(cardDiv);
+      });
+
+      content.appendChild(cardListDiv);
+
+      const submitBtn = this.createElement("button", "submit-discard-btn");
+      submitBtn.textContent = "Select a card to discard";
+      submitBtn.disabled = true;
+
+      submitBtn.addEventListener("click", () => {
+        if (selectedCard) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            cardToDiscard: selectedCard,
+          });
+        }
+      });
+
+      content.appendChild(submitBtn);
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        this.state.pending = null;
+        this.render();
+      });
+
+      content.appendChild(cancelBtn);
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
+    // Scavenger Camp benefit choice
+    if (this.state.pending?.type === "scavengercamp_choose_benefit") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Scavenger Camp: Choose your benefit";
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      const waterBtn = this.createElement("button", "ability-select-btn");
+      waterBtn.textContent = "💧 Gain Extra Water";
+      waterBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          benefit: "water",
+        });
+      });
+      buttonContainer.appendChild(waterBtn);
+
+      const punkBtn = this.createElement("button", "ability-select-btn");
+      punkBtn.textContent = "👤 Gain a Punk";
+      if (this.state.deck.length === 0) {
+        punkBtn.textContent += " (Deck Empty!)";
+        punkBtn.disabled = true;
+      }
+      punkBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          benefit: "punk",
+        });
+      });
+      buttonContainer.appendChild(punkBtn);
+
+      content.appendChild(buttonContainer);
+
+      // No cancel at this point - must choose a benefit
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     if (this.state.pending?.type === "omenclock_select_event") {
       const modal = this.createElement("div", "ability-selection-modal");
       const backdrop = this.createElement("div", "modal-backdrop");

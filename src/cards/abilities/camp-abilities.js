@@ -8,7 +8,43 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after transplantlab:
+  // Add to camp-abilities.js, after omenclock:
+
+  scavengercamp: {
+    discardchoose: {
+      cost: 0,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Check if player has cards to discard (excluding Water Silo)
+        const discardableCards = player.hand.filter(
+          (card) => !card.isWaterSilo && card.name !== "Water Silo"
+        );
+
+        if (discardableCards.length === 0) {
+          console.log(
+            "Scavenger Camp: No cards to discard (cannot discard Water Silo)"
+          );
+          return false;
+        }
+
+        // Set up discard selection
+        state.pending = {
+          type: "scavengercamp_select_discard",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          discardableCards: discardableCards,
+          context,
+        };
+
+        console.log(
+          `Scavenger Camp: Select a card to discard (${discardableCards.length} available)`
+        );
+        return true;
+      },
+    },
+  },
 
   omenclock: {
     advance: {

@@ -1744,6 +1744,95 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "scavengercamp_select_discard": {
+        const { cardToDiscard } = payload;
+        const pending = this.state.pending;
+
+        if (!cardToDiscard) {
+          console.log("Must select a card to discard");
+          return false;
+        }
+
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Find the card in hand
+        const cardIndex = player.hand.findIndex((c) => c.id === cardToDiscard);
+        if (cardIndex === -1) {
+          console.log("Card not found in hand");
+          return false;
+        }
+
+        const card = player.hand[cardIndex];
+
+        // Verify it's not Water Silo
+        if (card.isWaterSilo || card.name === "Water Silo") {
+          console.log("Cannot discard Water Silo");
+          return false;
+        }
+
+        // Remove from hand and discard
+        player.hand.splice(cardIndex, 1);
+        this.state.discard.push(card);
+        console.log(`Scavenger Camp: Discarded ${card.name}`);
+
+        // Now set up benefit choice
+        this.state.pending = {
+          type: "scavengercamp_choose_benefit",
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+          context: pending.context,
+        };
+
+        console.log("Scavenger Camp: Choose your benefit - Water or Punk");
+        return true;
+      }
+
+      case "scavengercamp_choose_benefit": {
+        const { benefit } = payload;
+        const pending = this.state.pending;
+
+        if (!benefit || (benefit !== "water" && benefit !== "punk")) {
+          console.log("Must choose water or punk");
+          return false;
+        }
+
+        const player = this.state.players[pending.sourcePlayerId];
+
+        if (benefit === "water") {
+          player.water += 1;
+          console.log("Scavenger Camp: Gained 1 extra water");
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+        } else if (benefit === "punk") {
+          // Check if deck has cards
+          if (this.state.deck.length === 0) {
+            console.log(
+              "Cannot gain punk - deck is empty. Defaulting to water."
+            );
+            player.water += 1;
+            console.log("Scavenger Camp: Gained 1 water (deck empty)");
+
+            // Mark ability complete
+            this.completeAbility(pending);
+            this.state.pending = null;
+          } else {
+            // Set up punk placement
+            this.state.pending = {
+              type: "place_punk",
+              source: pending.sourceCard,
+              sourceCard: pending.sourceCard,
+              sourcePlayerId: pending.sourcePlayerId,
+            };
+
+            console.log("Scavenger Camp: Place your punk");
+          }
+        }
+
+        return true;
+      }
+
       case "catapult_damage": {
         const pending = this.state.pending;
 

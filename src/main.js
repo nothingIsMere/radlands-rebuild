@@ -43,9 +43,9 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Warehouse",
+    name: "Transplant Lab",
     type: "camp",
-    campDraw: 1, // Warehouse has 1 camp draw
+    campDraw: 2, // Transplant Lab has 2 camp draw
     abilities: [{ effect: "restore", cost: 1 }],
     isReady: true,
     isDamaged: false,
@@ -393,9 +393,9 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Warehouse",
+    name: "Transplant Lab",
     type: "camp",
-    campDraw: 1, // Warehouse has 1 camp draw
+    campDraw: 2, // Transplant Lab has 2 camp draw
     abilities: [{ effect: "restore", cost: 1 }],
     isReady: true,
     isDamaged: false,

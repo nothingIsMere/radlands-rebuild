@@ -8,7 +8,71 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after catapult:
+  transplantlab: {
+    restore: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if player has played 2+ people this turn
+        if (state.turnEvents.peoplePlayedThisTurn < 2) {
+          console.log(
+            `Transplant Lab: Need to have played 2+ people this turn (played ${state.turnEvents.peoplePlayedThisTurn})`
+          );
+          return false;
+        }
+
+        // Find damaged cards to restore (your own)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true, // Protection irrelevant for restoration
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Transplant Lab: No damaged cards to restore");
+          return false;
+        }
+
+        // Filter out Transplant Lab itself from targets
+        const filteredTargets = validTargets.filter((t) => {
+          // Exclude Transplant Lab from restoring itself
+          if (
+            t.card.type === "camp" &&
+            t.card.name === "Transplant Lab" &&
+            t.columnIndex === context.columnIndex &&
+            t.position === 0
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        if (filteredTargets.length === 0) {
+          console.log(
+            "Transplant Lab: No valid targets (cannot restore itself)"
+          );
+          return false;
+        }
+
+        state.pending = {
+          type: "restore",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: filteredTargets,
+          context,
+        };
+
+        console.log(
+          `Transplant Lab: Select damaged card to restore (${filteredTargets.length} available, ${state.turnEvents.peoplePlayedThisTurn} people played)`
+        );
+        return true;
+      },
+    },
+  },
 
   nestofspies: {
     damage: {

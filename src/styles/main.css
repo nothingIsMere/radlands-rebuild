@@ -1451,3 +1451,37 @@ body.has-pending .card.bloodbank-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.card.laborcamp-destroy-target {
+  animation: pulse-orange 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #ff9800;
+  border: 2px dashed #ff9800;
+}
+
+.card.laborcamp-destroy-target::after {
+  content: "SACRIFICE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 152, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.card.laborcamp-restore-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+}
+
+body.has-pending .card.laborcamp-destroy-target,
+body.has-pending .card.laborcamp-restore-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

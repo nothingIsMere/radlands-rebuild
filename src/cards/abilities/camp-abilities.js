@@ -8,6 +8,89 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  // Add to camp-abilities.js, after bloodbank:
+
+  laborcamp: {
+    destroyrestore: {
+      cost: 0,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Find your own people to destroy
+        const validPeople = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validPeople.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validPeople.length === 0) {
+          console.log("Labor Camp: No people to destroy");
+          return false;
+        }
+
+        // Check if there are any damaged cards to restore (excluding Labor Camp itself)
+        const validRestoreTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              // Exclude Labor Camp itself from restoration targets
+              if (
+                !(
+                  card.type === "camp" &&
+                  card.name === "Labor Camp" &&
+                  col === context.columnIndex &&
+                  pos === 0
+                )
+              ) {
+                validRestoreTargets.push({
+                  playerId: context.playerId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validRestoreTargets.length === 0) {
+          console.log(
+            "Labor Camp: No damaged cards to restore (Labor Camp cannot restore itself)"
+          );
+          return false;
+        }
+
+        // Set up selection state - first select person to destroy
+        state.pending = {
+          type: "laborcamp_select_destroy",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validPeople,
+          validRestoreTargets: validRestoreTargets, // Store for later
+          context,
+        };
+
+        console.log(
+          `Labor Camp: Select one of your people to destroy (${validPeople.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   bloodbank: {
     destroywater: {
       cost: 0,

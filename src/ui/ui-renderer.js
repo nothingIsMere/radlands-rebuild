@@ -485,6 +485,30 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "laborcamp_select_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("laborcamp-destroy-target");
+      }
+    }
+
+    if (this.state.pending?.type === "laborcamp_select_restore") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("laborcamp-restore-target");
+      }
+    }
+
     if (this.state.pending?.type === "bloodbank_select_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>

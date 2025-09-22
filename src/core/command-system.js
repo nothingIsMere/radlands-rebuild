@@ -1889,6 +1889,124 @@ export class CommandSystem {
         return true;
       }
 
+      case "laborcamp_select_destroy": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Labor Camp destruction");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy the person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Labor Camp destroyed punk (returned to deck)");
+        } else {
+          this.state.discard.push(target);
+          console.log(`Labor Camp destroyed ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Now set up restoration selection
+        this.state.pending = {
+          type: "laborcamp_select_restore",
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+          validTargets: pending.validRestoreTargets,
+          context: pending.context,
+        };
+
+        console.log(
+          `Labor Camp: Now select damaged card to restore (${pending.validRestoreTargets.length} available)`
+        );
+        return true;
+      }
+
+      case "laborcamp_select_restore": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid restore target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Labor Camp restoration");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must select a damaged card to restore");
+          return false;
+        }
+
+        // Restore the card
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false; // Person becomes not ready when restored
+        }
+        // Camps stay ready when restored
+
+        console.log(`Labor Camp: Restored ${target.name}`);
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        return true;
+      }
+
       case "mercenary_camp_damage": {
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>

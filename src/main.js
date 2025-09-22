@@ -53,10 +53,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Mercenary Camp",
+    name: "Labor Camp",
     type: "camp",
-    campDraw: 0, // Mercenary Camp has 0 camp draw
-    abilities: [{ effect: "damagecamp", cost: 2 }],
+    campDraw: 1, // Labor Camp has 1 camp draw
+    abilities: [{ effect: "destroyrestore", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });
@@ -383,10 +383,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Mercenary Camp",
+    name: "Labor Camp",
     type: "camp",
-    campDraw: 0, // Mercenary Camp has 0 camp draw
-    abilities: [{ effect: "damagecamp", cost: 2 }],
+    campDraw: 1, // Labor Camp has 1 camp draw
+    abilities: [{ effect: "destroyrestore", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

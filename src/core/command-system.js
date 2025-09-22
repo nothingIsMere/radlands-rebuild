@@ -1738,6 +1738,179 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "catapult_damage": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Catapult");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target) {
+          console.log("No target at that position");
+          return false;
+        }
+
+        // Apply damage (ignoring protection)
+        if (target.isDamaged || target.isPunk) {
+          target.isDestroyed = true;
+
+          if (target.type === "person") {
+            // Handle person destruction
+            if (target.isPunk) {
+              const returnCard = {
+                id: target.id,
+                name: target.originalName || target.name,
+                type: target.originalCard?.type || target.type,
+                cost: target.originalCard?.cost || target.cost,
+                abilities: target.originalCard?.abilities || target.abilities,
+                junkEffect:
+                  target.originalCard?.junkEffect || target.junkEffect,
+              };
+              this.state.deck.unshift(returnCard);
+              console.log("Catapult destroyed enemy punk");
+            } else {
+              this.state.discard.push(target);
+              console.log(`Catapult destroyed ${target.name}`);
+            }
+
+            // Remove from column
+            const column =
+              this.state.players[targetPlayer].columns[targetColumn];
+            column.setCard(targetPosition, null);
+
+            // Move card in front back if needed
+            if (targetPosition < 2) {
+              const cardInFront = column.getCard(targetPosition + 1);
+              if (cardInFront) {
+                column.setCard(targetPosition, cardInFront);
+                column.setCard(targetPosition + 1, null);
+              }
+            }
+          } else if (target.type === "camp") {
+            console.log(`Catapult destroyed ${target.name} camp`);
+          }
+        } else {
+          target.isDamaged = true;
+          if (target.type === "person") {
+            target.isReady = false;
+          }
+          console.log(`Catapult damaged ${target.name}`);
+        }
+
+        // Now select own person to destroy
+        const player = this.state.players[pending.sourcePlayerId];
+        const validPeople = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validPeople.push({
+                playerId: pending.sourcePlayerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        this.state.pending = {
+          type: "catapult_select_destroy",
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+          validTargets: validPeople,
+          context: pending.context,
+        };
+
+        console.log(
+          `Catapult: Now select one of your people to destroy (${validPeople.length} available)`
+        );
+        return true;
+      }
+
+      case "catapult_select_destroy": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid person to destroy for Catapult");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy the person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Catapult: Destroyed your punk");
+        } else {
+          this.state.discard.push(target);
+          console.log(`Catapult: Destroyed your ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        return true;
+      }
+
       case "scudlauncher_select_target": {
         const pending = this.state.pending;
 

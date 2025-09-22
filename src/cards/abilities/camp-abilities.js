@@ -8,7 +8,63 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after scudlauncher:
+  // Add to camp-abilities.js, after warehouse:
+
+  catapult: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Check if player has at least one person
+        let hasPerson = false;
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              hasPerson = true;
+              break;
+            }
+          }
+          if (hasPerson) break;
+        }
+
+        if (!hasPerson) {
+          console.log("Catapult: Need at least one person to use this ability");
+          return false;
+        }
+
+        // Find ALL enemy cards (ignoring protection)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: true, // Catapult ignores protection!
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Catapult: No targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "catapult_damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          allowProtected: true,
+          context,
+        };
+
+        console.log(
+          `Catapult: Select ANY enemy card to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
 
   warehouse: {
     restore: {

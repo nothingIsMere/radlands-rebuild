@@ -496,6 +496,30 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "catapult_damage") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("catapult-target");
+      }
+    }
+
+    if (this.state.pending?.type === "catapult_select_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("catapult-sacrifice-target");
+      }
+    }
+
     if (this.state.pending?.type === "mulcher_select_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>

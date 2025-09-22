@@ -53,9 +53,9 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Training Camp",
+    name: "Catapult",
     type: "camp",
-    campDraw: 2, // Training Camp has 2 camp draw
+    campDraw: 0, // Catapult has 0 camp draw
     abilities: [{ effect: "damage", cost: 2 }],
     isReady: true,
     isDamaged: false,
@@ -383,9 +383,9 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Training Camp",
+    name: "Catapult",
     type: "camp",
-    campDraw: 2, // Training Camp has 2 camp draw
+    campDraw: 0, // Catapult has 0 camp draw
     abilities: [{ effect: "damage", cost: 2 }],
     isReady: true,
     isDamaged: false,

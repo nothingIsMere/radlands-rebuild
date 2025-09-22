@@ -1520,3 +1520,47 @@ body.has-pending .card.scudlauncher-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.card.catapult-target {
+  animation: pulse-red 1s infinite;
+  cursor: crosshair;
+  box-shadow: 0 0 15px #ff4500;
+  border: 3px solid #ff4500;
+}
+
+.card.catapult-target::after {
+  content: "💥";
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  font-size: 30px;
+  animation: pulse 1s infinite;
+}
+
+.card.catapult-sacrifice-target {
+  animation: pulse-dark-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #8b0000;
+  border: 2px dashed #8b0000;
+}
+
+.card.catapult-sacrifice-target::after {
+  content: "SACRIFICE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(139, 0, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+body.has-pending .card.catapult-target,
+body.has-pending .card.catapult-sacrifice-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

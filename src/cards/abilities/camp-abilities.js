@@ -8,6 +8,59 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  trainingcamp: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+        const campColumn = context.columnIndex;
+
+        // Count people in THIS column only
+        let peopleInColumn = 0;
+        for (let pos = 1; pos <= 2; pos++) {
+          const card = player.columns[campColumn].getCard(pos);
+          if (card && card.type === "person" && !card.isDestroyed) {
+            peopleInColumn++;
+          }
+        }
+
+        if (peopleInColumn < 2) {
+          console.log(
+            `Training Camp: Need 2 people in this column (have ${peopleInColumn})`
+          );
+          return false;
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Training Camp: No valid targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Training Camp: Select target to damage (2 people in column confirmed)`
+        );
+        return true;
+      },
+    },
+  },
   pillbox: {
     damage: {
       cost: 3, // Base cost, will be reduced by destroyed camps

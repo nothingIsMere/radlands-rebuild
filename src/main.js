@@ -53,10 +53,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Labor Camp",
+    name: "Training Camp",
     type: "camp",
-    campDraw: 1, // Labor Camp has 1 camp draw
-    abilities: [{ effect: "destroyrestore", cost: 0 }],
+    campDraw: 2, // Training Camp has 2 camp draw
+    abilities: [{ effect: "damage", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -383,10 +383,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Labor Camp",
+    name: "Training Camp",
     type: "camp",
-    campDraw: 1, // Labor Camp has 1 camp draw
-    abilities: [{ effect: "destroyrestore", cost: 0 }],
+    campDraw: 2, // Training Camp has 2 camp draw
+    abilities: [{ effect: "damage", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

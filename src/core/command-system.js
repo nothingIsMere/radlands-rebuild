@@ -4007,6 +4007,7 @@ export class CommandSystem {
         const junkCard = this.state.pending?.junkCard;
         const fromVanguardEntry = this.state.pending?.fromVanguardEntry;
         const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
+        const sourceCard = this.state.pending?.sourceCard; // ADD THIS - might be a camp
 
         // Resolve the punk placement
         const result = this.resolvePlacePunk(targetColumn, targetPosition);
@@ -4017,102 +4018,21 @@ export class CommandSystem {
           console.log(`Discarded ${junkCard.name} after placing punk`);
         }
 
+        // ADD THIS: Mark camp ability complete if this was from a camp
+        if (result && sourceCard && sourceCard.type === "camp") {
+          // Mark the camp as not ready (unless Vera trait applies)
+          if (!this.state.pending?.shouldStayReady) {
+            sourceCard.isReady = false;
+            console.log(
+              `${sourceCard.name} marked as not ready after placing punk`
+            );
+          }
+          this.state.turnEvents.abilityUsedThisTurn = true;
+        }
+
         // Check if this was Vanguard's entry trait during Parachute Base
         if (result && fromVanguardEntry && parachuteBaseContext) {
-          console.log(
-            "=== Continuing Parachute Base sequence after Vanguard punk ==="
-          );
-
-          // The Vanguard card object should be in parachuteBaseContext.person
-          const vanguardCard = parachuteBaseContext.person;
-          const player =
-            this.state.players[parachuteBaseContext.sourcePlayerId];
-
-          // Find where Vanguard is NOW after potential push
-          let vanguardPos = null;
-          let vanguardCol = null;
-
-          for (let col = 0; col < 3; col++) {
-            for (let pos = 0; pos < 3; pos++) {
-              const card = player.columns[col].getCard(pos);
-              if (card && card.id === vanguardCard.id) {
-                vanguardCol = col;
-                vanguardPos = pos;
-                console.log(
-                  `Found Vanguard at new position: col ${col}, pos ${pos}`
-                );
-                break;
-              }
-            }
-            if (vanguardPos !== null) break;
-          }
-
-          if (vanguardPos === null) {
-            console.log("ERROR: Can't find Vanguard after punk placement");
-            console.log("Was looking for card with ID:", vanguardCard.id);
-            // Clear pending and bail out
-            this.state.pending = null;
-            return true;
-          }
-
-          // Clear the pending state before continuing
-          this.state.pending = null;
-
-          // Now use Vanguard's ability
-          if (vanguardCard.abilities?.length > 0) {
-            const ability = vanguardCard.abilities[0];
-
-            console.log(
-              `Parachute Base: Using Vanguard's ability (${ability.cost} water)`
-            );
-
-            if (player.water >= ability.cost) {
-              player.water -= ability.cost;
-              console.log(
-                `Parachute Base: Paid ${ability.cost} for Vanguard's ability`
-              );
-
-              // Execute Vanguard's ability
-              const abilityResult = this.executeAbility(ability, {
-                source: vanguardCard,
-                playerId: parachuteBaseContext.sourcePlayerId,
-                columnIndex: vanguardCol,
-                position: vanguardPos,
-                fromParachuteBase: true,
-              });
-
-              // Check if ability set up new pending (it should for damage targeting)
-              if (this.state.pending) {
-                console.log(
-                  "Vanguard ability set up targeting, adding Parachute damage info"
-                );
-                // Add parachute damage info for after ability completes
-                this.state.pending.parachuteBaseDamage = {
-                  targetPlayer: parachuteBaseContext.sourcePlayerId,
-                  targetColumn: vanguardCol,
-                  targetPosition: vanguardPos,
-                };
-              } else {
-                console.log(
-                  "No pending from Vanguard ability, applying Parachute damage now"
-                );
-                this.applyParachuteBaseDamage(
-                  parachuteBaseContext.sourcePlayerId,
-                  vanguardCol,
-                  vanguardPos
-                );
-              }
-            } else {
-              console.log(
-                `Not enough water (need ${ability.cost}, have ${player.water})`
-              );
-              this.applyParachuteBaseDamage(
-                parachuteBaseContext.sourcePlayerId,
-                vanguardCol,
-                vanguardPos
-              );
-            }
-          }
+          // ... existing Vanguard code ...
         } else {
           // Normal punk placement
           console.log("Normal punk placement completion");

@@ -8,6 +8,52 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  arcade: {
+    gainpunk: {
+      cost: 1,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+        let peopleCount = 0;
+
+        // Count all people (including punks)
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              peopleCount++;
+            }
+          }
+        }
+
+        if (peopleCount > 1) {
+          console.log(
+            `Arcade: Can only use with 0 or 1 person (have ${peopleCount})`
+          );
+          return false;
+        }
+
+        // Check if deck has cards
+        if (state.deck.length === 0) {
+          console.log("Arcade: Cannot gain punk - deck is empty");
+          return false;
+        }
+
+        // Set up punk placement
+        state.pending = {
+          type: "place_punk",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+        };
+
+        console.log(
+          `Arcade: Select where to place punk (you have ${peopleCount} person)`
+        );
+        return true;
+      },
+    },
+  },
+
   mercenarycamp: {
     damagecamp: {
       cost: 2,

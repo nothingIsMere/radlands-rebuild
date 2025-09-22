@@ -1738,6 +1738,51 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "supplydepot_select_discard": {
+        const { cardToDiscard } = payload;
+        const pending = this.state.pending;
+
+        if (!cardToDiscard) {
+          console.log("Must select a card to discard");
+          return false;
+        }
+
+        // Verify the selected card is one of the drawn cards
+        const discardCard = pending.drawnCards.find(
+          (c) => c.id === cardToDiscard
+        );
+        if (!discardCard) {
+          console.log("Invalid card selected - must be one of the drawn cards");
+          return false;
+        }
+
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Find and discard the selected card from hand
+        const index = player.hand.findIndex((c) => c.id === cardToDiscard);
+        if (index !== -1) {
+          const discarded = player.hand.splice(index, 1)[0];
+          this.state.discard.push(discarded);
+          console.log(`Supply Depot: Discarded ${discarded.name}`);
+
+          // Identify which card was kept
+          const keptCard = pending.drawnCards.find(
+            (c) => c.id !== cardToDiscard
+          );
+          if (keptCard) {
+            console.log(`Supply Depot: Kept ${keptCard.name}`);
+          }
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        console.log("Supply Depot: Resolved");
+        return true;
+      }
       case "bloodbank_select_destroy": {
         const pending = this.state.pending;
 

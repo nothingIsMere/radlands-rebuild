@@ -1303,6 +1303,81 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    if (this.state.pending?.type === "supplydepot_select_discard") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Supply Depot: Choose 1 card to DISCARD";
+      content.appendChild(title);
+
+      const subtitle = this.createElement("div", "modal-subtitle");
+      subtitle.textContent = "The other card will stay in your hand";
+      subtitle.style.fontSize = "14px";
+      subtitle.style.color = "#666";
+      subtitle.style.marginBottom = "10px";
+      content.appendChild(subtitle);
+
+      const pending = this.state.pending;
+      let selectedCard = null;
+
+      const cardListDiv = this.createElement("div", "card-selection-list");
+
+      // Show only the 2 cards that were drawn
+      pending.drawnCards.forEach((card) => {
+        const cardDiv = this.createElement("div", "selectable-card");
+        cardDiv.textContent = `${card.name} (${card.cost || 0}💧)`;
+
+        if (card.junkEffect) {
+          cardDiv.textContent += ` [Junk: ${card.junkEffect}]`;
+        }
+
+        cardDiv.addEventListener("click", () => {
+          // Clear previous selection
+          const allCards = cardListDiv.querySelectorAll(".selectable-card");
+          allCards.forEach((c) => c.classList.remove("selected"));
+
+          // Select this card
+          cardDiv.classList.add("selected");
+          selectedCard = card.id;
+
+          // Enable submit button
+          const submitBtn = content.querySelector(".submit-discard-btn");
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Discard ${card.name}`;
+          }
+        });
+
+        cardListDiv.appendChild(cardDiv);
+      });
+
+      content.appendChild(cardListDiv);
+
+      const submitBtn = this.createElement("button", "submit-discard-btn");
+      submitBtn.textContent = "Select a card to discard";
+      submitBtn.disabled = true;
+
+      submitBtn.addEventListener("click", () => {
+        if (selectedCard) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            cardToDiscard: selectedCard,
+          });
+        }
+      });
+
+      content.appendChild(submitBtn);
+
+      // No cancel button - must complete the effect
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     if (this.state.pending?.type === "highground_select_person") {
       const modal = this.createElement("div", "ability-selection-modal");
       const backdrop = this.createElement("div", "modal-backdrop");

@@ -33,10 +33,10 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Mulcher",
+    name: "Supply Depot",
     type: "camp",
-    campDraw: 0, // Mulcher has 0 camp draw
-    abilities: [{ effect: "destroydraw", cost: 0 }],
+    campDraw: 2, // Supply Depot has 2 camp draw
+    abilities: [{ effect: "drawdiscard", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -373,10 +373,10 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Mulcher",
+    name: "Supply Depot",
     type: "camp",
-    campDraw: 0, // Mulcher has 0 camp draw
-    abilities: [{ effect: "destroydraw", cost: 0 }],
+    campDraw: 2, // Supply Depot has 2 camp draw
+    abilities: [{ effect: "drawdiscard", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

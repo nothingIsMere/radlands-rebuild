@@ -8,7 +8,55 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after bloodbank:
+  supplydepot: {
+    drawdiscard: {
+      cost: 2,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Check if deck has at least 1 card (we'll draw what we can)
+        if (state.deck.length === 0) {
+          console.log("Supply Depot: Cannot use - deck is empty");
+          return false;
+        }
+
+        // Draw 2 cards (or as many as possible)
+        const drawnCards = [];
+        for (let i = 0; i < 2; i++) {
+          if (state.deck.length > 0) {
+            const card = state.deck.shift();
+            player.hand.push(card);
+            drawnCards.push(card);
+            console.log(`Supply Depot: Drew ${card.name}`);
+          }
+        }
+
+        if (drawnCards.length === 0) {
+          console.log("Supply Depot: No cards drawn");
+          return false;
+        }
+
+        if (drawnCards.length === 1) {
+          // Only drew 1 card, no need to discard
+          console.log("Supply Depot: Only 1 card drawn, keeping it");
+          return true;
+        }
+
+        // Set up discard selection - must discard one of the drawn cards
+        state.pending = {
+          type: "supplydepot_select_discard",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          drawnCards: drawnCards,
+          context,
+        };
+
+        console.log("Supply Depot: Select 1 of the 2 drawn cards to discard");
+        return true;
+      },
+    },
+  },
 
   laborcamp: {
     destroyrestore: {

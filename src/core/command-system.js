@@ -1744,6 +1744,196 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "octagon_choose_destroy": {
+        const pending = this.state.pending;
+
+        // Check if player chose to cancel (no destruction)
+        if (payload.cancel) {
+          console.log("The Octagon: Chose not to destroy anyone");
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+          return true;
+        }
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for The Octagon");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy your person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("The Octagon: You destroyed your punk");
+        } else {
+          this.state.discard.push(target);
+          console.log(`The Octagon: You destroyed your ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Now opponent must destroy one of theirs
+        const opponentId = pending.sourcePlayerId === "left" ? "right" : "left";
+        const opponent = this.state.players[opponentId];
+        const opponentPeople = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              opponentPeople.push({
+                playerId: opponentId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (opponentPeople.length === 0) {
+          console.log("The Octagon: Opponent has no people to destroy");
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+          return true;
+        }
+
+        // Set up opponent's forced destruction
+        this.state.pending = {
+          type: "octagon_opponent_destroy",
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+          targetPlayerId: opponentId,
+          validTargets: opponentPeople,
+          context: pending.context,
+        };
+
+        console.log(
+          `The Octagon: ${opponentId} must destroy one of their people`
+        );
+        return true;
+      }
+
+      case "octagon_opponent_destroy": {
+        const pending = this.state.pending;
+
+        // Verify it's the opponent selecting their own person
+        if (targetPlayer !== pending.targetPlayerId) {
+          console.log("You must select your own person");
+          return false;
+        }
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for The Octagon");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy opponent's person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log(
+            `The Octagon: ${pending.targetPlayerId} destroyed their punk`
+          );
+        } else {
+          this.state.discard.push(target);
+          console.log(
+            `The Octagon: ${pending.targetPlayerId} destroyed their ${target.name}`
+          );
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+        this.state.pending = null;
+
+        console.log("The Octagon: Ability complete");
+        return true;
+      }
+
       case "scavengercamp_select_discard": {
         const { cardToDiscard } = payload;
         const pending = this.state.pending;

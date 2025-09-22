@@ -33,20 +33,21 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Omen Clock",
+    name: "Cannon",
     type: "camp",
-    campDraw: 1, // Omen Clock has 1 camp draw
-    abilities: [{ effect: "advance", cost: 1 }],
+    campDraw: 2, // Cannon has 2 camp draw
+    abilities: [{ effect: "damage", cost: 2 }],
     isReady: true,
-    isDamaged: false,
+    isDamaged: true, // STARTS DAMAGED!
+    isDestroyed: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Transplant Lab",
+    name: "The Octagon",
     type: "camp",
-    campDraw: 2, // Transplant Lab has 2 camp draw
-    abilities: [{ effect: "restore", cost: 1 }],
+    campDraw: 0, // The Octagon has 0 camp draw
+    abilities: [{ effect: "destroy", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });
@@ -373,10 +374,10 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Omen Clock",
+    name: "The Octagon",
     type: "camp",
-    campDraw: 1, // Omen Clock has 1 camp draw
-    abilities: [{ effect: "advance", cost: 1 }],
+    campDraw: 0, // The Octagon has 0 camp draw
+    abilities: [{ effect: "destroy", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });

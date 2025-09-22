@@ -8,7 +8,96 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after omenclock:
+  // Add to camp-abilities.js, after cannon:
+
+  theoctagon: {
+    destroy: {
+      cost: 1,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Find your own people
+        const validPeople = [];
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validPeople.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        // The Octagon is optional - you can choose not to destroy
+        state.pending = {
+          type: "octagon_choose_destroy",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validPeople,
+          context,
+        };
+
+        if (validPeople.length === 0) {
+          console.log("The Octagon: No people to destroy (ability ends)");
+          // Mark ability complete even with no targets
+          return true;
+        }
+
+        console.log(
+          `The Octagon: Choose one of your people to destroy, or cancel (${validPeople.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
+  cannon: {
+    damage: {
+      cost: 2,
+      handler: (state, context) => {
+        const cannon = state.getCard(context.playerId, context.columnIndex, 0);
+
+        // Cannon can only use its ability if undamaged
+        if (cannon.isDamaged) {
+          console.log("Cannon: Can only use ability when undamaged");
+          return false;
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Cannon: No valid targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Cannon: Select target to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
 
   scavengercamp: {
     discardchoose: {

@@ -130,6 +130,18 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "octagon_opponent_destroy":
+          // Show which player needs to act
+          if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
+            message.textContent =
+              "⚔️ THE OCTAGON: You MUST destroy one of YOUR people!";
+            overlay.classList.add("octagon-forced");
+          } else {
+            message.textContent = `⏳ Waiting for ${this.state.pending.targetPlayerId.toUpperCase()} to destroy one of their people...`;
+            overlay.classList.add("octagon-waiting");
+          }
+          break;
+
         case "scudlauncher_select_target":
           // Show which player needs to act
           if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
@@ -1350,6 +1362,69 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    // The Octagon opponent must destroy
+    if (this.state.pending?.type === "octagon_opponent_destroy") {
+      // Don't show a modal - just highlight valid targets on the board
+      // The opponent should click directly on their person to destroy
+      // But we should show a message banner
+      return null; // No modal needed, using board highlighting
+    }
+
+    // The Octagon choose to destroy
+    if (this.state.pending?.type === "octagon_choose_destroy") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "The Octagon: Choose to destroy one of your people?";
+      content.appendChild(title);
+
+      const subtitle = this.createElement("div", "modal-subtitle");
+      subtitle.textContent = "If you do, opponent must destroy one of theirs";
+      subtitle.style.fontSize = "14px";
+      subtitle.style.color = "#666";
+      content.appendChild(subtitle);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      // Show available people
+      this.state.pending.validTargets.forEach((target) => {
+        const btn = this.createElement("button", "ability-select-btn");
+        btn.textContent = `Destroy ${
+          target.card.isPunk ? "Punk" : target.card.name
+        }`;
+
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: target.playerId, // Use target.playerId, not just playerId
+            targetColumn: target.columnIndex, // Use target.columnIndex
+            targetPosition: target.position, // Use target.position
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
+
+      // Add "Don't Destroy" option
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Don't Destroy Anyone";
+      cancelBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          cancel: true,
+        });
+      });
+      buttonContainer.appendChild(cancelBtn);
+
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     // Scavenger Camp discard selection
     if (this.state.pending?.type === "scavengercamp_select_discard") {
       const modal = this.createElement("div", "ability-selection-modal");
@@ -1421,6 +1496,18 @@ export class UIRenderer {
       modal.appendChild(content);
 
       return modal;
+    }
+
+    if (this.state.pending?.type === "octagon_opponent_destroy") {
+      // Highlight cards that belong to the target player
+      if (
+        playerId === this.state.pending.targetPlayerId &&
+        card &&
+        card.type === "person" &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("octagon-target");
+      }
     }
 
     // Scavenger Camp benefit choice

@@ -1485,3 +1485,38 @@ body.has-pending .card.laborcamp-restore-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.card.scudlauncher-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 15px #ff0000;
+  border: 3px solid #ff0000;
+}
+
+.card.scudlauncher-target::after {
+  content: "🎯 TARGET";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff0000;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.pending-overlay.scudlauncher-self .pending-message-banner {
+  background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%);
+  animation: shake 0.5s infinite;
+}
+
+.pending-overlay.scudlauncher-waiting .pending-message-banner {
+  background: linear-gradient(135deg, #666 0%, #333 100%);
+}
+
+body.has-pending .card.scudlauncher-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

@@ -8,6 +8,53 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  scudlauncher: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+
+        // Find all opponent's cards (camps and people)
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = opponent.columns[col].getCard(pos);
+            if (card && !card.isDestroyed) {
+              validTargets.push({
+                playerId: opponentId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Scud Launcher: Opponent has no cards to damage");
+          return false;
+        }
+
+        // Set up opponent's choice
+        state.pending = {
+          type: "scudlauncher_select_target",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          targetPlayerId: opponentId, // The opponent who chooses
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Scud Launcher: ${opponentId} player must choose one of their cards to damage`
+        );
+        return true;
+      },
+    },
+  },
   trainingcamp: {
     damage: {
       cost: 2,

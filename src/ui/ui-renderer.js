@@ -130,6 +130,18 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "scudlauncher_select_target":
+          // Show which player needs to act
+          if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
+            message.textContent =
+              "🚀 SCUD LAUNCHER! Choose one of YOUR cards to damage";
+            overlay.classList.add("scudlauncher-self");
+          } else {
+            message.textContent = `⏳ Waiting for ${this.state.pending.targetPlayerId.toUpperCase()} to choose a card to damage...`;
+            overlay.classList.add("scudlauncher-waiting");
+          }
+          break;
+
         case "atomic_garden_restore":
           message.textContent =
             "🌱 Select a damaged person to restore AND ready";
@@ -472,6 +484,17 @@ export class UIRenderer {
     if (this.state.pending?.type === "parachute_place_person") {
     }
     const cardDiv = this.createElement("div", "card");
+
+    if (this.state.pending?.type === "scudlauncher_select_target") {
+      // Highlight cards that belong to the target player
+      if (
+        playerId === this.state.pending.targetPlayerId &&
+        card &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("scudlauncher-target");
+      }
+    }
 
     if (this.state.pending?.type === "mulcher_select_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(

@@ -1738,6 +1738,104 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "scudlauncher_select_target": {
+        const pending = this.state.pending;
+
+        // Verify it's the target player selecting their own card
+        if (targetPlayer !== pending.targetPlayerId) {
+          console.log("You must select your own card");
+          return false;
+        }
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Scud Launcher");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.isDestroyed) {
+          console.log("Invalid target selection");
+          return false;
+        }
+
+        // Apply damage to the selected card
+        if (target.isDamaged) {
+          target.isDestroyed = true;
+
+          if (target.type === "person") {
+            // Handle person destruction
+            if (target.isPunk) {
+              const returnCard = {
+                id: target.id,
+                name: target.originalName || target.name,
+                type: target.originalCard?.type || target.type,
+                cost: target.originalCard?.cost || target.cost,
+                abilities: target.originalCard?.abilities || target.abilities,
+                junkEffect:
+                  target.originalCard?.junkEffect || target.junkEffect,
+              };
+              this.state.deck.unshift(returnCard);
+              console.log(
+                `Scud Launcher destroyed ${pending.targetPlayerId}'s punk`
+              );
+            } else {
+              this.state.discard.push(target);
+              console.log(
+                `Scud Launcher destroyed ${pending.targetPlayerId}'s ${target.name}`
+              );
+            }
+
+            // Remove from column
+            const column =
+              this.state.players[targetPlayer].columns[targetColumn];
+            column.setCard(targetPosition, null);
+
+            // Move card in front back if needed
+            if (targetPosition < 2) {
+              const cardInFront = column.getCard(targetPosition + 1);
+              if (cardInFront) {
+                column.setCard(targetPosition, cardInFront);
+                column.setCard(targetPosition + 1, null);
+              }
+            }
+          } else if (target.type === "camp") {
+            console.log(
+              `Scud Launcher destroyed ${pending.targetPlayerId}'s ${target.name} camp`
+            );
+          }
+        } else {
+          target.isDamaged = true;
+          if (target.type === "person") {
+            target.isReady = false;
+          }
+          console.log(
+            `Scud Launcher damaged ${pending.targetPlayerId}'s ${target.name}`
+          );
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Check for game end
+        this.checkGameEnd();
+
+        return true;
+      }
       case "supplydepot_select_discard": {
         const { cardToDiscard } = payload;
         const pending = this.state.pending;

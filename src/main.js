@@ -33,9 +33,9 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Scud Launcher",
+    name: "Nest of Spies",
     type: "camp",
-    campDraw: 0, // Scud Launcher has 0 camp draw
+    campDraw: 1, // Nest of Spies has 1 camp draw
     abilities: [{ effect: "damage", cost: 1 }],
     isReady: true,
     isDamaged: false,
@@ -373,9 +373,9 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Scud Launcher",
+    name: "Nest of Spies",
     type: "camp",
-    campDraw: 0, // Scud Launcher has 0 camp draw
+    campDraw: 1, // Nest of Spies has 1 camp draw
     abilities: [{ effect: "damage", cost: 1 }],
     isReady: true,
     isDamaged: false,

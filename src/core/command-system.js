@@ -852,6 +852,12 @@ export class CommandSystem {
       return false;
     }
 
+    // INCREMENT THE PEOPLE PLAYED COUNTER!
+    this.state.turnEvents.peoplePlayedThisTurn++;
+    console.log(
+      `Placed punk - people played this turn: ${this.state.turnEvents.peoplePlayedThisTurn}`
+    );
+
     console.log(
       `Placed punk (face-down ${topCard.name}) at column ${targetColumn}, position ${targetPosition}`
     );
@@ -2771,6 +2777,12 @@ export class CommandSystem {
           console.log("Couldn't place punk, returned card to deck");
           return false;
         }
+
+        // INCREMENT THE COUNTER FOR UPRISING PUNKS TOO!
+        this.state.turnEvents.peoplePlayedThisTurn++;
+        console.log(
+          `Uprising punk placed - people played this turn: ${this.state.turnEvents.peoplePlayedThisTurn}`
+        );
 
         console.log(
           `Uprising: Placed punk at column ${targetColumn}, position ${targetPosition}`

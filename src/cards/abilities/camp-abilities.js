@@ -8,7 +8,50 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after warehouse:
+  // Add to camp-abilities.js, after catapult:
+
+  nestofspies: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if player has played 2+ people this turn
+        if (state.turnEvents.peoplePlayedThisTurn < 2) {
+          console.log(
+            `Nest of Spies: Need to have played 2+ people this turn (played ${state.turnEvents.peoplePlayedThisTurn})`
+          );
+          return false;
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Nest of Spies: No valid targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Nest of Spies: Select target to damage (${state.turnEvents.peoplePlayedThisTurn} people played this turn)`
+        );
+        return true;
+      },
+    },
+  },
 
   catapult: {
     damage: {

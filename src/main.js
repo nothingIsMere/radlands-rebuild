@@ -33,10 +33,10 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Arcade",
+    name: "Mulcher",
     type: "camp",
-    campDraw: 1, // Arcade has 1 camp draw
-    abilities: [{ effect: "gainpunk", cost: 1 }],
+    campDraw: 0, // Mulcher has 0 camp draw
+    abilities: [{ effect: "destroydraw", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });
@@ -375,10 +375,10 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Arcade",
+    name: "Mulcher",
     type: "camp",
-    campDraw: 1, // Arcade has 1 camp draw
-    abilities: [{ effect: "gainpunk", cost: 1 }],
+    campDraw: 0, // Mulcher has 0 camp draw
+    abilities: [{ effect: "destroydraw", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

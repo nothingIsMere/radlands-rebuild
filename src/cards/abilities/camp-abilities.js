@@ -8,6 +8,60 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  mulcher: {
+    destroydraw: {
+      cost: 0,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Find your own people to destroy
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validTargets.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Mulcher: No people to destroy");
+          return false;
+        }
+
+        // Check if deck has cards to draw
+        if (state.deck.length === 0) {
+          console.log(
+            "Mulcher: Warning - deck is empty, but can still destroy"
+          );
+          // Still allow the ability - destroying might be strategic even without draw
+        }
+
+        // Set up selection state
+        state.pending = {
+          type: "mulcher_select_destroy",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Mulcher: Select one of your people to destroy (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   arcade: {
     gainpunk: {
       cost: 1,

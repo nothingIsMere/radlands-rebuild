@@ -759,7 +759,8 @@ body.has-pending .card.pyromaniac-target,
 body.has-pending .card.molgur-target,
 body.has-pending .card.mutant-restore-target,
 body.has-pending .card.mutant-damage-target,
-body.has-pending .card.uprising-placement-target {
+body.has-pending .card.uprising-placement-target,
+body.has-pending .card.mulcher-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
@@ -1400,4 +1401,26 @@ body.has-pending .card.highground-placement-target {
 
 .person-select-btn.damaged {
   background: #ff5722;
+}
+
+.card.mulcher-target {
+  animation: pulse-dark-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #8b0000;
+  border: 2px dashed #8b0000;
+}
+
+.card.mulcher-target::after {
+  content: "DESTROY";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(139, 0, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
 }

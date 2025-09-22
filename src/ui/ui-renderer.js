@@ -473,6 +473,18 @@ export class UIRenderer {
     }
     const cardDiv = this.createElement("div", "card");
 
+    if (this.state.pending?.type === "mulcher_select_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("mulcher-target");
+      }
+    }
+
     // In renderCard for highlighting placement targets:
     if (this.state.pending?.type === "highground_place_person") {
       if (playerId === this.state.pending.playerId && position > 0) {

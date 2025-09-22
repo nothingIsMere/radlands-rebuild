@@ -1738,6 +1738,84 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "mulcher_select_destroy": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Mulcher");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy the person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Mulcher destroyed punk (returned to deck)");
+        } else {
+          this.state.discard.push(target);
+          console.log(`Mulcher destroyed ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Now draw a card
+        if (this.state.deck.length > 0) {
+          const player = this.state.players[pending.sourcePlayerId];
+          const drawnCard = this.state.deck.shift();
+          player.hand.push(drawnCard);
+          console.log(`Mulcher: Drew ${drawnCard.name}`);
+        } else {
+          console.log("Mulcher: Deck empty, no card drawn");
+        }
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        return true;
+      }
+
       case "mercenary_camp_damage": {
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>

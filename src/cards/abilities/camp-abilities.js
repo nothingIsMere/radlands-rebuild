@@ -8,6 +8,64 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  // Add to camp-abilities.js, after transplantlab:
+
+  omenclock: {
+    advance: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find all events in both players' queues that can be advanced
+        const validTargets = [];
+
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+
+          // Check each event slot
+          for (let i = 0; i < 3; i++) {
+            if (player.eventQueue[i]) {
+              // Check if there's an empty slot in front (lower index)
+              if (i > 0 && !player.eventQueue[i - 1]) {
+                validTargets.push({
+                  playerId: playerId,
+                  slotIndex: i,
+                  event: player.eventQueue[i],
+                  canAdvanceTo: i - 1,
+                });
+              } else if (i === 0) {
+                // Slot 1 (index 0) can always "advance" off the queue to resolve
+                validTargets.push({
+                  playerId: playerId,
+                  slotIndex: 0,
+                  event: player.eventQueue[0],
+                  willResolve: true,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Omen Clock: No events can be advanced");
+          return false;
+        }
+
+        state.pending = {
+          type: "omenclock_select_event",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Omen Clock: Select an event to advance (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   transplantlab: {
     restore: {
       cost: 1,

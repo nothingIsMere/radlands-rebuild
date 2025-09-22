@@ -33,10 +33,10 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Nest of Spies",
+    name: "Omen Clock",
     type: "camp",
-    campDraw: 1, // Nest of Spies has 1 camp draw
-    abilities: [{ effect: "damage", cost: 1 }],
+    campDraw: 1, // Omen Clock has 1 camp draw
+    abilities: [{ effect: "advance", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });
@@ -374,10 +374,10 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Nest of Spies",
+    name: "Omen Clock",
     type: "camp",
-    campDraw: 1, // Nest of Spies has 1 camp draw
-    abilities: [{ effect: "damage", cost: 1 }],
+    campDraw: 1, // Omen Clock has 1 camp draw
+    abilities: [{ effect: "advance", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });

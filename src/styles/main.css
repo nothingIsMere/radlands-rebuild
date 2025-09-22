@@ -1564,3 +1564,31 @@ body.has-pending .card.catapult-sacrifice-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.event-selection-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.event-select-btn {
+  padding: 12px;
+  font-size: 14px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.event-select-btn:hover {
+  background: #f57c00;
+  transform: scale(1.05);
+}
+
+.event-select-btn.will-resolve {
+  background: #f44336;
+  animation: pulse 1s infinite;
+}

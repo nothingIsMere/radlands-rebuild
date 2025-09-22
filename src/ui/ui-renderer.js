@@ -1350,6 +1350,65 @@ export class UIRenderer {
     console.log("Full pending state:", this.state.pending);
     console.log("Pending type specifically:", this.state.pending?.type);
 
+    if (this.state.pending?.type === "omenclock_select_event") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = "Omen Clock: Select an event to advance";
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "event-selection-grid");
+
+      this.state.pending.validTargets.forEach((target) => {
+        const btn = this.createElement("button", "event-select-btn");
+
+        const owner =
+          target.playerId === this.state.currentPlayer ? "Your" : "Opponent's";
+        const slot = target.slotIndex + 1;
+
+        if (target.willResolve) {
+          btn.textContent = `${owner} ${target.event.name} (Slot ${slot} → RESOLVE!)`;
+          btn.classList.add("will-resolve");
+        } else {
+          btn.textContent = `${owner} ${target.event.name} (Slot ${slot} → ${
+            slot - 1
+          })`;
+        }
+
+        btn.addEventListener("click", () => {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            eventPlayerId: target.playerId,
+            eventSlot: target.slotIndex,
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
+
+      content.appendChild(buttonContainer);
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.addEventListener("click", () => {
+        // Refund the water
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        player.water += 1;
+        this.state.pending = null;
+        this.render();
+      });
+
+      buttonContainer.appendChild(cancelBtn);
+
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     if (this.state.pending?.type === "supplydepot_select_discard") {
       const modal = this.createElement("div", "ability-selection-modal");
       const backdrop = this.createElement("div", "modal-backdrop");

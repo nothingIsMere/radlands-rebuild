@@ -4636,6 +4636,109 @@ export class CommandSystem {
         return true;
       }
 
+      case "omenclock_select_event": {
+        const pending = this.state.pending;
+        const { eventPlayerId, eventSlot } = payload;
+
+        // Find the matching valid target
+        const validTarget = pending.validTargets.find(
+          (t) => t.playerId === eventPlayerId && t.slotIndex === eventSlot
+        );
+
+        if (!validTarget) {
+          console.log("Not a valid event to advance");
+          return false;
+        }
+
+        const player = this.state.players[eventPlayerId];
+        const event = player.eventQueue[eventSlot];
+
+        if (!event) {
+          console.log("No event at that slot");
+          return false;
+        }
+
+        // Check if this will resolve the event (advancing from slot 1)
+        if (eventSlot === 0) {
+          console.log(`Omen Clock: Resolving ${event.name} immediately!`);
+
+          // Remove from queue
+          player.eventQueue[0] = null;
+
+          // Handle Raiders specially
+          if (event.isRaiders) {
+            player.raiders = "available";
+
+            // Set up opponent camp selection
+            const opponentId = eventPlayerId === "left" ? "right" : "left";
+
+            // Mark Omen Clock complete first
+            this.completeAbility(pending);
+
+            this.state.pending = {
+              type: "raiders_select_camp",
+              sourcePlayerId: eventPlayerId, // The owner of the Raiders
+              targetPlayerId: opponentId,
+            };
+
+            console.log(
+              `Raiders (via Omen Clock): ${opponentId} player must choose a camp to damage`
+            );
+            return true;
+          }
+
+          // Look up event definition for non-Raiders events
+          const eventName = event.name.toLowerCase().replace(/\s+/g, "");
+          const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
+
+          if (eventDef?.effect?.handler) {
+            console.log(`Omen Clock: Executing ${event.name} event effect`);
+
+            // Mark Omen Clock complete first
+            this.completeAbility(pending);
+
+            // Execute the event effect (belongs to the event's owner)
+            const eventContext = {
+              playerId: eventPlayerId, // The owner of the event
+              eventCard: event,
+            };
+
+            const result = eventDef.effect.handler(this.state, eventContext);
+
+            // Check if event created a pending state
+            if (!this.state.pending) {
+              // Event completed immediately, discard it
+              this.state.discard.push(event);
+              this.state.pending = null;
+            }
+            // If event created pending, it will handle its own discard
+          } else {
+            // No handler found, just discard
+            console.log(`Omen Clock: No handler for ${event.name}, discarding`);
+            this.state.discard.push(event);
+            this.completeAbility(pending);
+            this.state.pending = null;
+          }
+        } else {
+          // Normal advancement
+          const newSlot = eventSlot - 1;
+          player.eventQueue[newSlot] = event;
+          player.eventQueue[eventSlot] = null;
+
+          console.log(
+            `Omen Clock: Advanced ${event.name} from slot ${
+              eventSlot + 1
+            } to slot ${newSlot + 1}`
+          );
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+        }
+
+        return true;
+      }
+
       case "place_punk": {
         console.log("=== Processing place_punk target ===");
 

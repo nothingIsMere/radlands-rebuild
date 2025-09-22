@@ -8,6 +8,68 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  // Add to camp-abilities.js, after scudlauncher:
+
+  warehouse: {
+    restore: {
+      cost: 1,
+      handler: (state, context) => {
+        const opponentId = context.playerId === "left" ? "right" : "left";
+        const opponent = state.players[opponentId];
+
+        // Check if opponent has any unprotected camps
+        let hasUnprotectedCamp = false;
+        for (let col = 0; col < 3; col++) {
+          const camp = opponent.columns[col].getCard(0);
+          if (camp && !camp.isDestroyed) {
+            // Check if this camp is unprotected
+            if (!opponent.columns[col].isProtected(0)) {
+              hasUnprotectedCamp = true;
+              break;
+            }
+          }
+        }
+
+        if (!hasUnprotectedCamp) {
+          console.log(
+            "Warehouse: Opponent has no unprotected camps - cannot use ability"
+          );
+          return false;
+        }
+
+        // Find damaged cards to restore (your own)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true, // Protection irrelevant for restoration
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Warehouse: No damaged cards to restore");
+          return false;
+        }
+
+        state.pending = {
+          type: "restore",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Warehouse: Select damaged card to restore (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   scudlauncher: {
     damage: {
       cost: 1,

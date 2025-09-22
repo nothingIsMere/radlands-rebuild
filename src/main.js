@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Pillbox",
+    name: "Warehouse",
     type: "camp",
-    campDraw: 1, // Pillbox has 1 camp draw
-    abilities: [{ effect: "damage", cost: 3 }],
+    campDraw: 1, // Warehouse has 1 camp draw
+    abilities: [{ effect: "restore", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });
@@ -393,10 +393,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Pillbox",
+    name: "Warehouse",
     type: "camp",
-    campDraw: 1, // Pillbox has 1 camp draw
-    abilities: [{ effect: "damage", cost: 3 }],
+    campDraw: 1, // Warehouse has 1 camp draw
+    abilities: [{ effect: "restore", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });

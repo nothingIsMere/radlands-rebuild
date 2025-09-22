@@ -1738,6 +1738,79 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "bloodbank_select_destroy": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Blood Bank");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || target.type !== "person") {
+          console.log("Must select a person to destroy");
+          return false;
+        }
+
+        // Destroy the person
+        target.isDestroyed = true;
+
+        // Handle punk vs normal person
+        if (target.isPunk) {
+          const returnCard = {
+            id: target.id,
+            name: target.originalName || target.name,
+            type: target.originalCard?.type || target.type,
+            cost: target.originalCard?.cost || target.cost,
+            abilities: target.originalCard?.abilities || target.abilities,
+            junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Blood Bank destroyed punk (returned to deck)");
+        } else {
+          this.state.discard.push(target);
+          console.log(`Blood Bank destroyed ${target.name}`);
+        }
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Move card in front back if needed
+        if (targetPosition < 2) {
+          const cardInFront = column.getCard(targetPosition + 1);
+          if (cardInFront) {
+            column.setCard(targetPosition, cardInFront);
+            column.setCard(targetPosition + 1, null);
+          }
+        }
+
+        // Gain extra water
+        const player = this.state.players[pending.sourcePlayerId];
+        player.water += 1;
+        console.log("Blood Bank: Gained 1 extra water");
+
+        // Mark ability complete
+        this.completeAbility(pending);
+
+        // Clear pending
+        this.state.pending = null;
+
+        return true;
+      }
+
       case "mulcher_select_destroy": {
         const pending = this.state.pending;
 

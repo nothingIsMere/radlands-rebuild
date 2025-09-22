@@ -485,6 +485,18 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "bloodbank_select_destroy") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex && // Changed from targetColumn
+          t.position === position // Changed from targetPosition
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("bloodbank-target");
+      }
+    }
+
     // In renderCard for highlighting placement targets:
     if (this.state.pending?.type === "highground_place_person") {
       if (playerId === this.state.pending.playerId && position > 0) {

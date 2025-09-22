@@ -1424,3 +1424,30 @@ body.has-pending .card.highground-placement-target {
   font-weight: bold;
   pointer-events: none;
 }
+
+.card.bloodbank-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px dashed #2196f3;
+}
+
+.card.bloodbank-target::after {
+  content: "💧 SACRIFICE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(33, 150, 243, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+body.has-pending .card.bloodbank-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

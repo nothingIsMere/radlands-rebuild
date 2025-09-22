@@ -8,6 +8,52 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  bloodbank: {
+    destroywater: {
+      cost: 0,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Find your own people to destroy
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.type === "person" && !card.isDestroyed) {
+              validTargets.push({
+                playerId: context.playerId,
+                columnIndex: col,
+                position: pos,
+                card,
+              });
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log("Blood Bank: No people to destroy");
+          return false;
+        }
+
+        // Set up selection state
+        state.pending = {
+          type: "bloodbank_select_destroy",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Blood Bank: Select one of your people to destroy for water (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   mulcher: {
     destroydraw: {
       cost: 0,

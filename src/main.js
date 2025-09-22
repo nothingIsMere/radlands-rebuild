@@ -43,12 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Command Post",
+    name: "Blood Bank",
     type: "camp",
-    campDraw: 1, // Command Post has 1 camp draw
-    abilities: [
-      { effect: "damage", cost: 3 }, // Base cost shown
-    ],
+    campDraw: 1, // Blood Bank has 1 camp draw
+    abilities: [{ effect: "destroywater", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });
@@ -395,10 +393,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Atomic Garden",
+    name: "Blood Bank",
     type: "camp",
-    campDraw: 1, // Atomic Garden has 1 camp draw
-    abilities: [{ effect: "restoreready", cost: 2 }],
+    campDraw: 1, // Blood Bank has 1 camp draw
+    abilities: [{ effect: "destroywater", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

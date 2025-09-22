@@ -53,10 +53,11 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Catapult",
+    name: "Oasis",
     type: "camp",
-    campDraw: 0, // Catapult has 0 camp draw
-    abilities: [{ effect: "damage", cost: 2 }],
+    campDraw: 1, // Oasis has 1 camp draw
+    abilities: [], // No active abilities
+    trait: "People cost 1 less in this column if no people present", // Just for reference
     isReady: true,
     isDamaged: false,
   });
@@ -383,10 +384,11 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Catapult",
+    name: "Oasis",
     type: "camp",
-    campDraw: 0, // Catapult has 0 camp draw
-    abilities: [{ effect: "damage", cost: 2 }],
+    campDraw: 1, // Oasis has 1 camp draw
+    abilities: [], // No active abilities
+    trait: "People cost 1 less in this column if no people present", // Just for reference
     isReady: true,
     isDamaged: false,
   });

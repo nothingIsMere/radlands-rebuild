@@ -1627,3 +1627,14 @@ body.has-pending .card.octagon-target {
 .pending-overlay.octagon-waiting .pending-message-banner {
   background: linear-gradient(135deg, #666 0%, #333 100%);
 }
+
+.card.bonfire-restore-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+}
+
+body.has-pending .card.bonfire-restore-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

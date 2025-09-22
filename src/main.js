@@ -33,13 +33,12 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Cannon",
+    name: "Bonfire",
     type: "camp",
-    campDraw: 2, // Cannon has 2 camp draw
-    abilities: [{ effect: "damage", cost: 2 }],
+    campDraw: 1, // Bonfire has 1 camp draw
+    abilities: [{ effect: "damagerestoremany", cost: 0 }],
     isReady: true,
-    isDamaged: true, // STARTS DAMAGED!
-    isDestroyed: false,
+    isDamaged: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
@@ -383,11 +382,11 @@ function setupTestGame() {
   });
 
   gameState.players.right.columns[1].setCard(0, {
-    id: "camp_right_2",
-    name: "Scavenger Camp",
+    id: "camp_left_2",
+    name: "Bonfire",
     type: "camp",
-    campDraw: 1, // Scavenger Camp has 1 camp draw
-    abilities: [{ effect: "discardchoose", cost: 0 }],
+    campDraw: 1, // Bonfire has 1 camp draw
+    abilities: [{ effect: "damagerestoremany", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

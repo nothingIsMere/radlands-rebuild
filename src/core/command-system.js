@@ -2245,6 +2245,86 @@ export class CommandSystem {
         return result;
       }
 
+      case "bonfire_restore_multiple": {
+        const pending = this.state.pending;
+
+        // Check if player chose to finish
+        if (payload.finish) {
+          console.log(
+            `Bonfire: Restored ${pending.restoredCards.length} card(s)`
+          );
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+          return true;
+        }
+
+        // Verify it's a valid target
+        const isValidTarget = pending.validTargets?.some(
+          (t) =>
+            t.playerId === targetPlayer &&
+            t.columnIndex === targetColumn &&
+            t.position === targetPosition
+        );
+
+        if (!isValidTarget) {
+          console.log("Not a valid target for Bonfire restoration");
+          return false;
+        }
+
+        const target = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!target || !target.isDamaged) {
+          console.log("Must select a damaged card to restore");
+          return false;
+        }
+
+        // Restore the card
+        target.isDamaged = false;
+        if (target.type === "person") {
+          target.isReady = false; // Person becomes not ready when restored
+        }
+        // Camps stay ready when restored
+
+        console.log(`Bonfire restored ${target.name}`);
+
+        // Track this restoration
+        pending.restoredCards.push(target.name);
+
+        // Remove from valid targets
+        pending.validTargets = pending.validTargets.filter(
+          (t) =>
+            !(
+              t.playerId === targetPlayer &&
+              t.columnIndex === targetColumn &&
+              t.position === targetPosition
+            )
+        );
+
+        // Check if more targets remain
+        if (pending.validTargets.length === 0) {
+          console.log(
+            `Bonfire: All damaged cards restored (${pending.restoredCards.length} total)`
+          );
+
+          // Mark ability complete
+          this.completeAbility(pending);
+          this.state.pending = null;
+        } else {
+          // Continue with more restorations
+          console.log(
+            `Bonfire: Restored ${target.name}. Select another or finish (${pending.validTargets.length} remaining)`
+          );
+          // Keep pending state for more selections
+        }
+
+        return true;
+      }
+
       case "scavengercamp_select_discard": {
         const { cardToDiscard } = payload;
         const pending = this.state.pending;

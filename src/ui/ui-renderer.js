@@ -130,6 +130,17 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "bonfire_restore_multiple":
+          const restored = this.state.pending.restoredCards.length;
+          const remaining = this.state.pending.validTargets.length;
+          if (restored === 0) {
+            message.textContent = `🔥 Bonfire: Select cards to restore (${remaining} available)`;
+          } else {
+            message.textContent = `🔥 Bonfire: ${restored} restored. Select more or click Finish (${remaining} remaining)`;
+          }
+          overlay.classList.add("bonfire-restoration");
+          break;
+
         case "octagon_opponent_destroy":
           // Show which player needs to act
           if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
@@ -162,7 +173,7 @@ export class UIRenderer {
 
         case "highground_place_person":
           const personName = this.state.pending.selectedPerson.name;
-          const remaining = this.state.pending.collectedPeople.length;
+
           if (remaining > 0) {
             message.textContent = `⚔️ High Ground: Place ${personName} (${remaining} more after this)`;
           } else {
@@ -505,6 +516,18 @@ export class UIRenderer {
         !card.isDestroyed
       ) {
         cardDiv.classList.add("scudlauncher-target");
+      }
+    }
+
+    if (this.state.pending?.type === "bonfire_restore_multiple") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("bonfire-restore-target");
       }
     }
 
@@ -2457,6 +2480,27 @@ export class UIRenderer {
       controls.appendChild(drawCardBtn);
     }
 
+    // Finish button for Bonfire multiple restoration
+    if (this.state.pending?.type === "bonfire_restore_multiple") {
+      const finishBtn = this.createElement("button");
+      const restoredCount = this.state.pending.restoredCards?.length || 0;
+
+      if (restoredCount === 0) {
+        finishBtn.textContent = "Skip Restoration";
+      } else {
+        finishBtn.textContent = `Finish Restoring (${restoredCount} restored)`;
+      }
+
+      finishBtn.addEventListener("click", () => {
+        this.commands.execute({
+          type: "SELECT_TARGET",
+          finish: true,
+        });
+      });
+
+      controls.appendChild(finishBtn);
+    }
+
     // End Turn button
     const endTurn = this.createElement("button");
     endTurn.textContent = "End Turn";
@@ -2473,7 +2517,11 @@ export class UIRenderer {
     controls.appendChild(endTurn);
 
     // Cancel button (for pending actions)
-    if (this.state.pending) {
+    if (
+      this.state.pending &&
+      this.state.pending.type !== "bonfire_restore_multiple"
+    ) {
+      // Don't show Cancel for Bonfire
       const cancel = this.createElement("button");
 
       // Check if this is an entry trait (currently only Repair Bot's entry restore)

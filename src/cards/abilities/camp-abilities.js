@@ -8,7 +8,68 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, after theoctagon:
+  bonfire: {
+    damagerestoremany: {
+      cost: 0,
+      handler: (state, context) => {
+        const bonfire = state.getCard(context.playerId, context.columnIndex, 0);
+
+        // Damage Bonfire itself
+        if (bonfire.isDamaged) {
+          bonfire.isDestroyed = true;
+          console.log("Bonfire destroyed itself!");
+        } else {
+          bonfire.isDamaged = true;
+          console.log("Bonfire damaged itself");
+        }
+
+        // Find all damaged cards to restore (excluding Bonfire itself)
+        const validTargets = [];
+        const player = state.players[context.playerId];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              // Exclude Bonfire itself from restoration targets
+              if (!(card.type === "camp" && card.name === "Bonfire")) {
+                validTargets.push({
+                  playerId: context.playerId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log(
+            "Bonfire: No damaged cards to restore (Bonfire cannot restore itself)"
+          );
+          // Ability still completes even with no restoration targets
+          return true;
+        }
+
+        // Set up multiple restoration selection
+        state.pending = {
+          type: "bonfire_restore_multiple",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          restoredCards: [], // Track what's been restored
+          context,
+        };
+
+        console.log(
+          `Bonfire: Select cards to restore (${validTargets.length} available) or finish`
+        );
+        return true;
+      },
+    },
+  },
 
   cache: {
     raidpunk: {

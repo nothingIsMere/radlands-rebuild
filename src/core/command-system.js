@@ -1948,17 +1948,56 @@ export class CommandSystem {
           }
         }
 
-        // Now set up restoration selection
+        // NOW recalculate valid restoration targets AFTER the destruction and movement
+        const player = this.state.players[pending.sourcePlayerId];
+        const validRestoreTargets = [];
+        const laborCampColumn = pending.context?.columnIndex || 0; // Get Labor Camp's column
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (card && card.isDamaged && !card.isDestroyed) {
+              // Exclude Labor Camp itself from restoration targets
+              if (
+                !(
+                  card.type === "camp" &&
+                  card.name === "Labor Camp" &&
+                  col === laborCampColumn &&
+                  pos === 0
+                )
+              ) {
+                validRestoreTargets.push({
+                  playerId: pending.sourcePlayerId,
+                  columnIndex: col,
+                  position: pos,
+                  card,
+                });
+              }
+            }
+          }
+        }
+
+        if (validRestoreTargets.length === 0) {
+          console.log(
+            "Labor Camp: No damaged cards left to restore after destruction"
+          );
+          // Mark ability complete even though we can't restore
+          this.completeAbility(pending);
+          this.state.pending = null;
+          return true;
+        }
+
+        // Set up restoration selection with FRESH target data
         this.state.pending = {
           type: "laborcamp_select_restore",
           sourceCard: pending.sourceCard,
           sourcePlayerId: pending.sourcePlayerId,
-          validTargets: pending.validRestoreTargets,
+          validTargets: validRestoreTargets, // Fresh targets with correct positions
           context: pending.context,
         };
 
         console.log(
-          `Labor Camp: Now select damaged card to restore (${pending.validRestoreTargets.length} available)`
+          `Labor Camp: Now select damaged card to restore (${validRestoreTargets.length} available)`
         );
         return true;
       }

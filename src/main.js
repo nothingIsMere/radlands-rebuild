@@ -43,12 +43,11 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Outpost",
+    name: "Command Post",
     type: "camp",
-    campDraw: 1, // Outpost has 1 camp draw
+    campDraw: 1, // Command Post has 1 camp draw
     abilities: [
-      { effect: "raid", cost: 2 },
-      { effect: "restore", cost: 2 },
+      { effect: "damage", cost: 3 }, // Base cost shown
     ],
     isReady: true,
     isDamaged: false,
@@ -379,12 +378,11 @@ function setupTestGame() {
   // Camps: Juggernaut, Parachute Base, and a simple camp
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Outpost",
+    name: "Command Post",
     type: "camp",
-    campDraw: 1, // Outpost has 1 camp draw
+    campDraw: 1, // Command Post has 1 camp draw
     abilities: [
-      { effect: "raid", cost: 2 },
-      { effect: "restore", cost: 2 },
+      { effect: "damage", cost: 3 }, // Base cost shown
     ],
     isReady: true,
     isDamaged: false,

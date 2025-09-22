@@ -8,6 +8,44 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  atomicgarden: {
+    restoreready: {
+      cost: 2,
+      handler: (state, context) => {
+        // Find damaged PEOPLE only (not camps)
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requirePerson: true, // Only people, not camps
+            requireDamaged: true,
+            allowProtected: true,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Atomic Garden: No damaged people to restore");
+          return false;
+        }
+
+        state.pending = {
+          type: "atomic_garden_restore", // Special type to handle the ready state
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Atomic Garden: Select damaged person to restore and ready (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   commandpost: {
     damage: {
       cost: 3, // Base cost, will be reduced by punks

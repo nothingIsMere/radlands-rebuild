@@ -32,11 +32,11 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    id: "camp_right_0",
-    name: "Reactor",
+    id: "camp_left_1",
+    name: "Atomic Garden",
     type: "camp",
-    campDraw: 1, // Reactor has 1 camp draw
-    abilities: [{ effect: "destroyall", cost: 2 }],
+    campDraw: 1, // Atomic Garden has 1 camp draw
+    abilities: [{ effect: "restoreready", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
@@ -403,10 +403,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Reactor",
+    name: "Atomic Garden",
     type: "camp",
-    campDraw: 1, // Reactor has 1 camp draw
-    abilities: [{ effect: "destroyall", cost: 2 }],
+    campDraw: 1, // Atomic Garden has 1 camp draw
+    abilities: [{ effect: "restoreready", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

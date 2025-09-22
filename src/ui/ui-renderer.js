@@ -130,6 +130,12 @@ export class UIRenderer {
       const message = this.createElement("div", "pending-message-banner");
 
       switch (this.state.pending.type) {
+        case "atomic_garden_restore":
+          message.textContent =
+            "🌱 Select a damaged person to restore AND ready";
+          overlay.classList.add("restore-selection");
+          break;
+
         case "highground_place_person":
           const personName = this.state.pending.selectedPerson.name;
           const remaining = this.state.pending.collectedPeople.length;
@@ -140,6 +146,7 @@ export class UIRenderer {
           }
           overlay.classList.add("highground-placement");
           break;
+
         case "famine_select_keep":
           const selectingPlayer = this.state.pending.currentSelectingPlayer;
           if (selectingPlayer === this.state.currentPlayer) {
@@ -150,6 +157,7 @@ export class UIRenderer {
           }
           overlay.classList.add("famine-selection");
           break;
+
         case "uprising_place_punks":
           const punksLeft = this.state.pending.punksRemaining;
           if (punksLeft === 1) {
@@ -185,6 +193,7 @@ export class UIRenderer {
             "💀 Molgur Stang: Select ANY enemy camp to DESTROY (ignores protection)";
           overlay.classList.add("molgur-selection");
           break;
+
         case "pyromaniac_damage":
           message.textContent = "🔥 Select an unprotected enemy camp to damage";
           overlay.classList.add("pyromaniac-selection");
@@ -194,16 +203,19 @@ export class UIRenderer {
             "🎯 Sniper: Select ANY enemy card to damage (ignores protection)";
           overlay.classList.add("sniper-selection");
           break;
+
         case "assassin_destroy":
           message.textContent =
             "💀 Select an unprotected enemy person to DESTROY";
           overlay.classList.add("assassin-selection");
           break;
+
         case "repair_bot_entry_restore":
           message.textContent =
             "🔧 Repair Bot: Select a damaged card to RESTORE";
           overlay.classList.add("restore-selection");
           break;
+
         case "raiders_select_camp":
           // Show which player needs to act
           if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
@@ -215,24 +227,30 @@ export class UIRenderer {
             overlay.classList.add("raiders-waiting");
           }
           break;
+
         case "place_punk":
           message.textContent = "📍 Click any slot to place a PUNK";
           overlay.classList.add("punk-placement");
           break;
+
         case "junk_restore":
           message.textContent = "🔧 Select a damaged card to RESTORE";
           overlay.classList.add("restore-selection");
           break;
+
         case "junk_injure":
           message.textContent =
             "⚔️ Select an unprotected enemy person to INJURE";
           overlay.classList.add("injure-selection");
           break;
+
         case "damage":
+
         case "looter_damage":
           message.textContent = "💥 Select target for DAMAGE";
           overlay.classList.add("damage-selection");
           break;
+
         case "parachute_place_person":
           // Calculate costs for each column to show in message
           const costs = [];
@@ -692,7 +710,8 @@ export class UIRenderer {
 
     if (
       this.state.pending?.type === "restore" ||
-      this.state.pending?.type === "repair_bot_entry_restore"
+      this.state.pending?.type === "repair_bot_entry_restore" ||
+      this.state.pending?.type === "atomic_garden_restore"
     ) {
       // Check if this card is in the valid targets list
       const isValidTarget = this.state.pending.validTargets?.some(

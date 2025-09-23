@@ -33,30 +33,33 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Bonfire",
+    name: "Watchtower",
     type: "camp",
-    campDraw: 1, // Bonfire has 1 camp draw
-    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+    campDraw: 0, // Watchtower has 0 camp draw
+    abilities: [{ effect: "damage", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "The Octagon",
+    name: "omenclock",
     type: "camp",
-    campDraw: 0, // The Octagon has 0 camp draw
-    abilities: [{ effect: "destroy", cost: 1 }],
+    campDraw: 1,
+    abilities: [{ effect: "advance", cost: 1 }], // Advance any event
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "Cache",
+    name: "victorytotem",
     type: "camp",
-    campDraw: 1, // Cache has 1 camp draw
-    abilities: [{ effect: "raidpunk", cost: 2 }],
+    campDraw: 1,
+    abilities: [
+      { effect: "damage", cost: 2 },
+      { effect: "raid", cost: 2 },
+    ],
     isReady: true,
     isDamaged: false,
   });
@@ -370,19 +373,19 @@ function setupTestGame() {
   ];
 
   // RIGHT PLAYER SETUP (mirror configuration)
-  // Camps: Juggernaut, Parachute Base, and a simple camp
+
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Cache",
+    name: "Watchtower",
     type: "camp",
-    campDraw: 1, // Cache has 1 camp draw
-    abilities: [{ effect: "raidpunk", cost: 2 }],
+    campDraw: 0, // Watchtower has 0 camp draw
+    abilities: [{ effect: "damage", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.right.columns[1].setCard(0, {
-    id: "camp_left_2",
+    id: "camp_right_2",
     name: "Bonfire",
     type: "camp",
     campDraw: 1, // Bonfire has 1 camp draw

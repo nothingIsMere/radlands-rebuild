@@ -8,6 +8,51 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  // Add to camp-abilities.js, in the campAbilities object:
+
+  watchtower: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if any event resolved this turn (including Raiders and instant events)
+        if (!state.turnEvents.eventResolvedThisTurn) {
+          console.log(
+            "Watchtower: No events have resolved this turn - cannot use ability"
+          );
+          return false;
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Watchtower: No valid targets to damage");
+          return false;
+        }
+
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Watchtower: Event resolved this turn - select target to damage (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   bonfire: {
     damagerestoremany: {
       cost: 0,

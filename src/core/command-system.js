@@ -652,6 +652,8 @@ export class CommandSystem {
         player.hand.splice(cardIndex, 1);
         this.state.discard.push(card);
         this.state.turnEvents.firstEventPlayedThisTurn = true;
+        // Mark that an event resolved this turn (for Watchtower)
+        this.state.turnEvents.eventResolvedThisTurn = true;
         console.log(`${card.name} resolved instantly due to Zeto Kahn`);
         return true;
       }
@@ -730,6 +732,9 @@ export class CommandSystem {
 
       // Mark that an event was played this turn
       this.state.turnEvents.firstEventPlayedThisTurn = true;
+
+      // Mark that an event resolved this turn (for Watchtower)
+      this.state.turnEvents.eventResolvedThisTurn = true;
 
       // Execute effect
       const context = {
@@ -1603,6 +1608,9 @@ export class CommandSystem {
         // Mark that an event was played this turn
         this.state.turnEvents.firstEventPlayedThisTurn = true;
 
+        // Mark that an event resolved this turn (for Watchtower)
+        this.state.turnEvents.eventResolvedThisTurn = true;
+
         // Resolve Raiders immediately
         const opponentId = playerId === "left" ? "right" : "left";
         this.state.pending = {
@@ -1666,7 +1674,25 @@ export class CommandSystem {
       if (raidersIndex === 0) {
         // Raiders in slot 1 - resolve it
         console.log("Raid: Advancing Raiders off slot 1 - resolving effect!");
-        // ... rest of resolution code ...
+
+        // Mark that an event resolved this turn (for Watchtower)
+        this.state.turnEvents.eventResolvedThisTurn = true;
+
+        // Remove from queue
+        player.eventQueue[0] = null;
+        player.raiders = "available";
+
+        // Set up opponent camp selection
+        const opponentId = playerId === "left" ? "right" : "left";
+        this.state.pending = {
+          type: "raiders_select_camp",
+          sourcePlayerId: playerId,
+          targetPlayerId: opponentId,
+        };
+
+        console.log(
+          `Raiders: ${opponentId} player must choose a camp to damage`
+        );
         return true;
       } else if (raidersIndex > 0) {
         // Try to advance
@@ -5358,6 +5384,9 @@ export class CommandSystem {
         if (eventSlot === 0) {
           console.log(`Omen Clock: Resolving ${event.name} immediately!`);
 
+          // Mark that an event resolved this turn (for Watchtower)
+          this.state.turnEvents.eventResolvedThisTurn = true;
+
           // Remove from queue
           player.eventQueue[0] = null;
 
@@ -5368,6 +5397,7 @@ export class CommandSystem {
             // Mark Omen Clock complete first
             this.completeAbility(pending);
 
+            const opponentId = eventPlayerId === "left" ? "right" : "left";
             this.state.pending = {
               type: "raiders_select_camp",
               sourcePlayerId: eventPlayerId, // The owner of the Raiders
@@ -6436,6 +6466,9 @@ export class CommandSystem {
       if (event.isRaiders) {
         console.log("Raiders event resolving!");
 
+        // Mark that an event resolved this turn
+        this.state.turnEvents.eventResolvedThisTurn = true;
+
         // Remove from queue
         player.eventQueue[0] = null;
 
@@ -6468,6 +6501,9 @@ export class CommandSystem {
         if (eventDef?.effect?.handler) {
           console.log(`Resolving ${event.name} event effect`);
 
+          // Mark that an event resolved this turn
+          this.state.turnEvents.eventResolvedThisTurn = true;
+
           // Remove from queue first
           player.eventQueue[0] = null;
 
@@ -6495,6 +6531,10 @@ export class CommandSystem {
         } else {
           // No handler found, just discard
           console.log(`No handler for ${event.name}, discarding`);
+
+          // Still mark that an event resolved (even if no handler)
+          this.state.turnEvents.eventResolvedThisTurn = true;
+
           player.eventQueue[0] = null;
           this.state.discard.push(event);
         }

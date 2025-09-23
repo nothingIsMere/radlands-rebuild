@@ -23,6 +23,7 @@ export class GameState {
       eventResolvedThisTurn: false,
       abilityUsedThisTurn: false,
       veraFirstUseCards: [],
+      resonatorUsedThisTurn: false,
     };
   }
 

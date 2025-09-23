@@ -8,6 +8,51 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  resonator: {
+    damage: {
+      cost: 1,
+      handler: (state, context) => {
+        // Check if any ability has been used this turn
+        if (state.turnEvents.abilityUsedThisTurn) {
+          console.log(
+            "Resonator: Cannot use - another ability was already used this turn"
+          );
+          return false;
+        }
+
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Resonator: No valid targets to damage");
+          return false;
+        }
+
+        // Set up damage targeting with a special flag
+        state.pending = {
+          type: "damage",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          isResonator: true, // Flag to prevent other abilities this turn
+          context,
+        };
+
+        console.log(
+          `Resonator: Select target to damage (no other abilities can be used this turn)`
+        );
+        return true;
+      },
+    },
+  },
+
   constructionyard: {
     moveperson: {
       cost: 1,

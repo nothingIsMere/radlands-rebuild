@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "omenclock",
+    name: "resonator",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "advance", cost: 1 }], // Advance any event
+    abilities: [{ effect: "damage", cost: 1 }], // Must be only ability used
     isReady: true,
     isDamaged: false,
   });
@@ -386,10 +386,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[1].setCard(0, {
     id: "camp_right_2",
-    name: "Bonfire",
+    name: "resonator",
     type: "camp",
-    campDraw: 1, // Bonfire has 1 camp draw
-    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 1 }], // Must be only ability used
     isReady: true,
     isDamaged: false,
   });

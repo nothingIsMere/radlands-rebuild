@@ -42,6 +42,12 @@ export class CommandSystem {
 
   completeAbility(pending) {
     if (pending?.sourceCard) {
+      if (pending.isResonator) {
+        this.state.turnEvents.resonatorUsedThisTurn = true;
+        console.log(
+          "Resonator used - no other abilities can be used this turn"
+        );
+      }
       // Check if we stored a Vera decision
       if (!pending.shouldStayReady) {
         pending.sourceCard.isReady = false;
@@ -179,6 +185,10 @@ export class CommandSystem {
   }
 
   handleUseCampAbility(payload) {
+    if (this.state.turnEvents.resonatorUsedThisTurn) {
+      console.log("Cannot use abilities - Resonator was used this turn");
+      return false;
+    }
     if (!payload) return false;
 
     // Don't allow using abilities while there's a pending action
@@ -1393,6 +1403,10 @@ export class CommandSystem {
   }
 
   handleUseAbility(payload) {
+    if (this.state.turnEvents.resonatorUsedThisTurn) {
+      console.log("Cannot use abilities - Resonator was used this turn");
+      return false;
+    }
     if (!payload) return false;
 
     // Don't allow using abilities while there's a pending action
@@ -6539,6 +6553,7 @@ export class CommandSystem {
       veraFirstUseCards: [],
       highGroundActive: false,
       firstEventPlayedThisTurn: false,
+      resonatorUsedThisTurn: false,
     };
 
     // Switch player

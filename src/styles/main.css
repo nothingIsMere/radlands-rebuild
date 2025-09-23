@@ -760,7 +760,9 @@ body.has-pending .card.molgur-target,
 body.has-pending .card.mutant-restore-target,
 body.has-pending .card.mutant-damage-target,
 body.has-pending .card.uprising-placement-target,
-body.has-pending .card.mulcher-target {
+body.has-pending .card.mulcher-target,
+body.has-pending .card.constructionyard-moveable,
+body.has-pending .card.constructionyard-destination {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
@@ -1637,4 +1639,18 @@ body.has-pending .card.octagon-target {
 body.has-pending .card.bonfire-restore-target {
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+.card.constructionyard-moveable {
+  animation: pulse-blue 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px solid #2196f3;
+}
+
+.card.constructionyard-destination {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+  border: 2px dashed #4caf50;
 }

@@ -5358,6 +5358,110 @@ export class CommandSystem {
         return true;
       }
 
+      case "constructionyard_select_person": {
+        const pending = this.state.pending;
+
+        // Verify it's a valid person
+        const card = this.state.getCard(
+          targetPlayer,
+          targetColumn,
+          targetPosition
+        );
+        if (!card || card.type !== "person" || card.isDestroyed) {
+          console.log("Must select a person to move");
+          return false;
+        }
+
+        // Set up destination selection - person moves on THEIR side
+        this.state.pending = {
+          type: "constructionyard_select_destination",
+          source: pending.source,
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+          movingToPlayerId: targetPlayer, // The side the person belongs to
+          selectedPerson: {
+            card: card,
+            playerId: targetPlayer,
+            columnIndex: targetColumn,
+            position: targetPosition,
+          },
+          context: pending.context,
+        };
+
+        console.log(
+          `Construction Yard: Now select where to move ${card.name} (on ${targetPlayer}'s side)`
+        );
+        return true;
+      }
+
+      case "constructionyard_select_destination": {
+        const pending = this.state.pending;
+
+        // Validate it's the correct player's side
+        if (targetPlayer !== pending.movingToPlayerId) {
+          console.log("Must move to the same player's side");
+          return false;
+        }
+
+        // Validate target is a person slot
+        if (targetPosition === 0) {
+          console.log("Cannot move person to camp slot");
+          return false;
+        }
+
+        // Check if it's the same position
+        if (
+          targetColumn === pending.selectedPerson.columnIndex &&
+          targetPosition === pending.selectedPerson.position
+        ) {
+          console.log("Person is already in that position");
+          return false;
+        }
+
+        const player = this.state.players[pending.movingToPlayerId];
+        const sourceColumn = player.columns[pending.selectedPerson.columnIndex];
+        const destColumn = player.columns[targetColumn];
+        const movingCard = pending.selectedPerson.card;
+
+        // Remove from source
+        sourceColumn.setCard(pending.selectedPerson.position, null);
+
+        // Fill gap if needed
+        if (pending.selectedPerson.position === 1) {
+          const cardInFront = sourceColumn.getCard(2);
+          if (cardInFront) {
+            sourceColumn.setCard(1, cardInFront);
+            sourceColumn.setCard(2, null);
+            console.log(`${cardInFront.name} moved back to fill gap`);
+          }
+        }
+
+        // Place at destination with push
+        if (!this.placeCardWithPush(destColumn, targetPosition, movingCard)) {
+          // Undo gap filling if placement failed
+          if (pending.selectedPerson.position === 1) {
+            const movedCard = sourceColumn.getCard(1);
+            if (movedCard) {
+              sourceColumn.setCard(2, movedCard);
+              sourceColumn.setCard(1, null);
+            }
+          }
+          sourceColumn.setCard(pending.selectedPerson.position, movingCard);
+          console.log("Cannot place person there");
+          return false;
+        }
+
+        console.log(
+          `Construction Yard: Moved ${movingCard.name} to column ${targetColumn}, position ${targetPosition}`
+        );
+
+        // Mark ability complete
+        this.completeAbility(pending);
+        this.state.pending = null;
+
+        return true;
+      }
+
       case "omenclock_select_event": {
         const pending = this.state.pending;
         const { eventPlayerId, eventSlot } = payload;

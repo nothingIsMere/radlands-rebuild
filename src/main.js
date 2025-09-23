@@ -53,11 +53,11 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "victorytotem",
+    name: "constructionyard",
     type: "camp",
     campDraw: 1,
     abilities: [
-      { effect: "damage", cost: 2 },
+      { effect: "moveperson", cost: 1 },
       { effect: "raid", cost: 2 },
     ],
     isReady: true,
@@ -396,10 +396,13 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "Transplant Lab",
+    name: "constructionyard",
     type: "camp",
-    campDraw: 2, // Transplant Lab has 2 camp draw
-    abilities: [{ effect: "restore", cost: 1 }],
+    campDraw: 1,
+    abilities: [
+      { effect: "moveperson", cost: 1 },
+      { effect: "raid", cost: 2 },
+    ],
     isReady: true,
     isDamaged: false,
   });

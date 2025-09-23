@@ -519,6 +519,51 @@ export class UIRenderer {
       }
     }
 
+    // Add this with the other pending type checks in renderCard
+    if (this.state.pending?.type === "constructionyard_select_person") {
+      // Highlight player's own people
+      if (
+        playerId === this.state.pending.sourcePlayerId &&
+        card &&
+        card.type === "person" &&
+        !card.isDestroyed
+      ) {
+        cardDiv.classList.add("constructionyard-moveable");
+
+        // Make it clickable
+        cardDiv.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+        });
+      }
+    }
+
+    if (this.state.pending?.type === "constructionyard_select_destination") {
+      // Highlight valid destination slots (positions 1 and 2)
+      if (
+        playerId === this.state.pending.sourcePlayerId &&
+        position > 0 // Not camp slot
+      ) {
+        cardDiv.classList.add("constructionyard-destination");
+
+        // Make slots clickable
+        cardDiv.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+        });
+      }
+    }
+
     if (this.state.pending?.type === "bonfire_restore_multiple") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
@@ -994,6 +1039,22 @@ export class UIRenderer {
           this.state.pending?.type
         );
 
+        // Add Construction Yard destination handling HERE
+        if (
+          this.state.pending?.type === "constructionyard_select_destination" &&
+          playerId === this.state.pending.movingToPlayerId &&
+          position > 0 // Not camp slot
+        ) {
+          console.log("Construction Yard destination clicked");
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
+
         if (
           this.state.pending?.type === "highground_place_person" &&
           playerId === this.state.pending.playerId &&
@@ -1298,6 +1359,34 @@ export class UIRenderer {
       // Make cards clickable for multiple purposes
       cardDiv.addEventListener("click", (e) => {
         e.stopPropagation();
+
+        if (
+          this.state.pending?.type === "constructionyard_select_person" &&
+          card.type === "person" &&
+          !card.isDestroyed
+        ) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
+
+        if (
+          this.state.pending?.type === "constructionyard_select_destination" &&
+          playerId === this.state.pending.movingToPlayerId &&
+          position > 0 // Not camp slot
+        ) {
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+          return;
+        }
 
         console.log(
           "Occupied slot clicked, pending type:",

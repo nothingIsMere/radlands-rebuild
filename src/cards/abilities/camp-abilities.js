@@ -8,8 +8,146 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
-  // Add to camp-abilities.js, in the campAbilities object:
+  constructionyard: {
+    moveperson: {
+      cost: 1,
+      handler: (state, context) => {
+        // Find ALL people (both players)
+        const people = [];
 
+        for (const playerId of ["left", "right"]) {
+          const player = state.players[playerId];
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 1; pos <= 2; pos++) {
+              const card = player.columns[col].getCard(pos);
+              if (card && card.type === "person" && !card.isDestroyed) {
+                people.push({
+                  card,
+                  playerId,
+                  columnIndex: col,
+                  position: pos,
+                });
+              }
+            }
+          }
+        }
+
+        if (people.length === 0) {
+          console.log("Construction Yard: No people to move");
+          return false;
+        }
+
+        state.pending = {
+          type: "constructionyard_select_person",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          availablePeople: people,
+          context,
+        };
+
+        console.log(
+          `Construction Yard: Select any person to move (${people.length} available)`
+        );
+        return true;
+      },
+    },
+
+    raid: {
+      cost: 2,
+      handler: (state, context) => {
+        // This uses the same raid logic as other camps like Garage and Victory Totem
+        const player = state.players[context.playerId];
+
+        if (player.raiders === "available") {
+          const desiredSlot = 1;
+
+          let targetSlot = -1;
+          if (!player.eventQueue[desiredSlot]) {
+            targetSlot = desiredSlot;
+          } else {
+            for (let i = desiredSlot + 1; i < 3; i++) {
+              if (!player.eventQueue[i]) {
+                targetSlot = i;
+                break;
+              }
+            }
+          }
+
+          if (targetSlot === -1) {
+            console.log(
+              "Construction Yard: Cannot place Raiders - event queue is full"
+            );
+            return false;
+          }
+
+          player.eventQueue[targetSlot] = {
+            id: `${context.playerId}_raiders`,
+            name: "Raiders",
+            isRaiders: true,
+            queueNumber: 2,
+          };
+          player.raiders = "in_queue";
+          console.log(
+            `Construction Yard: Raiders placed in event queue at slot ${
+              targetSlot + 1
+            }`
+          );
+          return true;
+        } else if (player.raiders === "in_queue") {
+          let raidersIndex = -1;
+          for (let i = 0; i < 3; i++) {
+            if (player.eventQueue[i]?.isRaiders) {
+              raidersIndex = i;
+              break;
+            }
+          }
+
+          if (raidersIndex === 0) {
+            console.log(
+              "Construction Yard: Advancing Raiders off slot 1 - resolving effect!"
+            );
+            player.eventQueue[0] = null;
+            player.raiders = "available";
+
+            const opponentId = context.playerId === "left" ? "right" : "left";
+            state.pending = {
+              type: "raiders_select_camp",
+              sourcePlayerId: context.playerId,
+              targetPlayerId: opponentId,
+            };
+
+            console.log(
+              `Raiders: ${opponentId} player must choose a camp to damage`
+            );
+            return true;
+          } else if (raidersIndex > 0) {
+            const newIndex = raidersIndex - 1;
+            if (!player.eventQueue[newIndex]) {
+              player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
+              player.eventQueue[raidersIndex] = null;
+              console.log(
+                `Construction Yard: Advanced Raiders from slot ${
+                  raidersIndex + 1
+                } to slot ${newIndex + 1}`
+              );
+              return true;
+            } else {
+              console.log(
+                `Construction Yard: Cannot advance Raiders - slot ${
+                  newIndex + 1
+                } is occupied`
+              );
+              return false;
+            }
+          }
+        } else {
+          console.log("Construction Yard: Raiders already used this game");
+          return false;
+        }
+      },
+    },
+  },
   watchtower: {
     damage: {
       cost: 1,

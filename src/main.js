@@ -43,10 +43,11 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "resonator",
+    name: "obelisk",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 1 }], // Must be only ability used
+    abilities: [], // Win condition trait, no ability
+    trait: "When the last card is drawn from the deck, you win.",
     isReady: true,
     isDamaged: false,
   });
@@ -376,10 +377,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "Watchtower",
+    name: "commandpost",
     type: "camp",
-    campDraw: 0, // Watchtower has 0 camp draw
-    abilities: [{ effect: "damage", cost: 1 }],
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 3 }], // Cost reduced by punks
     isReady: true,
     isDamaged: false,
   });
@@ -699,24 +700,11 @@ function setupTestGame() {
     },
   ];
 
-  // Create a larger test deck
+  // Create a SMALL test deck for Obelisk testing
   gameState.deck = [
     { id: "deck_1", name: "Deck Scout", type: "person", cost: 1 },
     { id: "deck_2", name: "Deck Muse", type: "person", cost: 1 },
     { id: "deck_3", name: "Deck Fighter", type: "person", cost: 2 },
-    { id: "deck_4", name: "Deck Guard", type: "person", cost: 2 },
-    { id: "deck_5", name: "Deck Sniper", type: "person", cost: 3 },
-    { id: "deck_6", name: "Deck Healer", type: "person", cost: 1 },
-    { id: "deck_7", name: "Deck Tank", type: "person", cost: 3 },
-    { id: "deck_8", name: "Deck Support", type: "person", cost: 2 },
-    { id: "deck_9", name: "Deck Scout", type: "person", cost: 1 },
-    { id: "deck_10", name: "Deck Muse", type: "person", cost: 1 },
-    { id: "deck_11", name: "Deck Fighter", type: "person", cost: 2 },
-    { id: "deck_12", name: "Deck Guard", type: "person", cost: 2 },
-    { id: "deck_13", name: "Deck Sniper", type: "person", cost: 3 },
-    { id: "deck_14", name: "Deck Healer", type: "person", cost: 1 },
-    { id: "deck_15", name: "Deck Tank", type: "person", cost: 3 },
-    { id: "deck_16", name: "Deck Support", type: "person", cost: 2 },
   ].map((card) => ensureJunkEffect(card));
 
   // Start in actions phase
@@ -726,7 +714,7 @@ function setupTestGame() {
   console.log("- Both players have Parachute Base and Juggernaut");
   console.log("- Multiple person cards in hand for testing");
   console.log("- 20 water each for extensive testing");
-  console.log("- Deck has 8 cards");
+  console.log(`- Deck has ${gameState.deck.length} cards`);
 }
 
 // Set up the test and render

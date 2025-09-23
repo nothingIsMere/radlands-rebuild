@@ -8,6 +8,9 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  obelisk: {
+    // No abilities - just has a trait that affects win conditions
+  },
   resonator: {
     damage: {
       cost: 1,
@@ -923,6 +926,33 @@ export const campAbilities = {
         for (let i = 0; i < 2; i++) {
           if (state.deck.length > 0) {
             const card = state.deck.shift();
+            // Check deck exhaustion manually here
+            if (state.deck.length === 0) {
+              state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
+              console.log(
+                `Deck exhausted - count: ${state.deckExhaustedCount}`
+              );
+
+              if (state.deckExhaustedCount === 1) {
+                // Check for Obelisk
+                for (const playerId of ["left", "right"]) {
+                  const player = state.players[playerId];
+                  for (let col = 0; col < 3; col++) {
+                    const camp = player.columns[col].getCard(0);
+                    if (
+                      camp &&
+                      camp.name.toLowerCase() === "obelisk" &&
+                      !camp.isDestroyed
+                    ) {
+                      console.log(`${playerId} wins due to Obelisk!`);
+                      state.phase = "game_over";
+                      state.winner = playerId;
+                      return true;
+                    }
+                  }
+                }
+              }
+            }
             player.hand.push(card);
             drawnCards.push(card);
             console.log(`Supply Depot: Drew ${card.name}`);

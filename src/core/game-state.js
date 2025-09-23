@@ -12,6 +12,7 @@ export class GameState {
     this.phase = "setup";
     this.deck = [];
     this.discard = [];
+    this.deckExhaustedCount = 0; // Track how many times deck has been exhausted
 
     // Pending states for multi-step operations
     this.pending = null;

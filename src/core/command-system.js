@@ -20,6 +20,85 @@ export class CommandSystem {
     );
   }
 
+  checkForObelisk() {
+    console.log("Checking for Obelisk...");
+    console.log("state.players exists?", !!this.state.players);
+
+    for (const playerId of ["left", "right"]) {
+      console.log(`Checking ${playerId} player...`);
+      const player = this.state.players[playerId];
+
+      if (!player) {
+        console.log(`ERROR: No player object for ${playerId}`);
+        continue;
+      }
+
+      if (!player.columns) {
+        console.log(`ERROR: No columns for ${playerId}`);
+        continue;
+      }
+
+      for (let col = 0; col < 3; col++) {
+        const column = player.columns[col];
+
+        if (!column) {
+          console.log(`ERROR: No column ${col} for ${playerId}`);
+          continue;
+        }
+
+        const camp = column.getCard(0);
+        console.log(
+          `Checking ${playerId} column ${col}: ${
+            camp ? camp.name : "empty"
+          }, destroyed: ${camp?.isDestroyed}`
+        );
+
+        if (
+          camp &&
+          camp.name &&
+          camp.name.toLowerCase() === "obelisk" &&
+          !camp.isDestroyed
+        ) {
+          console.log(`Found active Obelisk for ${playerId}!`);
+          return playerId;
+        }
+      }
+    }
+    console.log("No Obelisk found");
+    return null;
+  }
+
+  checkDeckExhaustion() {
+    if (this.state.deck.length === 0) {
+      this.state.deckExhaustedCount++;
+      console.log(`Deck exhausted - count: ${this.state.deckExhaustedCount}`);
+
+      if (this.state.deckExhaustedCount === 1) {
+        console.log("First exhaustion - checking for Obelisk...");
+        // Check for Obelisk
+        const obeliskOwner = this.checkForObelisk();
+        console.log(`Obelisk owner: ${obeliskOwner}`);
+
+        if (obeliskOwner) {
+          console.log(`${obeliskOwner} wins due to Obelisk!`);
+          this.state.phase = "game_over";
+          this.state.winner = obeliskOwner;
+          this.notifyUI("GAME_OVER", obeliskOwner);
+          return true;
+        } else {
+          console.log("No active Obelisk found");
+        }
+      } else if (this.state.deckExhaustedCount >= 2) {
+        console.log("Deck exhausted twice - game ends in draw!");
+        this.state.phase = "game_over";
+        this.state.winner = "draw";
+        this.notifyUI("GAME_OVER", "draw");
+        return true;
+      }
+    }
+    return false;
+  }
+
   checkForActiveVera(playerId) {
     const player = this.state.players[playerId];
 
@@ -844,6 +923,9 @@ export class CommandSystem {
 
     // Take the top card from the deck
     const topCard = this.state.deck.shift();
+    if (this.checkDeckExhaustion()) {
+      return; // Stop processing if game ended
+    }
     console.log(`Took ${topCard.name} from deck to make punk`);
     console.log(`Deck size after taking card: ${this.state.deck.length}`);
 
@@ -933,9 +1015,20 @@ export class CommandSystem {
     }
 
     player.water -= CONSTANTS.DRAW_COST;
+
+    // Draw 2 cards
     if (this.state.deck.length > 0) {
       player.hand.push(this.state.deck.shift());
     }
+    if (this.state.deck.length > 0) {
+      player.hand.push(this.state.deck.shift());
+    }
+
+    // Check for deck exhaustion after drawing
+    if (this.checkDeckExhaustion()) {
+      return true; // Game ended
+    }
+
     return true;
   }
 
@@ -1021,25 +1114,35 @@ export class CommandSystem {
 
     switch (junkEffect) {
       case "water":
+        // Discard the card immediately for water
+        this.state.discard.push(card);
+        player.water += 1;
+        console.log("Gained 1 water from junk effect");
+        break;
+
       case "card":
       case "draw":
-      case "raid":
-        // These effects complete immediately - discard now
+        // Discard the card immediately for draw
         this.state.discard.push(card);
 
-        if (junkEffect === "water") {
-          player.water += 1;
-          console.log("Gained 1 water from junk effect");
-        } else if (junkEffect === "card" || junkEffect === "draw") {
-          if (this.state.deck.length > 0) {
-            const drawnCard = this.state.deck.shift();
-            player.hand.push(drawnCard);
-            console.log(`Drew ${drawnCard.name} from junk effect`);
-          }
-        } else if (junkEffect === "raid") {
-          this.executeRaid(playerId);
-          console.log("Raid effect triggered");
+        if (this.state.deck.length > 0) {
+          const drawnCard = this.state.deck.shift();
+          player.hand.push(drawnCard);
+          console.log(`Drew ${drawnCard.name} from junk effect`);
+        } else {
+          console.log("Deck empty, no card drawn from junk effect");
         }
+
+        // Always check deck exhaustion after attempting to draw
+        if (this.checkDeckExhaustion()) {
+          return true; // Game ended
+        }
+        break;
+
+      case "raid":
+        // Discard the card immediately for raid
+        this.state.discard.push(card);
+        this.executeRaid(playerId);
         break;
 
       case "injure":
@@ -2906,6 +3009,31 @@ export class CommandSystem {
         if (this.state.deck.length > 0) {
           const player = this.state.players[pending.sourcePlayerId];
           const drawnCard = this.state.deck.shift();
+          // Check deck exhaustion manually here
+          if (state.deck.length === 0) {
+            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
+            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+
+            if (state.deckExhaustedCount === 1) {
+              // Check for Obelisk
+              for (const playerId of ["left", "right"]) {
+                const player = state.players[playerId];
+                for (let col = 0; col < 3; col++) {
+                  const camp = player.columns[col].getCard(0);
+                  if (
+                    camp &&
+                    camp.name.toLowerCase() === "obelisk" &&
+                    !camp.isDestroyed
+                  ) {
+                    console.log(`${playerId} wins due to Obelisk!`);
+                    state.phase = "game_over";
+                    state.winner = playerId;
+                    return true;
+                  }
+                }
+              }
+            }
+          }
           player.hand.push(drawnCard);
           console.log(`Mulcher: Drew ${drawnCard.name}`);
         } else {
@@ -3457,6 +3585,9 @@ export class CommandSystem {
 
         // Take the top card from the deck
         const topCard = this.state.deck.shift();
+        if (this.checkDeckExhaustion()) {
+          return; // Stop processing if game ended
+        }
         console.log(
           `Took ${topCard.name} from deck to make punk ${pending.punksRemaining}`
         );
@@ -4360,6 +4491,9 @@ export class CommandSystem {
           case "draw":
             if (this.state.deck.length > 0) {
               const drawnCard = this.state.deck.shift();
+              if (this.checkDeckExhaustion()) {
+                return; // Stop processing if game ended
+              }
               player.hand.push(drawnCard);
               console.log(`Drew ${drawnCard.name} from Scientist junk`);
             }
@@ -5123,6 +5257,9 @@ export class CommandSystem {
           const player = this.state.players[sourcePlayerId];
           if (this.state.deck.length > 0) {
             const drawnCard = this.state.deck.shift();
+            if (this.checkDeckExhaustion()) {
+              return; // Stop processing if game ended
+            }
             player.hand.push(drawnCard);
             console.log(
               `Looter bonus: Drew ${drawnCard.name} for hitting camp`
@@ -6697,6 +6834,10 @@ export class CommandSystem {
       const drawnCard = this.state.deck.shift();
       player.hand.push(drawnCard);
       console.log(`${this.state.currentPlayer} drew: ${drawnCard.name}`);
+
+      if (this.checkDeckExhaustion()) {
+        return; // Game ended
+      }
     }
 
     // Set water

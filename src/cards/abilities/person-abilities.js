@@ -14,6 +14,31 @@ export const personAbilities = {
         const cardsDrawn = [];
         for (let i = 0; i < 3 && state.deck.length > 0; i++) {
           const card = state.deck.shift();
+          // Check deck exhaustion manually here
+          if (state.deck.length === 0) {
+            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
+            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+
+            if (state.deckExhaustedCount === 1) {
+              // Check for Obelisk
+              for (const playerId of ["left", "right"]) {
+                const player = state.players[playerId];
+                for (let col = 0; col < 3; col++) {
+                  const camp = player.columns[col].getCard(0);
+                  if (
+                    camp &&
+                    camp.name.toLowerCase() === "obelisk" &&
+                    !camp.isDestroyed
+                  ) {
+                    console.log(`${playerId} wins due to Obelisk!`);
+                    state.phase = "game_over";
+                    state.winner = playerId;
+                    return true;
+                  }
+                }
+              }
+            }
+          }
           player.hand.push(card);
           cardsDrawn.push(card);
         }
@@ -375,6 +400,31 @@ export const personAbilities = {
 
         for (let i = 0; i < cardsToDiscard; i++) {
           const card = state.deck.shift();
+          // Check deck exhaustion manually here
+          if (state.deck.length === 0) {
+            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
+            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+
+            if (state.deckExhaustedCount === 1) {
+              // Check for Obelisk
+              for (const playerId of ["left", "right"]) {
+                const player = state.players[playerId];
+                for (let col = 0; col < 3; col++) {
+                  const camp = player.columns[col].getCard(0);
+                  if (
+                    camp &&
+                    camp.name.toLowerCase() === "obelisk" &&
+                    !camp.isDestroyed
+                  ) {
+                    console.log(`${playerId} wins due to Obelisk!`);
+                    state.phase = "game_over";
+                    state.winner = playerId;
+                    return true;
+                  }
+                }
+              }
+            }
+          }
           discardedCards.push(card);
           state.discard.push(card);
         }

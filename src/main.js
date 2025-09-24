@@ -33,10 +33,10 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "Watchtower",
+    name: "supplydepot",
     type: "camp",
-    campDraw: 0, // Watchtower has 0 camp draw
-    abilities: [{ effect: "damage", cost: 1 }],
+    campDraw: 2,
+    abilities: [{ effect: "drawdiscard", cost: 2 }], // Draw 2, discard 1
     isReady: true,
     isDamaged: false,
   });

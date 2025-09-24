@@ -900,6 +900,14 @@ export class CommandSystem {
       // If can't place, return card to deck
       this.state.deck.unshift(topCard);
       console.log("Couldn't place punk, returned card to deck");
+
+      // IMPORTANT: Check exhaustion again after putting card back
+      const exhaustion = this.state.checkDeckExhaustion();
+      if (exhaustion.gameEnded) {
+        this.notifyUI("GAME_OVER", this.state.winner);
+        return false;
+      }
+
       return false;
     }
 
@@ -970,16 +978,14 @@ export class CommandSystem {
 
     player.water -= CONSTANTS.DRAW_COST;
 
-    // Draw 2 cards using the safe method
-    for (let i = 0; i < 2; i++) {
-      const result = this.state.drawCardWithReshuffle(
-        true,
-        this.state.currentPlayer
-      );
-      if (result.gameEnded) {
-        this.notifyUI("GAME_OVER", this.state.winner);
-        return true;
-      }
+    // Draw 1 card instead of 2
+    const result = this.state.drawCardWithReshuffle(
+      true,
+      this.state.currentPlayer
+    );
+    if (result.gameEnded) {
+      this.notifyUI("GAME_OVER", this.state.winner);
+      return true;
     }
 
     return true;
@@ -5254,14 +5260,16 @@ export class CommandSystem {
         if (damaged && isTargetCamp) {
           // Hit a camp - draw a card
           const player = this.state.players[sourcePlayerId];
-          if (this.state.deck.length > 0) {
-            const drawnCard = this.state.deck.shift();
-            if (this.checkDeckExhaustion()) {
-              return; // Stop processing if game ended
-            }
-            player.hand.push(drawnCard);
+          const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
+
+          if (result.gameEnded) {
+            this.notifyUI("GAME_OVER", this.state.winner);
+            return;
+          }
+
+          if (result.card) {
             console.log(
-              `Looter bonus: Drew ${drawnCard.name} for hitting camp`
+              `Looter bonus: Drew ${result.card.name} for hitting camp`
             );
           }
         }

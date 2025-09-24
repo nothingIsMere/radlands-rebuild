@@ -1136,9 +1136,12 @@ export class UIRenderer {
     }
 
     if (this.state.pending?.type === "place_punk") {
-      // Highlight valid placement slots (any slot, empty or occupied)
+      // Highlight valid placement slots (any slot except camps)
       if (playerId === this.state.pending.sourcePlayerId) {
-        cardDiv.classList.add("punk-placement-target");
+        // Only add highlight if NOT a camp
+        if (!card || card.type !== "camp") {
+          cardDiv.classList.add("punk-placement-target");
+        }
       }
     }
 

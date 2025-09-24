@@ -876,6 +876,12 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
     const column = player.columns[targetColumn];
 
+    // Cannot place punk in camp slot
+    if (targetPosition === 0 && column.camp) {
+      console.log("Cannot place punk in camp slot");
+      return false;
+    }
+
     console.log(`Deck size before taking card: ${this.state.deck.length}`);
 
     // Use the safe draw method

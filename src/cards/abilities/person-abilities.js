@@ -370,29 +370,66 @@ export const personAbilities = {
     discardchoose: {
       cost: 1,
       handler: (state, context) => {
-        // Discard up to 3 cards from top of deck
         const discardedCards = [];
 
         for (let i = 0; i < 3; i++) {
-          const result = state.drawCardWithReshuffle(false); // Don't add to hand
-
-          if (result.gameEnded) {
-            return true;
+          // Check if deck is empty BEFORE drawing
+          if (state.deck.length === 0) {
+            console.log(
+              `Scientist: Deck empty before draw ${i + 1}, checking exhaustion`
+            );
+            const exhaustion = state.checkDeckExhaustion();
+            if (exhaustion.gameEnded) {
+              return true;
+            }
           }
 
-          if (result.card) {
-            discardedCards.push(result.card);
-            state.discard.push(result.card);
+          // Now try to draw (without using drawCardWithReshuffle's exhaustion check)
+          if (state.deck.length > 0) {
+            const card = state.deck.shift();
+
+            // Record the card's info for junk selection
+            discardedCards.push({
+              name: card.name,
+              junkEffect: card.junkEffect,
+              id: `scientist_draw_${i}_${card.id}`,
+            });
+
+            // Immediately discard it
+            state.discard.push(card);
+            console.log(
+              `Scientist discarded: ${card.name} (${card.junkEffect})`
+            );
+            console.log(
+              `After discard ${i + 1}: Deck ${state.deck.length}, Discard ${
+                state.discard.length
+              }`
+            );
           } else {
-            break; // No more cards even after reshuffle attempt
+            console.log(`Scientist: No cards to draw for attempt ${i + 1}`);
+            break;
+          }
+        }
+
+        // Final exhaustion check after all discards
+        if (state.deck.length === 0) {
+          console.log(
+            `Scientist: Deck empty after discards, final exhaustion check`
+          );
+          const exhaustion = state.checkDeckExhaustion();
+          if (exhaustion.gameEnded) {
+            return true;
           }
         }
 
         console.log(
-          `Scientist: Discarded ${discardedCards.length} cards from deck`
+          `Scientist complete: Deck ${state.deck.length}, Discard ${state.discard.length}`
+        );
+        console.log(
+          `Scientist: Discarded ${discardedCards.length} cards total`
         );
 
-        // Filter cards with junk effects
+        // Filter for junk effects
         const cardsWithJunk = discardedCards.filter((card) => card.junkEffect);
 
         if (cardsWithJunk.length === 0) {
@@ -400,7 +437,7 @@ export const personAbilities = {
           return true;
         }
 
-        // Set up selection state
+        // Set up selection
         state.pending = {
           type: "scientist_select_junk",
           source: context.source,

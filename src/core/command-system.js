@@ -70,28 +70,25 @@ export class CommandSystem {
 
   checkDeckExhaustion() {
     if (this.state.deck.length === 0) {
-      this.state.deckExhaustedCount++;
+      this.state.deckExhaustedCount = (this.state.deckExhaustedCount || 0) + 1;
       console.log(`Deck exhausted - count: ${this.state.deckExhaustedCount}`);
 
       if (this.state.deckExhaustedCount === 1) {
         console.log("First exhaustion - checking for Obelisk...");
-        // Check for Obelisk
         const obeliskOwner = this.checkForObelisk();
-        console.log(`Obelisk owner: ${obeliskOwner}`);
-
         if (obeliskOwner) {
           console.log(`${obeliskOwner} wins due to Obelisk!`);
           this.state.phase = "game_over";
           this.state.winner = obeliskOwner;
+          this.state.winReason = "obelisk";
           this.notifyUI("GAME_OVER", obeliskOwner);
           return true;
-        } else {
-          console.log("No active Obelisk found");
         }
       } else if (this.state.deckExhaustedCount >= 2) {
         console.log("Deck exhausted twice - game ends in draw!");
         this.state.phase = "game_over";
         this.state.winner = "draw";
+        this.state.winReason = "deck_exhausted_twice";
         this.notifyUI("GAME_OVER", "draw");
         return true;
       }
@@ -479,6 +476,12 @@ export class CommandSystem {
       targetColumn,
       targetPosition
     );
+
+    // Check for game end if a camp was destroyed
+    if (result === "destroyed" && target.type === "camp") {
+      console.log(`Camp ${target.name} was destroyed - checking for game end`);
+      this.checkGameEnd();
+    }
 
     // Clear pending only after successful damage
     this.state.pending = null;
@@ -4574,6 +4577,7 @@ export class CommandSystem {
 
         // Destroy the camp outright
         target.isDestroyed = true;
+        this.checkGameEnd();
         console.log(
           `Molgur Stang destroyed ${target.name} (ignoring protection and damage state)`
         );
@@ -4968,6 +4972,7 @@ export class CommandSystem {
         // Apply damage to the selected camp
         if (camp.isDamaged) {
           camp.isDestroyed = true;
+          this.checkGameEnd();
           console.log(`Raiders destroyed ${camp.name}!`);
         } else {
           camp.isDamaged = true;
@@ -6605,6 +6610,7 @@ export class CommandSystem {
   }
 
   checkGameEnd() {
+    // Check for 3 destroyed camps
     for (const playerId of ["left", "right"]) {
       const player = this.state.players[playerId];
       let destroyedCamps = 0;
@@ -6617,6 +6623,11 @@ export class CommandSystem {
       if (destroyedCamps === 3) {
         this.state.phase = "game_over";
         this.state.winner = playerId === "left" ? "right" : "left";
+        this.state.winReason = "camps_destroyed";
+        console.log(
+          `${this.state.winner} wins - opponent has 3 destroyed camps!`
+        );
+        this.notifyUI("GAME_OVER", this.state.winner);
         return true;
       }
     }
@@ -6771,6 +6782,13 @@ export class CommandSystem {
 
           const result = eventDef.effect.handler(this.state, context);
 
+          // Check for game end conditions after event resolves
+          this.checkGameEnd(); // Check for 3 destroyed camps
+          if (this.checkDeckExhaustion()) {
+            // Game ended due to deck exhaustion
+            return;
+          }
+
           // Check if event created a pending state
           if (this.state.pending) {
             // Event needs target selection, wait for it
@@ -6797,8 +6815,8 @@ export class CommandSystem {
       }
     }
 
-    // Only advance events and continue if no pending selection
-    if (!this.state.pending) {
+    // Only advance events and continue if no pending selection and game hasn't ended
+    if (!this.state.pending && this.state.phase !== "game_over") {
       // Advance events forward
       for (let i = 0; i < 2; i++) {
         player.eventQueue[i] = player.eventQueue[i + 1];

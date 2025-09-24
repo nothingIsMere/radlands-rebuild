@@ -8,13 +8,87 @@ export class UIRenderer {
     this.container = null;
   }
 
+  renderGameOver() {
+    const overlay = document.createElement("div");
+    overlay.className = "game-over-overlay";
+    overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+    const modal = document.createElement("div");
+    modal.className = "game-over-modal";
+    modal.style.cssText = `
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+    max-width: 500px;
+  `;
+
+    const title = document.createElement("h1");
+    title.style.cssText = `
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 48px;
+  `;
+
+    const message = document.createElement("p");
+    message.style.cssText = `
+    font-size: 24px;
+    margin: 20px 0;
+    color: #666;
+  `;
+
+    const reason = document.createElement("p");
+    reason.style.cssText = `
+    font-size: 18px;
+    color: #999;
+    font-style: italic;
+  `;
+
+    if (this.state.winner === "draw") {
+      title.textContent = "🤝 DRAW!";
+      message.textContent = "The game ends in a draw!";
+      reason.textContent = "The deck was exhausted twice";
+    } else {
+      const winnerName =
+        this.state.winner === "left" ? "Left Player" : "Right Player";
+      title.textContent = "🏆 GAME OVER!";
+      message.textContent = `${winnerName} wins!`;
+
+      switch (this.state.winReason) {
+        case "obelisk":
+          reason.textContent = "Victory by Obelisk - deck exhausted";
+          break;
+        case "camps_destroyed":
+          reason.textContent = "Victory by destroying all enemy camps";
+          break;
+        default:
+          reason.textContent = "";
+      }
+    }
+
+    modal.appendChild(title);
+    modal.appendChild(message);
+    modal.appendChild(reason);
+    overlay.appendChild(modal);
+
+    return overlay;
+  }
+
   render() {
     console.log("UI render called, pending state:", this.state.pending);
-    if (this.state.pending) {
-      document.body.classList.add("has-pending");
-    } else {
-      document.body.classList.remove("has-pending");
-    }
+
     // Get or create main container
     if (!this.container) {
       this.container = document.getElementById("app");
@@ -24,8 +98,46 @@ export class UIRenderer {
       }
     }
 
-    // Clear and rebuild
+    // Clear container
     this.container.innerHTML = "";
+
+    // Check for game over FIRST
+    if (this.state.phase === "game_over") {
+      // Remove pending class since game is over
+      document.body.classList.remove("has-pending");
+
+      // Create dimmed background with game state
+      const gameContainer = this.createElement("div", "container");
+      gameContainer.style.opacity = "0.3";
+      gameContainer.style.pointerEvents = "none";
+
+      // Add title
+      const title = this.createElement("h1");
+      title.textContent = "Radlands";
+      gameContainer.appendChild(title);
+
+      // Add game info bar
+      gameContainer.appendChild(this.renderGameInfo());
+
+      // Add main game area (frozen state)
+      gameContainer.appendChild(this.renderGameArea());
+
+      // Append dimmed game state
+      this.container.appendChild(gameContainer);
+
+      // Add game over overlay
+      const gameOverOverlay = this.renderGameOver();
+      this.container.appendChild(gameOverOverlay);
+
+      return; // Stop here - no interactive elements
+    }
+
+    // Normal game rendering (not game over)
+    if (this.state.pending) {
+      document.body.classList.add("has-pending");
+    } else {
+      document.body.classList.remove("has-pending");
+    }
 
     // Create main game container
     const gameContainer = this.createElement("div", "container");
@@ -403,6 +515,7 @@ export class UIRenderer {
         slot.title = "Click to play event here";
 
         slot.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
           e.stopPropagation();
           console.log("Event slot clicked!", i);
           this.handleEventPlacement(playerId, i);
@@ -459,6 +572,7 @@ export class UIRenderer {
         waterSilo.title = "Click to take (1💧)";
 
         waterSilo.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           if (this.state.pending) {
             console.log("Complete current action first");
             return;
@@ -532,6 +646,7 @@ export class UIRenderer {
 
         // Make it clickable
         cardDiv.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
           e.stopPropagation();
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -553,6 +668,7 @@ export class UIRenderer {
 
         // Make slots clickable
         cardDiv.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
           e.stopPropagation();
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -1034,6 +1150,7 @@ export class UIRenderer {
 
       // Make empty slots clickable for placing cards
       cardDiv.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         console.log(
           "Empty slot clicked, pending type:",
           this.state.pending?.type
@@ -1209,6 +1326,7 @@ export class UIRenderer {
               }
 
               btn.addEventListener("click", (e) => {
+                if (this.state.phase === "game_over") return;
                 e.stopPropagation();
 
                 console.log("=== UI BUTTON CLICK ===");
@@ -1313,6 +1431,7 @@ export class UIRenderer {
             btn.textContent = `[Argo] Damage (1💧)`;
 
             btn.addEventListener("click", (e) => {
+              if (this.state.phase === "game_over") return;
               e.stopPropagation();
 
               if (this.state.pending) {
@@ -1358,6 +1477,7 @@ export class UIRenderer {
 
       // Make cards clickable for multiple purposes
       cardDiv.addEventListener("click", (e) => {
+        if (this.state.phase === "game_over") return;
         e.stopPropagation();
 
         if (
@@ -1495,6 +1615,7 @@ export class UIRenderer {
       const raidBtn = this.createElement("button", "ability-select-btn");
       raidBtn.textContent = "⚔️ Raid first, then Gain Punk";
       raidBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           effectFirst: "raid",
@@ -1505,6 +1626,7 @@ export class UIRenderer {
       const punkBtn = this.createElement("button", "ability-select-btn");
       punkBtn.textContent = "👤 Gain Punk first, then Raid";
       punkBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           effectFirst: "punk",
@@ -1518,6 +1640,7 @@ export class UIRenderer {
       const cancelBtn = this.createElement("button", "cancel-btn");
       cancelBtn.textContent = "Cancel";
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         // Refund the water
         const player = this.state.players[this.state.pending.sourcePlayerId];
         player.water += 2;
@@ -1572,6 +1695,7 @@ export class UIRenderer {
         }`;
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             targetPlayer: target.playerId, // Use target.playerId, not just playerId
@@ -1587,6 +1711,7 @@ export class UIRenderer {
       const cancelBtn = this.createElement("button", "cancel-btn");
       cancelBtn.textContent = "Don't Destroy Anyone";
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           cancel: true,
@@ -1625,6 +1750,7 @@ export class UIRenderer {
         }
 
         cardDiv.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           const allCards = cardListDiv.querySelectorAll(".selectable-card");
           allCards.forEach((c) => c.classList.remove("selected"));
 
@@ -1648,6 +1774,7 @@ export class UIRenderer {
       submitBtn.disabled = true;
 
       submitBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -1662,6 +1789,7 @@ export class UIRenderer {
       const cancelBtn = this.createElement("button", "cancel-btn");
       cancelBtn.textContent = "Cancel";
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.state.pending = null;
         this.render();
       });
@@ -1701,6 +1829,7 @@ export class UIRenderer {
       const waterBtn = this.createElement("button", "ability-select-btn");
       waterBtn.textContent = "💧 Gain Extra Water";
       waterBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           benefit: "water",
@@ -1715,6 +1844,7 @@ export class UIRenderer {
         punkBtn.disabled = true;
       }
       punkBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           benefit: "punk",
@@ -1760,6 +1890,7 @@ export class UIRenderer {
         }
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             eventPlayerId: target.playerId,
@@ -1776,6 +1907,7 @@ export class UIRenderer {
       const cancelBtn = this.createElement("button", "cancel-btn");
       cancelBtn.textContent = "Cancel";
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         // Refund the water
         const player = this.state.players[this.state.pending.sourcePlayerId];
         player.water += 1;
@@ -1822,6 +1954,7 @@ export class UIRenderer {
         }
 
         cardDiv.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           // Clear previous selection
           const allCards = cardListDiv.querySelectorAll(".selectable-card");
           allCards.forEach((c) => c.classList.remove("selected"));
@@ -1848,6 +1981,7 @@ export class UIRenderer {
       submitBtn.disabled = true;
 
       submitBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -1895,6 +2029,7 @@ export class UIRenderer {
         }
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             personId: person.id,
@@ -1942,6 +2077,7 @@ export class UIRenderer {
         }
 
         cardDiv.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           // Clear previous selection
           const allCards = cardListDiv.querySelectorAll(".selectable-card");
           allCards.forEach((c) => c.classList.remove("selected"));
@@ -1968,6 +2104,7 @@ export class UIRenderer {
       submitBtn.disabled = true;
 
       submitBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -2003,6 +2140,7 @@ export class UIRenderer {
         const damageBtn = this.createElement("button", "ability-select-btn");
         damageBtn.textContent = `Damage only (${this.state.pending.damageTargets.length} targets)`;
         damageBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             mode: "damage",
@@ -2016,6 +2154,7 @@ export class UIRenderer {
         const restoreBtn = this.createElement("button", "ability-select-btn");
         restoreBtn.textContent = `Restore only (${this.state.pending.restoreTargets.length} targets)`;
         restoreBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             mode: "restore",
@@ -2032,6 +2171,7 @@ export class UIRenderer {
         const bothBtn = this.createElement("button", "ability-select-btn");
         bothBtn.textContent = "Damage AND Restore";
         bothBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             mode: "both",
@@ -2062,6 +2202,7 @@ export class UIRenderer {
       const damageFirstBtn = this.createElement("button", "ability-select-btn");
       damageFirstBtn.textContent = "Damage first, then Restore";
       damageFirstBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           order: "damage_first",
@@ -2075,6 +2216,7 @@ export class UIRenderer {
       );
       restoreFirstBtn.textContent = "Restore first, then Damage";
       restoreFirstBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           order: "restore_first",
@@ -2115,6 +2257,7 @@ export class UIRenderer {
           cardDiv.textContent += " [Cannot discard]";
         } else {
           cardDiv.addEventListener("click", () => {
+            if (this.state.phase === "game_over") return;
             if (selectedCards.has(card.id)) {
               selectedCards.delete(card.id);
               cardDiv.classList.remove("selected");
@@ -2143,6 +2286,7 @@ export class UIRenderer {
       submitBtn.disabled = true;
 
       submitBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         if (selectedCards.size === 3) {
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -2186,6 +2330,7 @@ export class UIRenderer {
         btn.textContent = `${card.name}: Use ${card.junkEffect} effect`;
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             junkIndex: index,
@@ -2201,6 +2346,7 @@ export class UIRenderer {
       noJunkBtn.style.marginTop = "10px";
 
       noJunkBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         // Signal no junk with index -1
         this.commands.execute({
           type: "SELECT_TARGET",
@@ -2251,6 +2397,7 @@ export class UIRenderer {
         }
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             abilityIndex: index,
@@ -2265,6 +2412,7 @@ export class UIRenderer {
       cancelBtn.textContent = "Cancel";
 
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         console.log("Cancel clicked, pending:", this.state.pending);
         console.log("Has junkCard?", !!this.state.pending?.junkCard);
 
@@ -2325,6 +2473,7 @@ export class UIRenderer {
         }
 
         btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           this.commands.execute({
             type: "SELECT_TARGET",
             abilityIndex: index,
@@ -2339,6 +2488,7 @@ export class UIRenderer {
       cancelBtn.textContent = "Cancel";
 
       cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         console.log("Cancel clicked, pending:", this.state.pending);
         console.log("Has junkCard?", !!this.state.pending?.junkCard);
 
@@ -2431,6 +2581,7 @@ export class UIRenderer {
       } else {
         // Normal card click handling (only if not in Parachute Base mode)
         cardDiv.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
           if (this.state.currentPlayer === playerId) {
             if (this.selectedCard?.card?.id === card.id) {
               console.log("Deselecting card:", card.name);
@@ -2475,6 +2626,7 @@ export class UIRenderer {
 
       // Right-click to junk
       cardDiv.addEventListener("contextmenu", (e) => {
+        if (this.state.phase === "game_over") return;
         e.preventDefault();
         if (
           this.state.currentPlayer === playerId &&
@@ -2510,6 +2662,7 @@ export class UIRenderer {
     const drawDeck = this.createElement("div", "deck-pile draw-deck");
     drawDeck.textContent = this.state.deck?.length || "0";
     drawDeck.addEventListener("click", () => {
+      if (this.state.phase === "game_over") return;
       if (this.state.phase === "actions") {
         this.commands.execute({
           type: "DRAW_CARD",
@@ -2556,6 +2709,7 @@ export class UIRenderer {
       drawCardBtn.disabled = currentPlayer.water < CONSTANTS.DRAW_COST;
 
       drawCardBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "DRAW_CARD",
           playerId: this.state.currentPlayer,
@@ -2581,6 +2735,7 @@ export class UIRenderer {
       }
 
       finishBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         this.commands.execute({
           type: "SELECT_TARGET",
           finish: true,
@@ -2597,6 +2752,7 @@ export class UIRenderer {
       this.state.phase !== "actions" || this.state.pending !== null;
 
     endTurn.addEventListener("click", () => {
+      if (this.state.phase === "game_over") return;
       this.commands.execute({
         type: "END_TURN",
         playerId: this.state.currentPlayer,
@@ -2621,6 +2777,7 @@ export class UIRenderer {
       }
 
       cancel.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
         // Return junk card to hand if cancelling a junk effect
         if (this.state.pending?.junkCard) {
           const player = this.state.players[this.state.pending.sourcePlayerId];

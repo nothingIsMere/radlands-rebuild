@@ -43,11 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "obelisk",
+    name: "commandpost",
     type: "camp",
     campDraw: 1,
-    abilities: [], // Win condition trait, no ability
-    trait: "When the last card is drawn from the deck, you win.",
+    abilities: [{ effect: "damage", cost: 3 }], // Cost reduced by punks
     isReady: true,
     isDamaged: false,
   });
@@ -377,10 +376,11 @@ function setupTestGame() {
 
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "commandpost",
+    name: "obelisk",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 3 }], // Cost reduced by punks
+    abilities: [], // Win condition trait, no ability
+    trait: "When the last card is drawn from the deck, you win.",
     isReady: true,
     isDamaged: false,
   });

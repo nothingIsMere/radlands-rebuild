@@ -1383,6 +1383,7 @@ export const campAbilities = {
         const reactor = state.getCard(context.playerId, context.columnIndex, 0);
         if (reactor) {
           reactor.isDestroyed = true;
+          this.checkGameEnd();
           console.log("Reactor destroyed itself");
         }
 

@@ -58,7 +58,7 @@ export const eventAbilities = {
 
   bombardment: {
     cost: 4,
-    queueNumber: 3, // Goes to queue slot 3
+    queueNumber: 3,
     junkEffect: "restore",
     effect: {
       handler: (state, context) => {
@@ -86,7 +86,11 @@ export const eventAbilities = {
           }
         }
 
-        // Draw 1 card for each destroyed camp (including previously destroyed ones)
+        // Check for game end after damaging/destroying camps
+        // Note: We need to use the command system's checkGameEnd
+        // This should be called from command-system.js after the event resolves
+
+        // Draw 1 card for each destroyed camp
         const player = state.players[context.playerId];
         console.log(
           `Bombardment: Drawing ${destroyedCamps} cards for destroyed camps`
@@ -94,50 +98,11 @@ export const eventAbilities = {
 
         for (let i = 0; i < destroyedCamps && state.deck.length > 0; i++) {
           const drawnCard = state.deck.shift();
-          // Check deck exhaustion manually here
-          if (state.deck.length === 0) {
-            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
-
-            if (state.deckExhaustedCount === 1) {
-              // Check for Obelisk
-              for (const playerId of ["left", "right"]) {
-                const player = state.players[playerId];
-                for (let col = 0; col < 3; col++) {
-                  const camp = player.columns[col].getCard(0);
-                  if (
-                    camp &&
-                    camp.name.toLowerCase() === "obelisk" &&
-                    !camp.isDestroyed
-                  ) {
-                    console.log(`${playerId} wins due to Obelisk!`);
-                    state.phase = "game_over";
-                    state.winner = playerId;
-                    return true;
-                  }
-                }
-              }
-            }
-          }
           player.hand.push(drawnCard);
           console.log(`Bombardment: Drew ${drawnCard.name}`);
         }
 
-        // Check for game end
-        let allCampsDestroyed = true;
-        for (let col = 0; col < 3; col++) {
-          const camp = opponent.columns[col].getCard(0);
-          if (camp && !camp.isDestroyed) {
-            allCampsDestroyed = false;
-            break;
-          }
-        }
-
-        if (allCampsDestroyed) {
-          state.phase = "game_over";
-          state.winner = context.playerId;
-          console.log(`${context.playerId} wins by Bombardment!`);
-        }
+        // Note: Deck exhaustion should be checked by command-system after event resolves
 
         // Discard the event
         if (context.eventCard) {

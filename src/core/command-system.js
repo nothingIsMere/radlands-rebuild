@@ -761,6 +761,10 @@ export class CommandSystem {
       // Remove from hand
       player.hand.splice(cardIndex, 1);
 
+      // DISCARD THE EVENT CARD IMMEDIATELY (before executing handler)
+      this.state.discard.push(card);
+      console.log(`Discarded instant event ${card.name} to discard pile`);
+
       // Mark that an event was played this turn
       this.state.turnEvents.firstEventPlayedThisTurn = true;
 
@@ -778,10 +782,7 @@ export class CommandSystem {
       console.log("Event handler returned:", result);
       console.log("Pending state after handler:", this.state.pending);
 
-      // If no pending was created, discard the event
-      if (!this.state.pending) {
-        this.state.discard.push(card);
-      }
+      // Don't discard again - already done above
 
       return result;
     }
@@ -3822,7 +3823,6 @@ export class CommandSystem {
           return false;
         }
 
-        // Verify the selected card is one of the drawn cards
         const keepCard = pending.drawnCards.find((c) => c.id === cardToKeep);
         if (!keepCard) {
           console.log("Invalid card selected - must be one of the drawn cards");
@@ -3845,10 +3845,7 @@ export class CommandSystem {
 
         console.log(`Kept ${keepCard.name}`);
 
-        // Discard the event card itself
-        if (pending.eventCard) {
-          this.state.discard.push(pending.eventCard);
-        }
+        // DON'T discard the event card - it was already discarded when played
 
         // Clear pending
         this.state.pending = null;

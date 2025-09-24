@@ -996,6 +996,7 @@ export const personAbilities = {
         state.pending = {
           type: "restore",
           source: context.source,
+          sourceCard: context.source, // Add this to track the source card
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,

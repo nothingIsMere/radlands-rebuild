@@ -20,6 +20,26 @@ export class CommandSystem {
     );
   }
 
+  resolveRestore(targetPlayer, targetColumn, targetPosition) {
+    const target = this.state.getCard(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+    if (!target || !target.isDamaged) return false;
+
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+
+    console.log(`${target.name} restored!`);
+
+    // Clear pending
+    this.state.pending = null;
+    return true;
+  }
+
   checkForActiveVera(playerId) {
     const player = this.state.players[playerId];
 
@@ -41,6 +61,7 @@ export class CommandSystem {
   }
 
   completeAbility(pending) {
+    console.log("completeAbility called with pending:", pending);
     if (pending?.sourceCard) {
       if (pending.isResonator) {
         this.state.turnEvents.resonatorUsedThisTurn = true;
@@ -1137,36 +1158,31 @@ export class CommandSystem {
         );
         break;
 
-      case "restore":
-        // For targeted effects, we need to hold the card until target is selected
-        const restoreTargets = TargetValidator.findValidTargets(
-          this.state,
-          playerId,
-          {
-            allowOwn: true,
-            requireDamaged: true,
-            allowProtected: true,
-          }
+      case "restore": {
+        // Mark ability complete BEFORE resolving
+        this.completeAbility(this.state.pending);
+
+        // Store Parachute info if present
+        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+        // Resolve the restore (this clears pending)
+        const result = this.resolveRestore(
+          targetPlayer,
+          targetColumn,
+          targetPosition
         );
 
-        if (restoreTargets.length === 0) {
-          console.log("No damaged cards to restore");
-          // No targets - discard the card and end
-          this.state.discard.push(card);
-          return true;
+        // Handle Parachute Base if needed
+        if (result && parachuteBaseDamage) {
+          this.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
         }
 
-        this.state.pending = {
-          type: "junk_restore",
-          source: card,
-          sourcePlayerId: playerId,
-          junkCard: card, // Store the junk card to discard after target selection
-          validTargets: restoreTargets,
-        };
-        console.log(
-          `Select YOUR damaged card to restore (${restoreTargets.length} targets)`
-        );
-        break;
+        return result;
+      }
 
       case "punk":
         // Discard the card FIRST so it's in the reshuffle pool
@@ -5348,15 +5364,15 @@ export class CommandSystem {
 
         console.log(`Restored ${target.name}!`);
 
+        // Mark ability complete for ALL restore abilities
+        this.completeAbility(this.state.pending);
+
         // Check if this restore was from Parachute Base
         if (this.state.pending?.parachuteBaseDamage) {
           const pbDamage = this.state.pending.parachuteBaseDamage;
           console.log(
             "Parachute Base: Restore ability completed, now applying damage"
           );
-
-          // Mark ability complete
-          this.completeAbility(this.state.pending);
 
           // Clear pending first
           this.state.pending = null;

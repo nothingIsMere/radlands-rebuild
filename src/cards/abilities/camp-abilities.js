@@ -937,6 +937,9 @@ export const campAbilities = {
           if (result.card) {
             drawnCards.push(result.card);
             console.log(`Supply Depot: Drew ${result.card.name}`);
+          } else {
+            // No more cards available even after reshuffle attempt
+            break;
           }
         }
 

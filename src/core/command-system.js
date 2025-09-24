@@ -1154,9 +1154,9 @@ export class CommandSystem {
 
       case "punk":
         // Before setting up punk placement:
-        if (state.deck.length === 0) {
+        if (this.state.deck.length === 0) {
           // Try reshuffling
-          const result = state.drawCardWithReshuffle(false);
+          const result = this.state.drawCardWithReshuffle(false);
           if (result.gameEnded) {
             // Handle game end
             return true;
@@ -1166,7 +1166,7 @@ export class CommandSystem {
             return false; // or handle appropriately
           }
           // Put it back for the actual punk placement
-          state.deck.unshift(result.card);
+          this.state.deck.unshift(result.card);
         }
 
         this.state.pending = {
@@ -4438,7 +4438,10 @@ export class CommandSystem {
 
           case "card":
           case "draw":
-            const result = state.drawCardWithReshuffle(true, sourcePlayerId);
+            const result = this.state.drawCardWithReshuffle(
+              true,
+              sourcePlayerId
+            );
             if (result.gameEnded) {
               // Handle game end
               return true;
@@ -4460,9 +4463,9 @@ export class CommandSystem {
           case "restore":
           case "punk":
             // Check if deck has cards BEFORE setting up the pending state
-            if (state.deck.length === 0) {
+            if (this.state.deck.length === 0) {
               // Try to reshuffle if possible
-              const result = state.drawCardWithReshuffle(false);
+              const result = this.state.drawCardWithReshuffle(false);
               if (result.gameEnded) {
                 // Game ended due to deck exhaustion
                 console.log("Game ended - deck exhausted twice");

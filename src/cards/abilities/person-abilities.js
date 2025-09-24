@@ -384,7 +384,7 @@ export const personAbilities = {
             discardedCards.push(result.card);
             state.discard.push(result.card);
           } else {
-            break; // No more cards
+            break; // No more cards even after reshuffle attempt
           }
         }
 

@@ -102,7 +102,7 @@ export const eventAbilities = {
             return true;
           }
           if (!result.card) {
-            break; // No more cards to draw
+            break; // No more cards even after reshuffle
           }
           console.log(`Bombardment: Drew ${result.card.name}`);
         }

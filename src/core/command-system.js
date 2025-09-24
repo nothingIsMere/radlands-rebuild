@@ -1050,10 +1050,10 @@ export class CommandSystem {
 
     console.log(`Junking ${card.name} for ${card.junkEffect} effect`);
 
-    // Remove from hand first (we'll put it back if cancelled)
+    // Remove from hand first
     player.hand.splice(cardIndex, 1);
 
-    // Handle special case for Water Silo
+    // Handle special case for Water Silo - it returns to play area, not discard
     if (card.name === "Water Silo" || card.isWaterSilo) {
       player.waterSilo = "available";
       player.water += 1;
@@ -1061,22 +1061,31 @@ export class CommandSystem {
       return true;
     }
 
-    // Process the junk effect
+    // DISCARD THE CARD FIRST (except for effects that need targeting)
     const junkEffect = card.junkEffect?.toLowerCase();
+
+    // For immediate effects, discard first then execute
+    if (
+      junkEffect === "water" ||
+      junkEffect === "card" ||
+      junkEffect === "draw" ||
+      junkEffect === "raid"
+    ) {
+      this.state.discard.push(card);
+      console.log(`Discarded ${card.name} to discard pile`);
+    }
+
+    // Now process the junk effect
     console.log("Processing junk effect:", junkEffect);
 
     switch (junkEffect) {
       case "water":
-        // Discard the card immediately for water
-        this.state.discard.push(card);
         player.water += 1;
         console.log("Gained 1 water from junk effect");
         break;
 
       case "card":
       case "draw":
-        this.state.discard.push(card);
-
         const result = this.state.drawCardWithReshuffle(true, playerId);
         if (result.gameEnded) {
           this.notifyUI("GAME_OVER", this.state.winner);
@@ -1088,13 +1097,11 @@ export class CommandSystem {
         break;
 
       case "raid":
-        // Discard the card immediately for raid
-        this.state.discard.push(card);
         this.executeRaid(playerId);
         break;
 
       case "injure":
-        // Find valid injure targets using TargetValidator
+        // For targeted effects, we need to hold the card until target is selected
         const injureTargets = TargetValidator.findValidTargets(
           this.state,
           playerId,
@@ -1106,15 +1113,16 @@ export class CommandSystem {
 
         if (injureTargets.length === 0) {
           console.log("No valid targets to injure");
-          player.hand.push(card); // Return card to hand
-          return false;
+          // No targets - discard the card and end
+          this.state.discard.push(card);
+          return true;
         }
 
         this.state.pending = {
           type: "junk_injure",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card, // Store the junk card reference
+          junkCard: card, // Store the junk card to discard after target selection
           validTargets: injureTargets,
         };
         console.log(
@@ -1123,28 +1131,29 @@ export class CommandSystem {
         break;
 
       case "restore":
-        // Find ONLY damaged cards belonging to the current player
+        // For targeted effects, we need to hold the card until target is selected
         const restoreTargets = TargetValidator.findValidTargets(
           this.state,
           playerId,
           {
-            allowOwn: true, // Only your own cards
-            requireDamaged: true, // Only damaged cards
-            allowProtected: true, // Protection is irrelevant for restoration
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true,
           }
         );
 
         if (restoreTargets.length === 0) {
           console.log("No damaged cards to restore");
-          player.hand.push(card); // Return card to hand
-          return false;
+          // No targets - discard the card and end
+          this.state.discard.push(card);
+          return true;
         }
 
         this.state.pending = {
           type: "junk_restore",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card, // Store the junk card reference
+          junkCard: card, // Store the junk card to discard after target selection
           validTargets: restoreTargets,
         };
         console.log(
@@ -1153,19 +1162,29 @@ export class CommandSystem {
         break;
 
       case "punk":
-        // Before setting up punk placement:
+        // Discard the card FIRST so it's in the reshuffle pool
+        this.state.discard.push(card);
+        console.log(`Discarded ${card.name} to discard pile`);
+
+        // Now check if we can place a punk
         if (this.state.deck.length === 0) {
-          // Try reshuffling
+          // Deck is empty - try to reshuffle (which now includes our junked card!)
           const result = this.state.drawCardWithReshuffle(false);
+
           if (result.gameEnded) {
-            // Handle game end
+            console.log("Game ended while trying to gain punk");
+            this.notifyUI("GAME_OVER", this.state.winner);
             return true;
           }
+
           if (!result.card) {
-            console.log("Cannot gain punk - no cards available");
-            return false; // or handle appropriately
+            console.log(
+              "Cannot gain punk - no cards available even after reshuffle"
+            );
+            return true;
           }
-          // Put it back for the actual punk placement
+
+          // Put it back for the punk placement
           this.state.deck.unshift(result.card);
         }
 
@@ -1173,15 +1192,15 @@ export class CommandSystem {
           type: "place_punk",
           source: card,
           sourcePlayerId: playerId,
-          junkCard: card,
+          // Don't store junkCard since it's already discarded
         };
         console.log("Select where to place the punk");
         break;
 
       default:
         console.log(`Unknown junk effect: ${junkEffect}`);
-        // Return card to hand if effect is unknown
-        player.hand.push(card);
+        // Unknown effect - discard the card anyway
+        this.state.discard.push(card);
         return false;
     }
 
@@ -4899,6 +4918,9 @@ export class CommandSystem {
           return false;
         }
 
+        // Store the junk card reference before clearing pending
+        const junkCard = this.state.pending?.junkCard;
+
         // Restore the card
         target.isDamaged = false;
         if (target.type === "person") {
@@ -4907,9 +4929,8 @@ export class CommandSystem {
         // Camps stay ready when restored
         console.log(`${target.name} restored by junk effect!`);
 
-        const junkCard = this.state.pending?.junkCard;
+        // Discard the junk card after successful restore
         if (junkCard) {
-          // Discard the card after successful restore
           this.state.discard.push(junkCard);
           console.log(`Discarded ${junkCard.name} after restore`);
         }

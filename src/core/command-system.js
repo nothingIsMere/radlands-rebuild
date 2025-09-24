@@ -20,82 +20,6 @@ export class CommandSystem {
     );
   }
 
-  checkForObelisk() {
-    console.log("Checking for Obelisk...");
-    console.log("state.players exists?", !!this.state.players);
-
-    for (const playerId of ["left", "right"]) {
-      console.log(`Checking ${playerId} player...`);
-      const player = this.state.players[playerId];
-
-      if (!player) {
-        console.log(`ERROR: No player object for ${playerId}`);
-        continue;
-      }
-
-      if (!player.columns) {
-        console.log(`ERROR: No columns for ${playerId}`);
-        continue;
-      }
-
-      for (let col = 0; col < 3; col++) {
-        const column = player.columns[col];
-
-        if (!column) {
-          console.log(`ERROR: No column ${col} for ${playerId}`);
-          continue;
-        }
-
-        const camp = column.getCard(0);
-        console.log(
-          `Checking ${playerId} column ${col}: ${
-            camp ? camp.name : "empty"
-          }, destroyed: ${camp?.isDestroyed}`
-        );
-
-        if (
-          camp &&
-          camp.name &&
-          camp.name.toLowerCase() === "obelisk" &&
-          !camp.isDestroyed
-        ) {
-          console.log(`Found active Obelisk for ${playerId}!`);
-          return playerId;
-        }
-      }
-    }
-    console.log("No Obelisk found");
-    return null;
-  }
-
-  checkDeckExhaustion() {
-    if (this.state.deck.length === 0) {
-      this.state.deckExhaustedCount = (this.state.deckExhaustedCount || 0) + 1;
-      console.log(`Deck exhausted - count: ${this.state.deckExhaustedCount}`);
-
-      if (this.state.deckExhaustedCount === 1) {
-        console.log("First exhaustion - checking for Obelisk...");
-        const obeliskOwner = this.checkForObelisk();
-        if (obeliskOwner) {
-          console.log(`${obeliskOwner} wins due to Obelisk!`);
-          this.state.phase = "game_over";
-          this.state.winner = obeliskOwner;
-          this.state.winReason = "obelisk";
-          this.notifyUI("GAME_OVER", obeliskOwner);
-          return true;
-        }
-      } else if (this.state.deckExhaustedCount >= 2) {
-        console.log("Deck exhausted twice - game ends in draw!");
-        this.state.phase = "game_over";
-        this.state.winner = "draw";
-        this.state.winReason = "deck_exhausted_twice";
-        this.notifyUI("GAME_OVER", "draw");
-        return true;
-      }
-    }
-    return false;
-  }
-
   checkForActiveVera(playerId) {
     const player = this.state.players[playerId];
 
@@ -226,6 +150,21 @@ export class CommandSystem {
     // Clear pending
     this.state.pending = null;
     return damaged;
+  }
+
+  checkDeckExhaustion() {
+    if (this.state.deck.length === 0 && this.state.discard.length === 0) {
+      // Check if this is the second exhaustion
+      if (this.state.deckExhaustedCount >= 2) {
+        this.state.phase = "game_over";
+        this.state.winner = "draw";
+        this.state.winReason = "deck_exhausted_twice";
+        console.log("Game ends in draw - deck exhausted twice!");
+        this.notifyUI("GAME_OVER", "draw");
+        return true;
+      }
+    }
+    return false;
   }
 
   checkProtection(playerId, columnIndex, position) {
@@ -917,32 +856,44 @@ export class CommandSystem {
 
     console.log(`Deck size before taking card: ${this.state.deck.length}`);
 
-    // Check if deck has cards
-    if (this.state.deck.length === 0) {
-      console.log("Cannot place punk - deck is empty");
+    // Use the safe draw method
+    const result = this.state.drawCardWithReshuffle(false);
+
+    if (result.gameEnded) {
+      console.log("Game ended while trying to place punk");
+      this.notifyUI("GAME_OVER", this.state.winner);
       this.state.pending = null;
       return false;
     }
 
-    // Take the top card from the deck
-    const topCard = this.state.deck.shift();
-    if (this.checkDeckExhaustion()) {
-      return; // Stop processing if game ended
+    if (!result.card) {
+      console.log("Cannot place punk - no cards available");
+      this.state.pending = null;
+      return false;
     }
+
+    const topCard = result.card;
     console.log(`Took ${topCard.name} from deck to make punk`);
     console.log(`Deck size after taking card: ${this.state.deck.length}`);
 
     // Create punk from the actual card (face-down)
     const punk = {
-      ...topCard, // Keep ALL original properties including id
+      ...topCard,
       isPunk: true,
       isFaceDown: true,
       isReady: false,
       isDamaged: false,
       originalName: topCard.name,
-      originalCard: { ...topCard }, // Store complete original card
-      name: "Punk", // Override name for display
+      originalCard: { ...topCard },
+      name: "Punk",
     };
+
+    // Check for Karli Blaze's persistent trait
+    const hasActiveKarli = this.checkForActiveKarli(this.state.currentPlayer);
+    if (hasActiveKarli) {
+      punk.isReady = true;
+      console.log("Punk enters play ready due to Karli Blaze's trait!");
+    }
 
     // Try to place with push
     if (!this.placeCardWithPush(column, targetPosition, punk)) {
@@ -1019,17 +970,16 @@ export class CommandSystem {
 
     player.water -= CONSTANTS.DRAW_COST;
 
-    // Draw 2 cards
-    if (this.state.deck.length > 0) {
-      player.hand.push(this.state.deck.shift());
-    }
-    if (this.state.deck.length > 0) {
-      player.hand.push(this.state.deck.shift());
-    }
-
-    // Check for deck exhaustion after drawing
-    if (this.checkDeckExhaustion()) {
-      return true; // Game ended
+    // Draw 2 cards using the safe method
+    for (let i = 0; i < 2; i++) {
+      const result = this.state.drawCardWithReshuffle(
+        true,
+        this.state.currentPlayer
+      );
+      if (result.gameEnded) {
+        this.notifyUI("GAME_OVER", this.state.winner);
+        return true;
+      }
     }
 
     return true;
@@ -1125,20 +1075,15 @@ export class CommandSystem {
 
       case "card":
       case "draw":
-        // Discard the card immediately for draw
         this.state.discard.push(card);
 
-        if (this.state.deck.length > 0) {
-          const drawnCard = this.state.deck.shift();
-          player.hand.push(drawnCard);
-          console.log(`Drew ${drawnCard.name} from junk effect`);
-        } else {
-          console.log("Deck empty, no card drawn from junk effect");
+        const result = this.state.drawCardWithReshuffle(true, playerId);
+        if (result.gameEnded) {
+          this.notifyUI("GAME_OVER", this.state.winner);
+          return true;
         }
-
-        // Always check deck exhaustion after attempting to draw
-        if (this.checkDeckExhaustion()) {
-          return true; // Game ended
+        if (result.card) {
+          console.log(`Drew ${result.card.name} from junk effect`);
         }
         break;
 
@@ -1208,10 +1153,20 @@ export class CommandSystem {
         break;
 
       case "punk":
-        if (this.state.deck.length === 0) {
-          console.log("Cannot gain punk - deck is empty");
-          player.hand.push(card); // Return to hand
-          return false;
+        // Before setting up punk placement:
+        if (state.deck.length === 0) {
+          // Try reshuffling
+          const result = state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            // Handle game end
+            return true;
+          }
+          if (!result.card) {
+            console.log("Cannot gain punk - no cards available");
+            return false; // or handle appropriately
+          }
+          // Put it back for the actual punk placement
+          state.deck.unshift(result.card);
         }
 
         this.state.pending = {
@@ -3009,36 +2964,17 @@ export class CommandSystem {
         }
 
         // Now draw a card
-        if (this.state.deck.length > 0) {
-          const player = this.state.players[pending.sourcePlayerId];
-          const drawnCard = this.state.deck.shift();
-          // Check deck exhaustion manually here
-          if (state.deck.length === 0) {
-            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
-
-            if (state.deckExhaustedCount === 1) {
-              // Check for Obelisk
-              for (const playerId of ["left", "right"]) {
-                const player = state.players[playerId];
-                for (let col = 0; col < 3; col++) {
-                  const camp = player.columns[col].getCard(0);
-                  if (
-                    camp &&
-                    camp.name.toLowerCase() === "obelisk" &&
-                    !camp.isDestroyed
-                  ) {
-                    console.log(`${playerId} wins due to Obelisk!`);
-                    state.phase = "game_over";
-                    state.winner = playerId;
-                    return true;
-                  }
-                }
-              }
-            }
-          }
-          player.hand.push(drawnCard);
-          console.log(`Mulcher: Drew ${drawnCard.name}`);
+        const player = this.state.players[pending.sourcePlayerId];
+        const result = this.state.drawCardWithReshuffle(
+          true,
+          pending.sourcePlayerId
+        );
+        if (result.gameEnded) {
+          this.notifyUI("GAME_OVER", this.state.winner);
+          return true;
+        }
+        if (result.card) {
+          console.log(`Mulcher: Drew ${result.card.name}`);
         } else {
           console.log("Mulcher: Deck empty, no card drawn");
         }
@@ -3587,10 +3523,20 @@ export class CommandSystem {
         }
 
         // Take the top card from the deck
-        const topCard = this.state.deck.shift();
-        if (this.checkDeckExhaustion()) {
-          return; // Stop processing if game ended
+        const result = this.state.drawCardWithReshuffle(false);
+        if (result.gameEnded) {
+          this.notifyUI("GAME_OVER", this.state.winner);
+          return false;
         }
+        if (!result.card) {
+          console.log("Cannot place punk - deck is empty");
+          if (pending.eventCard) {
+            this.state.discard.push(pending.eventCard);
+          }
+          this.state.pending = null;
+          return false;
+        }
+        const topCard = result.card;
         console.log(
           `Took ${topCard.name} from deck to make punk ${pending.punksRemaining}`
         );
@@ -4492,17 +4438,13 @@ export class CommandSystem {
 
           case "card":
           case "draw":
-            if (this.state.deck.length > 0) {
-              const drawnCard = this.state.deck.shift();
-              if (this.checkDeckExhaustion()) {
-                return; // Stop processing if game ended
-              }
-              player.hand.push(drawnCard);
-              console.log(`Drew ${drawnCard.name} from Scientist junk`);
+            const result = state.drawCardWithReshuffle(true, sourcePlayerId);
+            if (result.gameEnded) {
+              // Handle game end
+              return true;
             }
-            // Mark source card not ready
-            if (sourceCard) {
-              sourceCard.isReady = false;
+            if (result.card) {
+              console.log(`Drew ${result.card.name} from Scientist junk`);
             }
             break;
 
@@ -4517,23 +4459,51 @@ export class CommandSystem {
           case "injure":
           case "restore":
           case "punk":
-            // These need targeting - set up new pending
-            this.state.pending = {
-              type:
-                junkEffect === "punk"
-                  ? "place_punk"
-                  : junkEffect === "injure"
-                  ? "junk_injure"
-                  : "junk_restore",
+            // Check if deck has cards BEFORE setting up the pending state
+            if (state.deck.length === 0) {
+              // Try to reshuffle if possible
+              const result = state.drawCardWithReshuffle(false);
+              if (result.gameEnded) {
+                // Game ended due to deck exhaustion
+                console.log("Game ended - deck exhausted twice");
+                // Clear pending
+                state.pending = null;
+                // Mark source card not ready
+                if (sourceCard) {
+                  sourceCard.isReady = false;
+                }
+                return true;
+              }
+
+              if (!result.card) {
+                console.log(
+                  "Cannot gain punk from Scientist junk - no cards available"
+                );
+                // Mark source card not ready since we used the ability
+                if (sourceCard) {
+                  sourceCard.isReady = false;
+                }
+                // Clear pending
+                state.pending = null;
+                return true;
+              }
+
+              // Put the card back since we just checked
+              state.deck.unshift(result.card);
+            }
+
+            // Now we know deck has cards, set up punk placement
+            state.pending = {
+              type: "place_punk",
               sourcePlayerId: sourcePlayerId,
               fromScientist: true,
               scientistCard: sourceCard, // Store reference to mark not ready later
             };
-            console.log(`Scientist junk: Setting up ${junkEffect} targeting`);
+            console.log("Scientist junk: Setting up punk placement");
 
             // Preserve parachute damage if present
             if (parachuteBaseDamage) {
-              this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+              state.pending.parachuteBaseDamage = parachuteBaseDamage;
             }
             break;
         }
@@ -6848,14 +6818,16 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
 
     // Draw a card
-    if (this.state.deck.length > 0) {
-      const drawnCard = this.state.deck.shift();
-      player.hand.push(drawnCard);
-      console.log(`${this.state.currentPlayer} drew: ${drawnCard.name}`);
-
-      if (this.checkDeckExhaustion()) {
-        return; // Game ended
-      }
+    const result = this.state.drawCardWithReshuffle(
+      true,
+      this.state.currentPlayer
+    );
+    if (result.gameEnded) {
+      this.notifyUI("GAME_OVER", this.state.winner);
+      return;
+    }
+    if (result.card) {
+      console.log(`${this.state.currentPlayer} drew: ${result.card.name}`);
     }
 
     // Set water

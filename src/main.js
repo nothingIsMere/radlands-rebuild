@@ -376,11 +376,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[0].setCard(0, {
     id: "camp_right_1",
-    name: "obelisk",
+    name: "mercenarycamp",
     type: "camp",
-    campDraw: 1,
-    abilities: [], // Win condition trait, no ability
-    trait: "When the last card is drawn from the deck, you win.",
+    campDraw: 0,
+    abilities: [{ effect: "damagecamp", cost: 2 }], // Requires 4+ people
     isReady: true,
     isDamaged: false,
   });

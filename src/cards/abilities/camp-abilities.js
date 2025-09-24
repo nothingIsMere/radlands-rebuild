@@ -308,10 +308,20 @@ export const campAbilities = {
       handler: (state, context) => {
         const player = state.players[context.playerId];
 
-        // Check if deck has cards for the punk
+        // Before setting up punk placement:
         if (state.deck.length === 0) {
-          console.log("Cache: Cannot use - deck is empty (need card for punk)");
-          return false;
+          // Try reshuffling
+          const result = state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            // Handle game end
+            return true;
+          }
+          if (!result.card) {
+            console.log("Cannot gain punk - no cards available");
+            return false; // or handle appropriately
+          }
+          // Put it back for the actual punk placement
+          state.deck.unshift(result.card);
         }
 
         // Check if Raiders is available or can be advanced
@@ -915,47 +925,18 @@ export const campAbilities = {
       handler: (state, context) => {
         const player = state.players[context.playerId];
 
-        // Check if deck has at least 1 card (we'll draw what we can)
-        if (state.deck.length === 0) {
-          console.log("Supply Depot: Cannot use - deck is empty");
-          return false;
-        }
-
         // Draw 2 cards (or as many as possible)
         const drawnCards = [];
         for (let i = 0; i < 2; i++) {
-          if (state.deck.length > 0) {
-            const card = state.deck.shift();
-            // Check deck exhaustion manually here
-            if (state.deck.length === 0) {
-              state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-              console.log(
-                `Deck exhausted - count: ${state.deckExhaustedCount}`
-              );
+          const result = state.drawCardWithReshuffle(true, context.playerId);
 
-              if (state.deckExhaustedCount === 1) {
-                // Check for Obelisk
-                for (const playerId of ["left", "right"]) {
-                  const player = state.players[playerId];
-                  for (let col = 0; col < 3; col++) {
-                    const camp = player.columns[col].getCard(0);
-                    if (
-                      camp &&
-                      camp.name.toLowerCase() === "obelisk" &&
-                      !camp.isDestroyed
-                    ) {
-                      console.log(`${playerId} wins due to Obelisk!`);
-                      state.phase = "game_over";
-                      state.winner = playerId;
-                      return true;
-                    }
-                  }
-                }
-              }
-            }
-            player.hand.push(card);
-            drawnCards.push(card);
-            console.log(`Supply Depot: Drew ${card.name}`);
+          if (result.gameEnded) {
+            return true;
+          }
+
+          if (result.card) {
+            drawnCards.push(result.card);
+            console.log(`Supply Depot: Drew ${result.card.name}`);
           }
         }
 
@@ -970,7 +951,7 @@ export const campAbilities = {
           return true;
         }
 
-        // Set up discard selection - must discard one of the drawn cards
+        // Set up discard selection
         state.pending = {
           type: "supplydepot_select_discard",
           source: context.source,
@@ -1191,10 +1172,20 @@ export const campAbilities = {
           return false;
         }
 
-        // Check if deck has cards
+        // Before setting up punk placement:
         if (state.deck.length === 0) {
-          console.log("Arcade: Cannot gain punk - deck is empty");
-          return false;
+          // Try reshuffling
+          const result = state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            // Handle game end
+            return true;
+          }
+          if (!result.card) {
+            console.log("Cannot gain punk - no cards available");
+            return false; // or handle appropriately
+          }
+          // Put it back for the actual punk placement
+          state.deck.unshift(result.card);
         }
 
         // Set up punk placement

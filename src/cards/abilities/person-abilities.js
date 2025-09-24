@@ -12,52 +12,34 @@ export const personAbilities = {
 
         // Draw 3 cards
         const cardsDrawn = [];
-        for (let i = 0; i < 3 && state.deck.length > 0; i++) {
-          const card = state.deck.shift();
-          // Check deck exhaustion manually here
-          if (state.deck.length === 0) {
-            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+        for (let i = 0; i < 3; i++) {
+          const result = state.drawCardWithReshuffle(true, context.playerId);
 
-            if (state.deckExhaustedCount === 1) {
-              // Check for Obelisk
-              for (const playerId of ["left", "right"]) {
-                const player = state.players[playerId];
-                for (let col = 0; col < 3; col++) {
-                  const camp = player.columns[col].getCard(0);
-                  if (
-                    camp &&
-                    camp.name.toLowerCase() === "obelisk" &&
-                    !camp.isDestroyed
-                  ) {
-                    console.log(`${playerId} wins due to Obelisk!`);
-                    state.phase = "game_over";
-                    state.winner = playerId;
-                    return true;
-                  }
-                }
-              }
-            }
+          if (result.gameEnded) {
+            // Game ended, return immediately
+            return true;
           }
-          player.hand.push(card);
-          cardsDrawn.push(card);
+
+          if (result.card) {
+            cardsDrawn.push(result.card);
+          }
         }
 
         console.log(`Zeto Kahn: Drew ${cardsDrawn.length} cards`);
 
         if (cardsDrawn.length === 0) {
-          console.log("Zeto Kahn: Deck was empty, no cards drawn");
+          console.log("Zeto Kahn: No cards drawn");
           return false;
         }
 
-        // Always set up discard selection
+        // Set up discard selection
         state.pending = {
           type: "zeto_discard_selection",
           source: context.source,
           sourcePlayerId: context.playerId,
           mustDiscard: 3,
           context,
-          parachuteBaseDamage: context.parachuteBaseDamage, // Preserve if from Parachute Base
+          parachuteBaseDamage: context.parachuteBaseDamage,
         };
 
         console.log("Zeto Kahn: Select 3 cards to discard (not Water Silo)");
@@ -388,48 +370,27 @@ export const personAbilities = {
     discardchoose: {
       cost: 1,
       handler: (state, context) => {
-        // Check if deck has cards
-        if (state.deck.length === 0) {
-          console.log("Scientist: Deck is empty");
-          return false;
-        }
-
-        // Discard up to 3 cards
-        const cardsToDiscard = Math.min(3, state.deck.length);
+        // Discard up to 3 cards from top of deck
         const discardedCards = [];
 
-        for (let i = 0; i < cardsToDiscard; i++) {
-          const card = state.deck.shift();
-          // Check deck exhaustion manually here
-          if (state.deck.length === 0) {
-            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+        for (let i = 0; i < 3; i++) {
+          const result = state.drawCardWithReshuffle(false); // Don't add to hand
 
-            if (state.deckExhaustedCount === 1) {
-              // Check for Obelisk
-              for (const playerId of ["left", "right"]) {
-                const player = state.players[playerId];
-                for (let col = 0; col < 3; col++) {
-                  const camp = player.columns[col].getCard(0);
-                  if (
-                    camp &&
-                    camp.name.toLowerCase() === "obelisk" &&
-                    !camp.isDestroyed
-                  ) {
-                    console.log(`${playerId} wins due to Obelisk!`);
-                    state.phase = "game_over";
-                    state.winner = playerId;
-                    return true;
-                  }
-                }
-              }
-            }
+          if (result.gameEnded) {
+            return true;
           }
-          discardedCards.push(card);
-          state.discard.push(card);
+
+          if (result.card) {
+            discardedCards.push(result.card);
+            state.discard.push(result.card);
+          } else {
+            break; // No more cards
+          }
         }
 
-        console.log(`Scientist: Discarded ${cardsToDiscard} cards from deck`);
+        console.log(
+          `Scientist: Discarded ${discardedCards.length} cards from deck`
+        );
 
         // Filter cards with junk effects
         const cardsWithJunk = discardedCards.filter((card) => card.junkEffect);
@@ -443,16 +404,14 @@ export const personAbilities = {
         state.pending = {
           type: "scientist_select_junk",
           source: context.source,
-          sourceCard: context.source, // Add this explicit reference
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           discardedCards: cardsWithJunk,
           context,
         };
 
         console.log(
-          `${
-            context.fromMimic ? "Mimic (as Scientist)" : "Scientist"
-          }: Choose junk effect to use (${cardsWithJunk.length} options)`
+          `Scientist: Choose junk effect to use (${cardsWithJunk.length} options)`
         );
         return true;
       },
@@ -503,9 +462,20 @@ export const personAbilities = {
       cost: 1,
       handler: (state, context) => {
         // Check if deck has cards
+        // Before setting up punk placement:
         if (state.deck.length === 0) {
-          console.log("Rabble Rouser: Cannot gain punk - deck is empty");
-          return false;
+          // Try reshuffling
+          const result = state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            // Handle game end
+            return true;
+          }
+          if (!result.card) {
+            console.log("Cannot gain punk - no cards available");
+            return false; // or handle appropriately
+          }
+          // Put it back for the actual punk placement
+          state.deck.unshift(result.card);
         }
 
         // Set up punk placement
@@ -896,20 +866,34 @@ export const personAbilities = {
   },
 
   woundedsoldier: {
-    damage: {
-      cost: 1,
-      handler: (state, context) => {
-        state.pending = {
-          type: "damage",
-          source: context.source,
-          sourceCard: context.source,
-          sourcePlayerId: context.playerId,
-          context,
-        };
+    onEntry: (state, context) => {
+      const player = state.players[context.playerId];
 
-        console.log("Wounded Soldier: Select target to damage");
+      // Draw a card
+      const result = state.drawCardWithReshuffle(true, context.playerId);
+
+      if (result.gameEnded) {
         return true;
-      },
+      }
+
+      if (result.card) {
+        console.log(`Wounded Soldier: Drew ${result.card.name}`);
+      } else {
+        console.log("Wounded Soldier: Deck empty, cannot draw");
+      }
+
+      // Damage self
+      const card = state.players[context.playerId].columns[
+        context.columnIndex
+      ].getCard(context.position);
+
+      if (card) {
+        card.isDamaged = true;
+        card.isReady = false;
+        console.log("Wounded Soldier: Damaged self on entry");
+      }
+
+      return true;
     },
   },
 

@@ -96,13 +96,16 @@ export const eventAbilities = {
           `Bombardment: Drawing ${destroyedCamps} cards for destroyed camps`
         );
 
-        for (let i = 0; i < destroyedCamps && state.deck.length > 0; i++) {
-          const drawnCard = state.deck.shift();
-          player.hand.push(drawnCard);
-          console.log(`Bombardment: Drew ${drawnCard.name}`);
+        for (let i = 0; i < destroyedCamps; i++) {
+          const result = state.drawCardWithReshuffle(true, context.playerId);
+          if (result.gameEnded) {
+            return true;
+          }
+          if (!result.card) {
+            break; // No more cards to draw
+          }
+          console.log(`Bombardment: Drew ${result.card.name}`);
         }
-
-        // Note: Deck exhaustion should be checked by command-system after event resolves
 
         // Discard the event
         if (context.eventCard) {
@@ -318,13 +321,20 @@ export const eventAbilities = {
           return true;
         }
 
-        // Check if deck has enough cards
+        // Before setting up punk placement:
         if (state.deck.length === 0) {
-          console.log("Uprising: Deck is empty, no punks can be gained");
-          if (context.eventCard) {
-            state.discard.push(context.eventCard);
+          // Try reshuffling
+          const result = state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            // Handle game end
+            return true;
           }
-          return true;
+          if (!result.card) {
+            console.log("Cannot gain punk - no cards available");
+            return false; // or handle appropriately
+          }
+          // Put it back for the actual punk placement
+          state.deck.unshift(result.card);
         }
 
         const punksToGain = Math.min(maxPunks, state.deck.length);
@@ -631,37 +641,18 @@ export const eventAbilities = {
         console.log("Interrogate handler called!");
         const player = state.players[context.playerId];
 
-        // Draw 4 cards and TRACK THEM
+        // Draw 4 cards
         const cardsDrawn = [];
-        for (let i = 0; i < 4 && state.deck.length > 0; i++) {
-          const drawnCard = state.deck.shift();
-          // Check deck exhaustion manually here
-          if (state.deck.length === 0) {
-            state.deckExhaustedCount = (state.deckExhaustedCount || 0) + 1;
-            console.log(`Deck exhausted - count: ${state.deckExhaustedCount}`);
+        for (let i = 0; i < 4; i++) {
+          const result = state.drawCardWithReshuffle(true, context.playerId);
 
-            if (state.deckExhaustedCount === 1) {
-              // Check for Obelisk
-              for (const playerId of ["left", "right"]) {
-                const player = state.players[playerId];
-                for (let col = 0; col < 3; col++) {
-                  const camp = player.columns[col].getCard(0);
-                  if (
-                    camp &&
-                    camp.name.toLowerCase() === "obelisk" &&
-                    !camp.isDestroyed
-                  ) {
-                    console.log(`${playerId} wins due to Obelisk!`);
-                    state.phase = "game_over";
-                    state.winner = playerId;
-                    return true;
-                  }
-                }
-              }
-            }
+          if (result.gameEnded) {
+            return true;
           }
-          player.hand.push(card);
-          cardsDrawn.push(card);
+
+          if (result.card) {
+            cardsDrawn.push(result.card);
+          }
         }
 
         console.log(
@@ -674,16 +665,15 @@ export const eventAbilities = {
           return true;
         }
 
-        // Set up selection to KEEP 1 card from those drawn
+        // Set up selection to KEEP 1 card
         state.pending = {
           type: "interrogate_keep",
           sourcePlayerId: context.playerId,
-          drawnCards: cardsDrawn, // Store the specific cards drawn
+          drawnCards: cardsDrawn,
           eventCard: context.eventCard,
         };
 
         console.log("Interrogate: Choose 1 card to keep from the 4 drawn");
-
         return true;
       },
     },

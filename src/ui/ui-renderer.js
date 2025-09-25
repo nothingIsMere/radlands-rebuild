@@ -633,6 +633,31 @@ export class UIRenderer {
       }
     }
 
+    if (this.state.pending?.type === "adrenalinelab_select_person") {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.card.id === card?.id &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+
+      if (isValidTarget) {
+        cardDiv.classList.add("adrenalinelab-target");
+
+        // Make it clickable
+        cardDiv.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
+          e.stopPropagation();
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            targetPlayer: playerId,
+            targetColumn: columnIndex,
+            targetPosition: position,
+          });
+        });
+      }
+    }
+
     // Add this with the other pending type checks in renderCard
     if (this.state.pending?.type === "constructionyard_select_person") {
       // Highlight player's own people
@@ -1238,6 +1263,12 @@ export class UIRenderer {
     } else {
       // THIS is where card type checking should be - when card EXISTS
       if (card.type === "camp") {
+        console.log(
+          "Rendering camp:",
+          card.name,
+          "with abilities:",
+          card.abilities
+        );
         cardDiv.classList.add("camp");
       } else if (card.type === "person") {
         cardDiv.classList.add("person");
@@ -1304,6 +1335,12 @@ export class UIRenderer {
             let canUseAbility = false;
 
             if (card.type === "camp") {
+              console.log(
+                "Rendering camp:",
+                card.name,
+                "with abilities:",
+                card.abilities
+              );
               canUseAbility = card.isReady && !card.isDestroyed;
             } else if (card.type === "person") {
               canUseAbility =
@@ -1355,7 +1392,19 @@ export class UIRenderer {
                     },
                   });
                 } else if (card.type === "camp") {
+                  console.log(
+                    "Rendering camp:",
+                    card.name,
+                    "with abilities:",
+                    card.abilities
+                  );
                   // Regular camps are always at position 0
+                  console.log(
+                    "Camp ability clicked:",
+                    card.name,
+                    "at column",
+                    columnIndex
+                  );
                   this.commands.execute({
                     type: "USE_CAMP_ABILITY",
                     playerId: playerId,
@@ -1401,6 +1450,12 @@ export class UIRenderer {
                 if (!card.isReady) text.textContent += " [Not Ready]";
                 if (card.isDamaged) text.textContent += " [Damaged]";
               } else if (card.type === "camp") {
+                console.log(
+                  "Rendering camp:",
+                  card.name,
+                  "with abilities:",
+                  card.abilities
+                );
                 if (!card.isReady) text.textContent += " [Used]";
                 if (card.isDestroyed) text.textContent += " [Destroyed]";
               }

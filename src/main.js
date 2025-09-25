@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "commandpost",
+    name: "Adrenaline Lab",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 3 }], // Cost reduced by punks
+    abilities: [{ effect: "usedamagedability", cost: 0 }], // Use damaged person ability
     isReady: true,
     isDamaged: false,
   });
@@ -396,13 +396,10 @@ function setupTestGame() {
 
   gameState.players.right.columns[2].setCard(0, {
     id: "camp_right_3",
-    name: "constructionyard",
+    name: "Adrenaline Lab",
     type: "camp",
     campDraw: 1,
-    abilities: [
-      { effect: "moveperson", cost: 1 },
-      { effect: "raid", cost: 2 },
-    ],
+    abilities: [{ effect: "usedamagedability", cost: 0 }], // Use damaged person ability
     isReady: true,
     isDamaged: false,
   });

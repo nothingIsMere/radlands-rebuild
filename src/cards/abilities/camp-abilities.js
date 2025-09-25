@@ -8,9 +8,115 @@
 import { TargetValidator } from "../../core/target-validator.js";
 
 export const campAbilities = {
+  adrenalinelab: {
+    usedamagedability: {
+      cost: 0,
+      handler: (state, context) => {
+        const player = state.players[context.playerId];
+
+        // Find all damaged people with abilities
+        const validTargets = [];
+
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 1; pos <= 2; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (
+              card &&
+              card.type === "person" &&
+              card.isDamaged &&
+              !card.isDestroyed &&
+              card.abilities?.length > 0
+            ) {
+              // Check if any ability is affordable
+              const affordableAbilities = card.abilities.filter(
+                (ability) => player.water >= ability.cost
+              );
+
+              if (affordableAbilities.length > 0) {
+                validTargets.push({
+                  card,
+                  columnIndex: col,
+                  position: pos,
+                  abilities: affordableAbilities,
+                });
+              }
+            }
+          }
+        }
+
+        // Check for Argo's granted ability on damaged people/punks
+        // Move the checkForActiveArgo logic directly here
+        let hasActiveArgo = false;
+        for (let col = 0; col < 3; col++) {
+          for (let pos = 0; pos < 3; pos++) {
+            const card = player.columns[col].getCard(pos);
+            if (
+              card &&
+              card.name === "Argo Yesky" &&
+              !card.isDamaged &&
+              !card.isDestroyed
+            ) {
+              hasActiveArgo = true;
+              break;
+            }
+          }
+          if (hasActiveArgo) break;
+        }
+
+        if (hasActiveArgo && player.water >= 1) {
+          // Add damaged people/punks that only have Argo's ability
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 1; pos <= 2; pos++) {
+              const card = player.columns[col].getCard(pos);
+              if (
+                card &&
+                card.type === "person" &&
+                card.isDamaged &&
+                !card.isDestroyed &&
+                (!card.abilities || card.abilities.length === 0)
+              ) {
+                // This person only has Argo's granted ability
+                validTargets.push({
+                  card,
+                  columnIndex: col,
+                  position: pos,
+                  abilities: [{ effect: "damage", cost: 1 }],
+                  isArgoGranted: true,
+                });
+              }
+            }
+          }
+        }
+
+        if (validTargets.length === 0) {
+          console.log(
+            "Adrenaline Lab: No damaged people with affordable abilities"
+          );
+          return false;
+        }
+
+        // Set up selection
+        state.pending = {
+          type: "adrenalinelab_select_person",
+          source: context.source,
+          sourceCard: context.campCard || context.source,
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets,
+          context,
+        };
+
+        console.log(
+          `Adrenaline Lab: Select a damaged person to use their ability (${validTargets.length} available)`
+        );
+        return true;
+      },
+    },
+  },
+
   obelisk: {
     // No abilities - just has a trait that affects win conditions
   },
+
   resonator: {
     damage: {
       cost: 1,

@@ -26,6 +26,8 @@ export class GameState {
       veraFirstUseCards: [],
       resonatorUsedThisTurn: false,
     };
+
+    this.activeAbilityContext = null;
   }
 
   checkDeckExhaustion() {

@@ -12,6 +12,26 @@ export class CommandSystem {
     this.registerHandlers();
   }
 
+  createAbilityContext(
+    source,
+    playerId,
+    columnIndex,
+    position,
+    ability,
+    fromAdrenalineLab = false
+  ) {
+    return {
+      source,
+      playerId,
+      columnIndex,
+      position,
+      ability,
+      fromAdrenalineLab,
+      startedAt: Date.now(),
+      completed: false,
+    };
+  }
+
   findValidTargets(sourcePlayerId, options = {}) {
     return TargetValidator.findValidTargets(
       this.state,
@@ -62,6 +82,7 @@ export class CommandSystem {
 
   completeAbility(pending) {
     console.log("completeAbility called with pending:", pending);
+
     if (pending?.sourceCard) {
       if (pending.isResonator) {
         this.state.turnEvents.resonatorUsedThisTurn = true;
@@ -69,11 +90,14 @@ export class CommandSystem {
           "Resonator used - no other abilities can be used this turn"
         );
       }
+
       // Check if we stored a Vera decision
       if (!pending.shouldStayReady) {
         pending.sourceCard.isReady = false;
       }
+
       this.state.turnEvents.abilityUsedThisTurn = true;
+
       console.log(
         `${pending.sourceCard.name} ${
           pending.shouldStayReady
@@ -81,6 +105,11 @@ export class CommandSystem {
             : "marked as not ready"
         } after ability completed`
       );
+    }
+
+    // NEW: Also finalize any active ability context (for Adrenaline Lab)
+    if (this.activeAbilityContext && !this.activeAbilityContext.completed) {
+      this.finalizeAbilityExecution(this.activeAbilityContext);
     }
   }
 
@@ -140,6 +169,9 @@ export class CommandSystem {
 
     // Clear pending
     this.state.pending = null;
+    if (this.activeAbilityContext && !this.state.pending) {
+      this.finalizeAbilityExecution(this.activeAbilityContext);
+    }
 
     console.log("Mutant ability completed");
   }
@@ -221,6 +253,7 @@ export class CommandSystem {
   }
 
   handleUseCampAbility(payload) {
+    console.log("Camp ability triggered:", payload);
     if (this.state.turnEvents.resonatorUsedThisTurn) {
       console.log("Cannot use abilities - Resonator was used this turn");
       return false;
@@ -1167,6 +1200,9 @@ export class CommandSystem {
       case "restore": {
         // Mark ability complete BEFORE resolving
         this.completeAbility(this.state.pending);
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Store Parachute info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
@@ -1848,37 +1884,126 @@ export class CommandSystem {
   }
 
   executeAbility(ability, context) {
-    let cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
-    const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
+    // Create or enhance the execution context
+    const abilityContext = this.createAbilityContext(
+      context.source,
+      context.playerId,
+      context.columnIndex,
+      context.position,
+      ability,
+      context.fromAdrenalineLab || false
+    );
 
-    // CRITICAL: If this is Mimic copying another card, use THAT card's handler
+    // Store as active context
+    this.activeAbilityContext = abilityContext;
+
+    // Get the card name for handler lookup
+    let cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
+
+    // If this is Mimic copying another card, use THAT card's handler
     if (context.fromMimic && context.copiedFrom) {
       cardName = context.copiedFrom.toLowerCase().replace(/\s+/g, "");
-      console.log(`Mimic executing as ${cardName}`);
     }
 
     // Check camp abilities first
     if (context.source.type === "camp") {
       const campAbility =
-        window.cardRegistry?.campAbilities?.[cardName]?.[effectName];
+        window.cardRegistry?.campAbilities?.[cardName]?.[
+          ability.effect.toLowerCase().replace(/\s+/g, "")
+        ];
       if (campAbility?.handler) {
-        return campAbility.handler(this.state, context);
+        const result = campAbility.handler(this.state, context);
+
+        // If ability completed immediately (no pending state created)
+        if (!this.state.pending) {
+          this.finalizeAbilityExecution(abilityContext);
+        }
+
+        return result;
       }
     }
 
-    // Check person abilities - now using the correct cardName
+    // Check person abilities
+    const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
     const personAbility =
       window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
     if (personAbility?.handler) {
-      console.log(`Found handler for ${cardName}.${effectName}`);
-      return personAbility.handler(this.state, context);
+      const result = personAbility.handler(this.state, context);
+
+      // If ability completed immediately (no pending state created)
+      if (!this.state.pending) {
+        this.finalizeAbilityExecution(abilityContext);
+      }
+
+      return result;
     }
 
     // Fall back to generic ability handling
-    console.log(
-      `No specific handler found for ${cardName}.${effectName}, using generic`
-    );
     this.handleGenericAbility(ability, context);
+
+    // If ability completed immediately (no pending state created)
+    if (!this.state.pending) {
+      this.finalizeAbilityExecution(abilityContext);
+    }
+  }
+
+  // Add a new method to handle ability finalization
+  finalizeAbilityExecution(abilityContext) {
+    if (!abilityContext || abilityContext.completed) return;
+
+    abilityContext.completed = true;
+
+    // Handle Adrenaline Lab destruction if needed
+    if (abilityContext.fromAdrenalineLab) {
+      console.log("Adrenaline Lab: Ability completed, destroying the person");
+
+      const card = this.state.getCard(
+        abilityContext.playerId,
+        abilityContext.columnIndex,
+        abilityContext.position
+      );
+
+      if (card && card.type === "person" && !card.isDestroyed) {
+        card.isDestroyed = true;
+
+        const player = this.state.players[abilityContext.playerId];
+        const column = player.columns[abilityContext.columnIndex];
+
+        // Handle punk vs normal person
+        if (card.isPunk) {
+          const returnCard = {
+            id: card.id,
+            name: card.originalName || card.name,
+            type: card.originalCard?.type || card.type,
+            cost: card.originalCard?.cost || card.cost,
+            abilities: card.originalCard?.abilities || card.abilities,
+            junkEffect: card.originalCard?.junkEffect || card.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Adrenaline Lab: Destroyed punk (returned to deck)");
+        } else {
+          this.state.discard.push(card);
+          console.log(`Adrenaline Lab: Destroyed ${card.name}`);
+        }
+
+        // Remove from column
+        column.setCard(abilityContext.position, null);
+
+        // Move cards behind forward
+        if (abilityContext.position < 2) {
+          const cardInFront = column.getCard(abilityContext.position + 1);
+          if (cardInFront) {
+            column.setCard(abilityContext.position, cardInFront);
+            column.setCard(abilityContext.position + 1, null);
+          }
+        }
+      }
+    }
+
+    // Clear active context
+    if (this.activeAbilityContext === abilityContext) {
+      this.activeAbilityContext = null;
+    }
   }
 
   handleSelectTarget(payload) {
@@ -1893,6 +2018,140 @@ export class CommandSystem {
 
     // Route to appropriate handler based on pending type
     switch (this.state.pending.type) {
+      case "adrenalinelab_select_person": {
+        const pending = this.state.pending;
+
+        // Find the selected target
+        const selectedTarget = pending.validTargets.find(
+          (t) =>
+            t.card.id ===
+            this.state.getCard(targetPlayer, targetColumn, targetPosition)?.id
+        );
+
+        if (!selectedTarget) {
+          console.log("Invalid target for Adrenaline Lab");
+          return false;
+        }
+
+        // If person has multiple abilities, let player choose
+        if (selectedTarget.abilities.length > 1) {
+          this.state.pending = {
+            type: "adrenalinelab_select_ability",
+            source: pending.source,
+            sourceCard: pending.sourceCard,
+            sourcePlayerId: pending.sourcePlayerId,
+            selectedPerson: selectedTarget,
+            context: pending.context,
+          };
+
+          console.log(
+            `Adrenaline Lab: Choose which ${selectedTarget.card.name} ability to use`
+          );
+          return true;
+        }
+
+        // Single ability - use it
+        const ability = selectedTarget.abilities[0];
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Pay the cost
+        player.water -= ability.cost;
+        console.log(
+          `Adrenaline Lab: Paid ${ability.cost} water for ${selectedTarget.card.name}'s ${ability.effect}`
+        );
+
+        // Mark Adrenaline Lab as used
+        if (pending.sourceCard) {
+          pending.sourceCard.isReady = false;
+        }
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Execute the ability with the Adrenaline Lab flag
+        const abilityContext = {
+          source: selectedTarget.card,
+          playerId: pending.sourcePlayerId,
+          columnIndex: selectedTarget.columnIndex,
+          position: selectedTarget.position,
+          fromAdrenalineLab: true,
+        };
+
+        this.executeAbility(ability, abilityContext);
+
+        console.log(
+          `Adrenaline Lab: Using ${selectedTarget.card.name}'s ${ability.effect} ability`
+        );
+
+        // Check if ability created a pending state
+        if (this.state.pending) {
+          // Store Adrenaline Lab info in the new pending state
+          this.state.pending.adrenalineLabDestroy = {
+            playerId: pending.sourcePlayerId,
+            columnIndex: selectedTarget.columnIndex,
+            position: selectedTarget.position,
+          };
+        }
+
+        return true;
+      }
+
+      case "adrenalinelab_select_ability": {
+        const pending = this.state.pending;
+        const abilityIndex = payload.abilityIndex;
+
+        if (
+          abilityIndex === undefined ||
+          !pending.selectedPerson.abilities[abilityIndex]
+        ) {
+          console.log("Invalid ability selection for Adrenaline Lab");
+          return false;
+        }
+
+        const ability = pending.selectedPerson.abilities[abilityIndex];
+        const player = this.state.players[pending.sourcePlayerId];
+
+        // Pay the cost
+        player.water -= ability.cost;
+        console.log(
+          `Adrenaline Lab: Paid ${ability.cost} for ${pending.selectedPerson.card.name}'s ${ability.effect}`
+        );
+
+        // Mark Adrenaline Lab as used
+        if (pending.sourceCard) {
+          pending.sourceCard.isReady = false;
+        }
+
+        // Clear pending
+        this.state.pending = null;
+
+        // Execute the ability with the Adrenaline Lab flag
+        const abilityContext = {
+          source: pending.selectedPerson.card,
+          playerId: pending.sourcePlayerId,
+          columnIndex: pending.selectedPerson.columnIndex,
+          position: pending.selectedPerson.position,
+          fromAdrenalineLab: true,
+        };
+
+        this.executeAbility(ability, abilityContext);
+
+        console.log(
+          `Adrenaline Lab: Using ${pending.selectedPerson.card.name}'s ${ability.effect} ability`
+        );
+
+        // Check if ability created a pending state
+        if (this.state.pending) {
+          // Store Adrenaline Lab info in the new pending state
+          this.state.pending.adrenalineLabDestroy = {
+            playerId: pending.sourcePlayerId,
+            columnIndex: pending.selectedPerson.columnIndex,
+            position: pending.selectedPerson.position,
+          };
+        }
+
+        return true;
+      }
       case "octagon_choose_destroy": {
         const pending = this.state.pending;
 
@@ -1903,6 +2162,9 @@ export class CommandSystem {
           // Mark ability complete
           this.completeAbility(pending);
           this.state.pending = null;
+          if (this.activeAbilityContext) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
           return true;
         }
 
@@ -1987,6 +2249,9 @@ export class CommandSystem {
           // Mark ability complete
           this.completeAbility(pending);
           this.state.pending = null;
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
           return true;
         }
 
@@ -2535,6 +2800,9 @@ export class CommandSystem {
           // Mark ability complete
           this.completeAbility(pending);
           this.state.pending = null;
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
         } else if (benefit === "punk") {
           // Check if deck has cards
           if (this.state.deck.length === 0) {
@@ -2547,6 +2815,9 @@ export class CommandSystem {
             // Mark ability complete
             this.completeAbility(pending);
             this.state.pending = null;
+            if (this.activeAbilityContext && !this.state.pending) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
           } else {
             // Set up punk placement
             this.state.pending = {
@@ -2733,6 +3004,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         return true;
       }
 
@@ -2829,6 +3104,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Check for game end
         this.checkGameEnd();
 
@@ -2875,6 +3154,10 @@ export class CommandSystem {
 
         // Clear pending
         this.state.pending = null;
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         console.log("Supply Depot: Resolved");
         return true;
@@ -2948,6 +3231,10 @@ export class CommandSystem {
 
         // Clear pending
         this.state.pending = null;
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         return true;
       }
@@ -3032,6 +3319,10 @@ export class CommandSystem {
 
         // Clear pending
         this.state.pending = null;
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         return true;
       }
@@ -3131,6 +3422,9 @@ export class CommandSystem {
           // Mark ability complete even though we can't restore
           this.completeAbility(pending);
           this.state.pending = null;
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
           return true;
         }
 
@@ -3190,6 +3484,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         return true;
       }
 
@@ -3231,6 +3529,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Check for game end
         this.checkGameEnd();
 
@@ -3271,6 +3573,10 @@ export class CommandSystem {
 
         // Clear pending
         this.state.pending = null;
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         return true;
       }
@@ -4090,6 +4396,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         console.log("Zeto Kahn: Draw and discard complete");
 
         // Apply Parachute Base damage if needed
@@ -4440,6 +4750,11 @@ export class CommandSystem {
           // Clear pending
           this.state.pending = null;
 
+          // ADD THIS: Finalize ability execution for Adrenaline Lab
+          if (this.activeAbilityContext) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
+
           // Apply Parachute Base damage if needed
           if (parachuteBaseDamage) {
             this.applyParachuteBaseDamage(
@@ -4478,6 +4793,11 @@ export class CommandSystem {
             if (sourceCard) {
               sourceCard.isReady = false;
             }
+
+            // ADD THIS: Finalize ability execution for Adrenaline Lab
+            if (this.activeAbilityContext) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
             break;
 
           case "card":
@@ -4493,6 +4813,16 @@ export class CommandSystem {
             if (result.card) {
               console.log(`Drew ${result.card.name} from Scientist junk`);
             }
+
+            // Mark source card not ready
+            if (sourceCard) {
+              sourceCard.isReady = false;
+            }
+
+            // ADD THIS: Finalize ability execution for Adrenaline Lab
+            if (this.activeAbilityContext) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
             break;
 
           case "raid":
@@ -4500,6 +4830,11 @@ export class CommandSystem {
             // Mark source card not ready
             if (sourceCard) {
               sourceCard.isReady = false;
+            }
+
+            // ADD THIS: Finalize ability execution for Adrenaline Lab
+            if (this.activeAbilityContext) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
             }
             break;
 
@@ -4514,11 +4849,17 @@ export class CommandSystem {
                 // Game ended due to deck exhaustion
                 console.log("Game ended - deck exhausted twice");
                 // Clear pending
-                state.pending = null;
+                this.state.pending = null;
                 // Mark source card not ready
                 if (sourceCard) {
                   sourceCard.isReady = false;
                 }
+
+                // ADD THIS: Finalize ability execution for Adrenaline Lab
+                if (this.activeAbilityContext) {
+                  this.finalizeAbilityExecution(this.activeAbilityContext);
+                }
+
                 return true;
               }
 
@@ -4531,16 +4872,22 @@ export class CommandSystem {
                   sourceCard.isReady = false;
                 }
                 // Clear pending
-                state.pending = null;
+                this.state.pending = null;
+
+                // ADD THIS: Finalize ability execution for Adrenaline Lab
+                if (this.activeAbilityContext) {
+                  this.finalizeAbilityExecution(this.activeAbilityContext);
+                }
+
                 return true;
               }
 
               // Put the card back since we just checked
-              state.deck.unshift(result.card);
+              this.state.deck.unshift(result.card);
             }
 
             // Now we know deck has cards, set up punk placement
-            state.pending = {
+            this.state.pending = {
               type: "place_punk",
               sourcePlayerId: sourcePlayerId,
               fromScientist: true,
@@ -4550,8 +4897,11 @@ export class CommandSystem {
 
             // Preserve parachute damage if present
             if (parachuteBaseDamage) {
-              state.pending.parachuteBaseDamage = parachuteBaseDamage;
+              this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
             }
+
+            // NOTE: Don't finalize here since we're setting up a new pending state
+            // The finalization will happen when the punk placement completes
             break;
         }
 
@@ -4566,6 +4916,7 @@ export class CommandSystem {
 
         return true;
       }
+
       case "molgur_destroy_camp": {
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>
@@ -4794,6 +5145,10 @@ export class CommandSystem {
         // Clear pending
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Apply Parachute Base damage if needed
         if (parachuteBaseDamage) {
           console.log(
@@ -4836,6 +5191,10 @@ export class CommandSystem {
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
         this.completeAbility(this.state.pending);
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Set up for damage (with allowProtected flag preserved)
         this.state.pending = {
@@ -4887,6 +5246,10 @@ export class CommandSystem {
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
         this.completeAbility(this.state.pending);
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Apply the damage
         const result = this.resolveDamage(
@@ -5007,6 +5370,10 @@ export class CommandSystem {
         // Mark ability complete (for Raiders)
         this.completeAbility(this.state.pending);
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         if (fromCache && !fromCacheComplete) {
           // Continue with Cache's punk placement
           console.log("Cache: Raiders resolved, now place your punk");
@@ -5096,6 +5463,10 @@ export class CommandSystem {
         // Mark ability complete BEFORE resolving damage
         this.completeAbility(this.state.pending);
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Resolve the damage (this clears pending)
         const result = this.resolveDamage(
           targetPlayer,
@@ -5103,11 +5474,13 @@ export class CommandSystem {
           targetPosition
         );
 
+        // ADD THIS: Finalize ability execution if there's an active context
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Apply Parachute Base damage if needed
         if (result && parachuteBaseDamage) {
-          console.log(
-            "Damage ability completed, applying Parachute Base damage"
-          );
           this.applyParachuteBaseDamage(
             parachuteBaseDamage.targetPlayer,
             parachuteBaseDamage.targetColumn,
@@ -5229,6 +5602,10 @@ export class CommandSystem {
         // Mark ability complete BEFORE resolving damage (which clears pending)
         this.completeAbility(this.state.pending);
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Now apply the damage (this will clear pending)
         const result = this.resolveDamage(
           targetPlayer,
@@ -5268,6 +5645,10 @@ export class CommandSystem {
         const isTargetCamp = targetCard?.type === "camp";
 
         this.completeAbility(this.state.pending);
+
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // This call clears this.state.pending!
         const damaged = this.resolveDamage(
@@ -5332,12 +5713,21 @@ export class CommandSystem {
 
         this.completeAbility(this.state.pending);
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Call resolveInjure (which will clear pending)
         const result = this.resolveInjure(
           targetPlayer,
           targetColumn,
           targetPosition
         );
+
+        // ADD THIS: Finalize ability execution if there's an active context
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Now apply Parachute Base damage if it existed
         if (parachuteBaseDamage) {
@@ -5373,6 +5763,10 @@ export class CommandSystem {
         // Mark ability complete for ALL restore abilities
         this.completeAbility(this.state.pending);
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         // Check if this restore was from Parachute Base
         if (this.state.pending?.parachuteBaseDamage) {
           const pbDamage = this.state.pending.parachuteBaseDamage;
@@ -5383,6 +5777,11 @@ export class CommandSystem {
           // Clear pending first
           this.state.pending = null;
 
+          // Finalize ability execution before applying Parachute damage
+          if (this.activeAbilityContext) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
+
           // Apply damage to the card that was played via Parachute Base
           this.applyParachuteBaseDamage(
             pbDamage.targetPlayer,
@@ -5392,6 +5791,11 @@ export class CommandSystem {
         } else {
           // Normal restore, just clear pending
           this.state.pending = null;
+
+          // Finalize ability execution after clearing pending
+          if (this.activeAbilityContext) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
         }
 
         return true;
@@ -5443,6 +5847,10 @@ export class CommandSystem {
 
           // Clear pending first
           this.state.pending = null;
+
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
 
           const player = this.state.players[pbContext.sourcePlayerId];
           const person = this.state.getCard(
@@ -5636,6 +6044,10 @@ export class CommandSystem {
         this.completeAbility(pending);
         this.state.pending = null;
 
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         return true;
       }
 
@@ -5678,6 +6090,10 @@ export class CommandSystem {
             // Mark Omen Clock complete first
             this.completeAbility(pending);
 
+            if (this.activeAbilityContext && !this.state.pending) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
+
             const opponentId = eventPlayerId === "left" ? "right" : "left";
             this.state.pending = {
               type: "raiders_select_camp",
@@ -5704,6 +6120,10 @@ export class CommandSystem {
             // Clear the Omen Clock pending state BEFORE executing the event
             this.state.pending = null;
 
+            if (this.activeAbilityContext && !this.state.pending) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
+
             // Execute the event effect (belongs to the event's owner)
             const eventContext = {
               playerId: eventPlayerId, // The owner of the event
@@ -5723,6 +6143,9 @@ export class CommandSystem {
             this.state.discard.push(event);
             this.completeAbility(pending);
             this.state.pending = null;
+            if (this.activeAbilityContext && !this.state.pending) {
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            }
           }
         } else {
           // Normal advancement
@@ -5739,6 +6162,9 @@ export class CommandSystem {
           // Mark ability complete
           this.completeAbility(pending);
           this.state.pending = null;
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
         }
 
         return true;
@@ -6385,6 +6811,9 @@ export class CommandSystem {
 
           // Clear the mimic pending state
           this.state.pending = null;
+          if (this.activeAbilityContext && !this.state.pending) {
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          }
 
           // Execute the damage ability with Mimic as the source
           const mimicContext = {
@@ -6480,6 +6909,9 @@ export class CommandSystem {
 
         // Clear the mimic pending state
         this.state.pending = null;
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Execute the copied ability with Mimic as the source
         const mimicContext = {
@@ -6556,6 +6988,9 @@ export class CommandSystem {
 
         // Clear the pending state
         this.state.pending = null;
+        if (this.activeAbilityContext && !this.state.pending) {
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
 
         // Execute the copied ability with Mimic as the source
         const mimicContext = {

@@ -1654,3 +1654,15 @@ body.has-pending .card.bonfire-restore-target {
   box-shadow: 0 0 10px #4caf50;
   border: 2px dashed #4caf50;
 }
+
+.card.adrenalinelab-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #9c27b0;
+  border: 2px solid #9c27b0;
+}
+
+body.has-pending .card.adrenalinelab-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

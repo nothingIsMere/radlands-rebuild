@@ -43,7 +43,9 @@ export class CardRegistry {
   }
 
   getAbilityHandler(cardName) {
-    return this.abilities.get(cardName.toLowerCase().replace(/\s+/g, ""));
+    const normalized = cardName.toLowerCase().replace(/\s+/g, "");
+    console.log("Looking for ability handler:", normalized);
+    return this.abilities.get(normalized);
   }
 
   getTraitHandler(cardName) {

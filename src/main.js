@@ -67,6 +67,14 @@ function setupTestGame() {
   // LEFT PLAYER HAND
   gameState.players.left.hand = [
     {
+      id: "muse_1",
+      name: "Muse",
+      type: "person",
+      cost: 1,
+      abilities: [{ effect: "extra_water", cost: 0 }],
+      junkEffect: "injure",
+    },
+    {
       id: "vigilante_1",
       name: "Vigilante",
       type: "person",
@@ -413,6 +421,14 @@ function setupTestGame() {
       cost: 0,
       queueNumber: 1,
       junkEffect: "water",
+    },
+    {
+      id: "muse_2",
+      name: "Muse",
+      type: "person",
+      cost: 1,
+      abilities: [{ effect: "extra_water", cost: 0 }],
+      junkEffect: "injure",
     },
     {
       id: "bombardment_2",

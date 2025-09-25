@@ -4246,6 +4246,7 @@ export class CommandSystem {
       }
 
       case "magnus_select_column": {
+        const pending = this.state.pending;
         // Magnus needs a column selection, but SELECT_TARGET gives us a specific card
         // We'll infer the column from the target position
         const targetCol = targetColumn;
@@ -4997,6 +4998,7 @@ export class CommandSystem {
       }
 
       case "molgur_destroy_camp": {
+        const pending = this.state.pending;
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>
             t.playerId === targetPlayer &&

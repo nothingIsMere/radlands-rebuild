@@ -762,7 +762,8 @@ body.has-pending .card.mutant-damage-target,
 body.has-pending .card.uprising-placement-target,
 body.has-pending .card.mulcher-target,
 body.has-pending .card.constructionyard-moveable,
-body.has-pending .card.constructionyard-destination {
+body.has-pending .card.constructionyard-destination,
+body.has-pending .card.rabblerouser-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }

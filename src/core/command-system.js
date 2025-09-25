@@ -1947,14 +1947,64 @@ export class CommandSystem {
     }
   }
 
-  // Add a new method to handle ability finalization
   finalizeAbilityExecution(abilityContext) {
     if (!abilityContext || abilityContext.completed) return;
 
     abilityContext.completed = true;
 
-    // Handle Adrenaline Lab destruction if needed
-    if (abilityContext.fromAdrenalineLab) {
+    // Check if there's pending Adrenaline Lab destruction info
+    if (this.state.pending?.adrenalineLabDestroy) {
+      const destroyInfo = this.state.pending.adrenalineLabDestroy;
+      console.log("Adrenaline Lab: Ability completed, destroying the person");
+
+      const card = this.state.getCard(
+        destroyInfo.playerId,
+        destroyInfo.columnIndex,
+        destroyInfo.position
+      );
+
+      if (card && card.type === "person" && !card.isDestroyed) {
+        card.isDestroyed = true;
+
+        const player = this.state.players[destroyInfo.playerId];
+        const column = player.columns[destroyInfo.columnIndex];
+
+        // Handle punk vs normal person
+        if (card.isPunk) {
+          const returnCard = {
+            id: card.id,
+            name: card.originalName || card.name,
+            type: card.originalCard?.type || card.type,
+            cost: card.originalCard?.cost || card.cost,
+            abilities: card.originalCard?.abilities || card.abilities,
+            junkEffect: card.originalCard?.junkEffect || card.junkEffect,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log("Adrenaline Lab: Destroyed punk (returned to deck)");
+        } else {
+          this.state.discard.push(card);
+          console.log(`Adrenaline Lab: Destroyed ${card.name}`);
+        }
+
+        // Remove from column
+        column.setCard(destroyInfo.position, null);
+
+        // Move cards behind forward
+        if (destroyInfo.position < 2) {
+          const cardInFront = column.getCard(destroyInfo.position + 1);
+          if (cardInFront) {
+            column.setCard(destroyInfo.position, cardInFront);
+            column.setCard(destroyInfo.position + 1, null);
+          }
+        }
+      }
+
+      // Clear the destruction info
+      this.state.pending = null;
+    }
+
+    // Original Adrenaline Lab destruction logic (for immediate execution)
+    else if (abilityContext.fromAdrenalineLab) {
       console.log("Adrenaline Lab: Ability completed, destroying the person");
 
       const card = this.state.getCard(
@@ -2075,6 +2125,12 @@ export class CommandSystem {
           columnIndex: selectedTarget.columnIndex,
           position: selectedTarget.position,
           fromAdrenalineLab: true,
+          adrenalineLabDestroy: {
+            // ADD THIS
+            playerId: pending.sourcePlayerId,
+            columnIndex: selectedTarget.columnIndex,
+            position: selectedTarget.position,
+          },
         };
 
         this.executeAbility(ability, abilityContext);
@@ -2083,8 +2139,15 @@ export class CommandSystem {
           `Adrenaline Lab: Using ${selectedTarget.card.name}'s ${ability.effect} ability`
         );
 
+        console.log(
+          "After executeAbility, pending state is:",
+          this.state.pending
+        );
+        console.log("Pending type:", this.state.pending?.type);
+
         // Check if ability created a pending state
         if (this.state.pending) {
+          console.log("Adding adrenalineLabDestroy to pending state");
           // Store Adrenaline Lab info in the new pending state
           this.state.pending.adrenalineLabDestroy = {
             playerId: pending.sourcePlayerId,
@@ -4233,6 +4296,7 @@ export class CommandSystem {
 
         // Check for Parachute Base damage
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const adrenalineLabDestroy = pending?.adrenalineLabDestroy;
 
         // Clear pending
         this.state.pending = null;
@@ -4247,6 +4311,11 @@ export class CommandSystem {
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
+        }
+
+        if (adrenalineLabDestroy) {
+          this.state.pending = { adrenalineLabDestroy };
+          this.finalizeAbilityExecution(this.activeAbilityContext);
         }
 
         return true;
@@ -4344,6 +4413,7 @@ export class CommandSystem {
           validTargets: counterTargets,
           vanguardCard: this.state.pending.sourceCard,
           parachuteBaseDamage: parachuteBaseDamage,
+          adrenalineLabDestroy: pending.adrenalineLabDestroy,
         };
 
         console.log(
@@ -4461,6 +4531,7 @@ export class CommandSystem {
 
         // Store Parachute Base damage info before clearing pending
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const adrenalineLabDestroy = pending?.adrenalineLabDestroy;
 
         // Clear pending
         this.state.pending = null;
@@ -4482,9 +4553,15 @@ export class CommandSystem {
           console.log("No Parachute Base damage to apply");
         }
 
+        if (adrenalineLabDestroy) {
+          this.state.pending = { adrenalineLabDestroy };
+          this.finalizeAbilityExecution(this.activeAbilityContext);
+        }
+
         console.log("Vanguard ability fully completed");
         return true;
       }
+
       case "mutant_choose_mode": {
         const mode = payload.mode; // 'damage', 'restore', or 'both'
         const pending = this.state.pending;
@@ -4942,6 +5019,7 @@ export class CommandSystem {
 
         // Store Parachute Base damage info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const adrenalineLabDestroy = pending?.adrenalineLabDestroy;
 
         // Destroy the camp outright
         target.isDestroyed = true;
@@ -4980,6 +5058,11 @@ export class CommandSystem {
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
+        }
+
+        if (adrenalineLabDestroy) {
+          this.state.pending = { adrenalineLabDestroy };
+          this.finalizeAbilityExecution(this.activeAbilityContext);
         }
 
         return true;
@@ -5492,7 +5575,7 @@ export class CommandSystem {
 
       case "cultleader_select_destroy": {
         // Verify it's a valid target
-        const isValidTarget = this.state.pending.validTargets?.some(
+        const isValidTarget = this.state.pending?.validTargets?.some(
           (t) =>
             t.playerId === targetPlayer &&
             t.columnIndex === targetColumn &&
@@ -5514,11 +5597,12 @@ export class CommandSystem {
           return false;
         }
 
-        // Store if Cult Leader is destroying itself
+        // Store if Cult Leader is destroying itself - USE this.state.pending directly
         const isDestroyingSelf = target.id === this.state.pending.source.id;
 
         // Store Parachute Base damage info if present
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const adrenalineLabDestroy = this.state.pending?.adrenalineLabDestroy; // ADD THIS
 
         // Destroy the target person
         target.isDestroyed = true;
@@ -5560,10 +5644,11 @@ export class CommandSystem {
         // Now set up damage targeting (even if Cult Leader destroyed itself)
         this.state.pending = {
           type: "cultleader_damage",
-          sourcePlayerId: this.state.pending.sourcePlayerId,
+          sourcePlayerId: this.state.pending.sourcePlayerId, // Use this.state.pending directly
           sourceCard: cultLeaderCard,
           destroyedSelf: isDestroyingSelf,
           parachuteBaseDamage: parachuteBaseDamage,
+          adrenalineLabDestroy: adrenalineLabDestroy, // PRESERVE THIS
         };
 
         console.log("Cult Leader: Now select target to damage");
@@ -5571,6 +5656,7 @@ export class CommandSystem {
       }
 
       case "cultleader_damage": {
+        const pending = this.state.pending;
         // This is the damage after destroying own person
         // Can't damage own cards
         if (targetPlayer === this.state.pending.sourcePlayerId) {
@@ -5598,6 +5684,8 @@ export class CommandSystem {
         // Store info we need before clearing
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
         const destroyedSelf = this.state.pending?.destroyedSelf;
+        const adrenalineLabDestroy = this.state.pending?.adrenalineLabDestroy;
+        const sourceCard = pending?.sourceCard;
 
         // Mark ability complete BEFORE resolving damage (which clears pending)
         this.completeAbility(this.state.pending);
@@ -5627,6 +5715,11 @@ export class CommandSystem {
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
+        }
+
+        if (adrenalineLabDestroy && !destroyedSelf) {
+          this.state.pending = { adrenalineLabDestroy };
+          this.finalizeAbilityExecution(this.activeAbilityContext);
         }
 
         return result;
@@ -5837,6 +5930,8 @@ export class CommandSystem {
 
         // Check if this was from Parachute Base
         const pbContext = pending.parachuteBaseContext;
+        const adrenalineLabDestroy = pending.adrenalineLabDestroy;
+
         if (pbContext) {
           console.log(
             "=== Continuing Parachute Base sequence after Repair Bot entry trait ==="
@@ -5903,6 +5998,7 @@ export class CommandSystem {
                   targetColumn: pbContext.targetColumn,
                   targetPosition: pbContext.targetSlot,
                 };
+                this.state.pending.adrenalineLabDestroy = adrenalineLabDestroy;
               } else {
                 // No pending means no valid targets or ability failed
                 console.log(
@@ -5913,6 +6009,10 @@ export class CommandSystem {
                   pbContext.targetColumn,
                   pbContext.targetSlot
                 );
+                if (adrenalineLabDestroy) {
+                  this.state.pending = { adrenalineLabDestroy };
+                  this.finalizeAbilityExecution(this.activeAbilityContext);
+                }
               }
             } else {
               console.log(
@@ -5937,7 +6037,13 @@ export class CommandSystem {
           }
         } else {
           // Normal entry restore (not from Parachute Base)
-          this.state.pending = null;
+
+          if (adrenalineLabDestroy) {
+            this.state.pending = { adrenalineLabDestroy };
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          } else {
+            this.state.pending = null;
+          }
         }
 
         return true;
@@ -6448,6 +6554,7 @@ export class CommandSystem {
 
         // Check for Parachute Base damage if applicable
         const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+        const adrenalineLabDestroy = pending?.adrenalineLabDestroy;
 
         // Clear pending
         this.state.pending = null;
@@ -6462,6 +6569,11 @@ export class CommandSystem {
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
+        }
+
+        if (adrenalineLabDestroy) {
+          this.state.pending = { adrenalineLabDestroy };
+          this.finalizeAbilityExecution(this.activeAbilityContext);
         }
 
         return true;

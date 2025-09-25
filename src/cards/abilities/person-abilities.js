@@ -459,6 +459,9 @@ export const personAbilities = {
     destroyowndamage: {
       cost: 0,
       handler: (state, context) => {
+        console.log("=== CULT LEADER HANDLER CALLED ===");
+        console.log("Context:", context);
+        console.log("Current pending state:", state.pending);
         // Find all of player's own people
         const validTargets = TargetValidator.findValidTargets(
           state,
@@ -466,26 +469,29 @@ export const personAbilities = {
           {
             allowOwn: true,
             requirePerson: true,
-            allowProtected: true, // Can destroy own protected people
+            allowProtected: true,
           }
         );
+
+        console.log("Found valid targets:", validTargets.length);
 
         if (validTargets.length === 0) {
           console.log("Cult Leader: No people to destroy");
           return false;
         }
 
-        // DON'T mark as not ready here - let handleUseAbility do it
-
         // Set up selection for which of your own people to destroy
         state.pending = {
           type: "cultleader_select_destroy",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,
+          adrenalineLabDestroy: context.adrenalineLabDestroy, // Get it from context, not state.pending
         };
 
+        console.log("Set pending state to:", state.pending);
         console.log(
           `Cult Leader: Select one of your people to destroy (${validTargets.length} targets)`
         );

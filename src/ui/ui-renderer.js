@@ -648,6 +648,7 @@ export class UIRenderer {
         cardDiv.addEventListener("click", (e) => {
           if (this.state.phase === "game_over") return;
           e.stopPropagation();
+          e.preventDefault();
           this.commands.execute({
             type: "SELECT_TARGET",
             targetPlayer: playerId,
@@ -1263,12 +1264,6 @@ export class UIRenderer {
     } else {
       // THIS is where card type checking should be - when card EXISTS
       if (card.type === "camp") {
-        console.log(
-          "Rendering camp:",
-          card.name,
-          "with abilities:",
-          card.abilities
-        );
         cardDiv.classList.add("camp");
       } else if (card.type === "person") {
         cardDiv.classList.add("person");
@@ -1335,12 +1330,6 @@ export class UIRenderer {
             let canUseAbility = false;
 
             if (card.type === "camp") {
-              console.log(
-                "Rendering camp:",
-                card.name,
-                "with abilities:",
-                card.abilities
-              );
               canUseAbility = card.isReady && !card.isDestroyed;
             } else if (card.type === "person") {
               canUseAbility =
@@ -1392,12 +1381,6 @@ export class UIRenderer {
                     },
                   });
                 } else if (card.type === "camp") {
-                  console.log(
-                    "Rendering camp:",
-                    card.name,
-                    "with abilities:",
-                    card.abilities
-                  );
                   // Regular camps are always at position 0
                   console.log(
                     "Camp ability clicked:",
@@ -1450,12 +1433,6 @@ export class UIRenderer {
                 if (!card.isReady) text.textContent += " [Not Ready]";
                 if (card.isDamaged) text.textContent += " [Damaged]";
               } else if (card.type === "camp") {
-                console.log(
-                  "Rendering camp:",
-                  card.name,
-                  "with abilities:",
-                  card.abilities
-                );
                 if (!card.isReady) text.textContent += " [Used]";
                 if (card.isDestroyed) text.textContent += " [Destroyed]";
               }
@@ -1537,6 +1514,8 @@ export class UIRenderer {
       cardDiv.addEventListener("click", (e) => {
         if (this.state.phase === "game_over") return;
         e.stopPropagation();
+
+        if (e.defaultPrevented) return;
 
         if (
           this.state.pending?.type === "constructionyard_select_person" &&

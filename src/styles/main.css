@@ -767,6 +767,13 @@ body.has-pending .card.constructionyard-destination {
   pointer-events: auto !important;
 }
 
+body.has-pending .card.rabblerouser-target,
+body.has-pending .card.adrenalinelab-person-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
 /* Only dim ENEMY cards that aren't targets during targeting */
 body.has-pending
   .player-board:not(.active)

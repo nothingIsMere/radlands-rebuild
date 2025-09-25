@@ -4322,6 +4322,7 @@ export class CommandSystem {
       }
 
       case "vanguard_damage": {
+        const pending = this.state.pending;
         console.log(
           "Vanguard damage target selected:",
           targetPlayer,
@@ -4488,6 +4489,7 @@ export class CommandSystem {
       }
 
       case "vanguard_counter": {
+        const pending = this.state.pending;
         console.log(
           "Vanguard counter target selected:",
           targetPlayer,
@@ -6484,6 +6486,7 @@ export class CommandSystem {
       }
 
       case "rescue_team_select": {
+        const pending = this.state.pending;
         // Verify it's a valid target
         const isValidTarget = this.state.pending.validTargets?.some(
           (t) =>

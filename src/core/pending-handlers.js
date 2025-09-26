@@ -815,7 +815,345 @@ class MolgurDestroyCampHandler extends PendingHandler {
   }
 }
 
-// Export a registry of all handlers
+// Camp damage handlers that ignore protection
+class CatapultDamageHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid catapult target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Store values before clearing
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Clear pending first
+    this.state.pending = null;
+
+    // Apply damage (Catapult ignores protection)
+    const target = this.getTarget(payload);
+    if (!target) return false;
+
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+      if (target.type === "camp") {
+        this.commandSystem.checkGameEnd();
+      } else if (target.isPunk) {
+        const returnCard = {
+          id: target.id,
+          name: target.originalName || "Unknown Card",
+          type: "person",
+          cost: target.cost || 0,
+        };
+        this.state.deck.unshift(returnCard);
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+      } else {
+        this.state.discard.push(target);
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+      }
+      console.log(`Catapult destroyed ${target.name || "target"}`);
+    } else {
+      target.isDamaged = true;
+      if (target.type === "person") {
+        target.isReady = false;
+      }
+      console.log(`Catapult damaged ${target.name}`);
+    }
+
+    // Now handle the catapult's self-destruction selection
+    const player = this.state.players[sourcePlayerId];
+    const validPeople = [];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 1; pos <= 2; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (card && card.type === "person" && !card.isDestroyed) {
+          validPeople.push({
+            playerId: sourcePlayerId,
+            columnIndex: col,
+            position: pos,
+            card,
+          });
+        }
+      }
+    }
+
+    if (validPeople.length > 0) {
+      this.state.pending = {
+        type: "catapult_select_destroy",
+        sourcePlayerId: sourcePlayerId,
+        validTargets: validPeople,
+      };
+      console.log("Catapult: Now select one of your people to destroy");
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+class CatapultSelectDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid catapult sacrifice target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Must select a person to destroy");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("Catapult: Destroyed punk (returned to deck)");
+    } else {
+      this.state.discard.push(target);
+      console.log(`Catapult: Destroyed ${target.name}`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    return true;
+  }
+}
+
+// Mercenary Camp handler (damages camps ignoring protection)
+class MercenaryCampDamageHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid mercenary camp target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "camp") {
+      console.log("Mercenary Camp can only damage camps");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Apply damage (ignores protection)
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+      console.log(`Mercenary Camp destroyed ${target.name}!`);
+      this.commandSystem.checkGameEnd();
+    } else {
+      target.isDamaged = true;
+      console.log(`Mercenary Camp damaged ${target.name}`);
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Scud Launcher handler (opponent chooses their card to damage)
+class ScudLauncherSelectTargetHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Verify correct player is selecting
+    if (targetPlayer !== this.state.pending.targetPlayerId) {
+      console.log("You must select your own card");
+      return false;
+    }
+
+    const target = this.getTarget(payload);
+    if (!target || target.isDestroyed) {
+      console.log("Invalid target");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Apply damage
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+
+      if (target.type === "camp") {
+        console.log(`Scud Launcher destroyed ${target.name} camp!`);
+        this.commandSystem.checkGameEnd();
+      } else if (target.isPunk) {
+        const returnCard = {
+          id: target.id,
+          name: target.originalName || "Unknown Card",
+          type: "person",
+          cost: target.cost || 0,
+        };
+        this.state.deck.unshift(returnCard);
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+        console.log("Scud Launcher destroyed punk");
+      } else {
+        this.state.discard.push(target);
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+        console.log(`Scud Launcher destroyed ${target.name}`);
+      }
+    } else {
+      target.isDamaged = true;
+      if (target.type === "person") {
+        target.isReady = false;
+      }
+      console.log(`Scud Launcher damaged ${target.name}`);
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Repair Bot entry restore handler
+class RepairBotEntryRestoreHandler extends PendingHandler {
+  handle(payload) {
+    const { skip } = payload;
+
+    if (skip) {
+      console.log("Skipping Repair Bot entry restore");
+      this.state.pending = null;
+      return true;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid restore target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || !target.isDamaged) {
+      console.log("Must target a damaged card");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Restore the card
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+
+    console.log(`Repair Bot entry trait: Restored ${target.name}`);
+
+    return true;
+  }
+}
+
+// Atomic Garden restore handler (restores AND readies)
+class AtomicGardenRestoreHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid atomic garden target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person" || !target.isDamaged) {
+      console.log("Atomic Garden can only restore damaged people");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Restore AND ready the person
+    target.isDamaged = false;
+    target.isReady = true; // This is the special part!
+
+    console.log(`Atomic Garden: Restored and readied ${target.name}!`);
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -831,6 +1169,12 @@ export const pendingHandlers = {
   vanguard_damage: VanguardDamageHandler,
   vanguard_counter: VanguardCounterHandler,
   molgur_destroy_camp: MolgurDestroyCampHandler,
+  catapult_damage: CatapultDamageHandler,
+  catapult_select_destroy: CatapultSelectDestroyHandler,
+  mercenary_camp_damage: MercenaryCampDamageHandler,
+  scudlauncher_select_target: ScudLauncherSelectTargetHandler,
+  repair_bot_entry_restore: RepairBotEntryRestoreHandler,
+  atomic_garden_restore: AtomicGardenRestoreHandler,
 };
 
 // Export a function to get the right handler

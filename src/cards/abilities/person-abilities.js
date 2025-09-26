@@ -965,22 +965,30 @@ export const personAbilities = {
     damage: {
       cost: 2,
       handler: (state, context) => {
-        console.log("=== Looter ability handler called ===");
-        console.log("Source card:", context.source.name);
-        console.log("From Mimic?", context.fromMimic);
-        console.log("Setting pending type to: looter_damage");
+        // Find valid damage targets
+        const validTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowProtected: false,
+          }
+        );
+
+        if (validTargets.length === 0) {
+          console.log("Looter: No valid targets");
+          return false;
+        }
 
         state.pending = {
           type: "looter_damage",
           source: context.source,
-          sourcePlayerId: context.playerId, // This is the player using the ability
+          sourcePlayerId: context.playerId,
+          validTargets: validTargets, // ADD THIS!
           context,
-          copiedFrom: context.copiedFrom, // Will be 'Looter' if from Mimic
         };
+
         console.log(
-          `${
-            context.fromMimic ? "Mimic (as Looter)" : "Looter"
-          }: Select target to damage`
+          `Looter: Select target to damage (${validTargets.length} targets)`
         );
         return true;
       },

@@ -345,13 +345,15 @@ class PyromanciacDamageHandler extends DamageBasedHandler {
 class LooterDamageHandler extends DamageBasedHandler {
   executeDamage(payload) {
     const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // STORE THESE BEFORE finalizeAbility() clears pending!
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const parachuteBaseDamage = this.state.pending.parachuteBaseDamage;
 
     const targetCard = this.getTarget(payload);
     const isTargetCamp = targetCard?.type === "camp";
 
-    this.finalizeAbility();
+    this.finalizeAbility(); // This sets pending to null
 
     const damaged = this.resolveDamage(
       targetPlayer,
@@ -360,7 +362,7 @@ class LooterDamageHandler extends DamageBasedHandler {
     );
 
     if (damaged && isTargetCamp) {
-      // Looter's special effect - draw if hit a camp
+      // Use the stored sourcePlayerId, not this.state.pending.sourcePlayerId
       const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
       if (result.gameEnded) {
         this.commandSystem.notifyUI("GAME_OVER", this.state.winner);

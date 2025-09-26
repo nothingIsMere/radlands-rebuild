@@ -14,6 +14,77 @@ class PendingHandler {
   }
 
   // Helper methods that many handlers will use
+  isValidTarget(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    return this.state.pending.validTargets?.some(
+      (t) =>
+        t.playerId === targetPlayer &&
+        t.columnIndex === targetColumn &&
+        t.position === targetPosition
+    );
+  }
+
+  getTarget(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    return this.state.getCard(targetPlayer, targetColumn, targetPosition);
+  }
+
+  handleParachuteBaseDamage() {
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    if (parachuteBaseDamage) {
+      console.log("Applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+  }
+
+  finalizeAbility() {
+    this.completeAbility();
+    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+  }
+  isValidTarget(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    return this.state.pending.validTargets?.some(
+      (t) =>
+        t.playerId === targetPlayer &&
+        t.columnIndex === targetColumn &&
+        t.position === targetPosition
+    );
+  }
+
+  getTarget(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    return this.state.getCard(targetPlayer, targetColumn, targetPosition);
+  }
+
+  handleParachuteBaseDamage() {
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    if (parachuteBaseDamage) {
+      console.log("Applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+  }
+
+  finalizeAbility() {
+    this.completeAbility();
+    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+  }
+
   resolveDamage(targetPlayer, targetColumn, targetPosition) {
     return this.commandSystem.resolveDamage(
       targetPlayer,
@@ -36,37 +107,26 @@ class PendingHandler {
   }
 }
 
-// Now create specific handlers for each pending type
 class DamageHandler extends PendingHandler {
   handle(payload) {
     const { targetPlayer, targetColumn, targetPosition } = payload;
 
-    // Store Parachute Base info before resolving
+    // Store Parachute info
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-    // Mark ability complete BEFORE resolving damage
-    this.completeAbility();
+    // Use the new helper
+    this.finalizeAbility();
 
-    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
-      this.commandSystem.finalizeAbilityExecution(
-        this.commandSystem.activeAbilityContext
-      );
-    }
-
-    // Resolve the damage (this clears pending)
+    // Resolve the damage
     const result = this.resolveDamage(
       targetPlayer,
       targetColumn,
       targetPosition
     );
 
-    // Apply Parachute Base damage if needed
+    // Use the new helper for Parachute
     if (result && parachuteBaseDamage) {
-      this.commandSystem.applyParachuteBaseDamage(
-        parachuteBaseDamage.targetPlayer,
-        parachuteBaseDamage.targetColumn,
-        parachuteBaseDamage.targetPosition
-      );
+      this.handleParachuteBaseDamage();
     }
 
     return result;
@@ -179,47 +239,144 @@ class RestoreHandler extends PendingHandler {
 
 class InjureHandler extends PendingHandler {
   handle(payload) {
-    const { targetPlayer, targetColumn, targetPosition } = payload;
+    // Use the new helpers
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid injure target");
+      return false;
+    }
 
-    const target = this.state.getCard(
-      targetPlayer,
-      targetColumn,
-      targetPosition
-    );
+    const target = this.getTarget(payload);
     if (!target || target.type !== "person") {
       console.log("Can only injure people");
       return false;
     }
 
-    // Store Parachute Base damage info BEFORE resolving
+    const { targetPlayer, targetColumn, targetPosition } = payload;
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-    this.completeAbility();
+    this.finalizeAbility();
 
-    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
-      this.commandSystem.finalizeAbilityExecution(
-        this.commandSystem.activeAbilityContext
-      );
-    }
-
-    // Call resolveInjure (which will clear pending)
     const result = this.commandSystem.resolveInjure(
       targetPlayer,
       targetColumn,
       targetPosition
     );
 
-    // Apply Parachute Base damage if it existed
     if (parachuteBaseDamage) {
-      console.log("Applying Parachute Base damage to injured target");
-      this.commandSystem.applyParachuteBaseDamage(
-        parachuteBaseDamage.targetPlayer,
-        parachuteBaseDamage.targetColumn,
-        parachuteBaseDamage.targetPosition
-      );
+      this.handleParachuteBaseDamage();
     }
 
     return result;
+  }
+}
+
+// Base class for all damage-like effects
+class DamageBasedHandler extends PendingHandler {
+  requiresValidTarget = true;
+
+  handle(payload) {
+    if (this.requiresValidTarget && !this.isValidTarget(payload)) {
+      console.log(`Not a valid target for ${this.state.pending.type}`);
+      return false;
+    }
+
+    return this.executeDamage(payload);
+  }
+
+  executeDamage(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+    this.finalizeAbility();
+
+    const result = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (result && parachuteBaseDamage) {
+      this.handleParachuteBaseDamage();
+    }
+
+    return result;
+  }
+}
+
+// Now specific damage variants are TINY
+class SniperDamageHandler extends DamageBasedHandler {
+  handle(payload) {
+    // Sniper ignores protection, so we set up different pending
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid target for Sniper");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
+    this.finalizeAbility();
+
+    // Set up for damage with allowProtected flag
+    this.state.pending = {
+      type: "damage",
+      sourcePlayerId: this.state.pending.sourcePlayerId,
+      allowProtected: true,
+    };
+
+    const result = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (result && parachuteBaseDamage) {
+      this.handleParachuteBaseDamage();
+    }
+
+    return result;
+  }
+}
+
+class PyromanciacDamageHandler extends DamageBasedHandler {
+  // Just inherits everything - it's just normal damage to camps
+}
+
+class LooterDamageHandler extends DamageBasedHandler {
+  executeDamage(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const parachuteBaseDamage = this.state.pending.parachuteBaseDamage;
+
+    const targetCard = this.getTarget(payload);
+    const isTargetCamp = targetCard?.type === "camp";
+
+    this.finalizeAbility();
+
+    const damaged = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (damaged && isTargetCamp) {
+      // Looter's special effect - draw if hit a camp
+      const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
+      if (result.gameEnded) {
+        this.commandSystem.notifyUI("GAME_OVER", this.state.winner);
+        return;
+      }
+      if (result.card) {
+        console.log(`Looter bonus: Drew ${result.card.name} for hitting camp`);
+      }
+    }
+
+    if (parachuteBaseDamage) {
+      this.state.pending = { parachuteBaseDamage };
+      this.commandSystem.checkAndApplyParachuteBaseDamage();
+    }
+
+    return damaged;
   }
 }
 
@@ -312,7 +469,9 @@ export const pendingHandlers = {
   restore: RestoreHandler,
   injure: InjureHandler,
   raiders_select_camp: RaidersSelectCampHandler,
-  // We'll add more handlers here
+  sniper_damage: SniperDamageHandler,
+  pyromaniac_damage: PyromanciacDamageHandler,
+  looter_damage: LooterDamageHandler,
 };
 
 // Export a function to get the right handler

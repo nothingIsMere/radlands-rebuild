@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "Adrenaline Lab",
+    name: "garage",
     type: "camp",
-    campDraw: 1,
-    abilities: [{ effect: "usedamagedability", cost: 0 }], // Use damaged person ability
+    campDraw: 0,
+    abilities: [{ effect: "raid", cost: 1 }],
     isReady: true,
     isDamaged: false,
   });

@@ -1199,32 +1199,37 @@ export class CommandSystem {
         break;
 
       case "restore": {
-        // Mark ability complete BEFORE resolving
-        this.completeAbility(this.state.pending);
-        if (this.activeAbilityContext && !this.state.pending) {
-          this.finalizeAbilityExecution(this.activeAbilityContext);
-        }
-
-        // Store Parachute info if present
-        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
-
-        // Resolve the restore (this clears pending)
-        const result = this.resolveRestore(
-          targetPlayer,
-          targetColumn,
-          targetPosition
+        // For targeted effects, we need to find valid targets first
+        const restoreTargets = TargetValidator.findValidTargets(
+          this.state,
+          playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true,
+          }
         );
 
-        // Handle Parachute Base if needed
-        if (result && parachuteBaseDamage) {
-          this.applyParachuteBaseDamage(
-            parachuteBaseDamage.targetPlayer,
-            parachuteBaseDamage.targetColumn,
-            parachuteBaseDamage.targetPosition
-          );
+        if (restoreTargets.length === 0) {
+          console.log("No damaged cards to restore");
+          // No targets - discard the card and end
+          this.state.discard.push(card);
+          return true;
         }
 
-        return result;
+        // Don't discard yet - wait until after target selection
+        this.state.pending = {
+          type: "junk_restore",
+          source: card,
+          sourcePlayerId: playerId,
+          junkCard: card, // Store the card to discard after target selection
+          validTargets: restoreTargets,
+        };
+
+        console.log(
+          `Select damaged card to restore (${restoreTargets.length} targets)`
+        );
+        break;
       }
 
       case "punk":
@@ -5464,95 +5469,6 @@ export class CommandSystem {
         return true;
       }
 
-      case "raiders_select_camp": {
-        // Verify it's the target player selecting their own camp
-        if (targetPlayer !== this.state.pending.targetPlayerId) {
-          console.log("You must select your own camp");
-          return false;
-        }
-
-        // Verify it's a camp (position 0)
-        if (targetPosition !== 0) {
-          console.log("Must select a camp");
-          return false;
-        }
-
-        const camp = this.state.getCard(targetPlayer, targetColumn, 0);
-        if (!camp || camp.type !== "camp") {
-          console.log("Invalid camp selection");
-          return false;
-        }
-
-        if (camp.isDestroyed) {
-          console.log("Camp is already destroyed");
-          return false;
-        }
-
-        // Apply damage to the selected camp
-        if (camp.isDamaged) {
-          camp.isDestroyed = true;
-          this.checkGameEnd();
-          console.log(`Raiders destroyed ${camp.name}!`);
-        } else {
-          camp.isDamaged = true;
-          console.log(`Raiders damaged ${camp.name}!`);
-        }
-
-        // Check if this was from Cache
-        const fromCache = this.state.pending.fromCache;
-        const cacheSourceCard = this.state.pending.cacheSourceCard;
-        const cacheContext = this.state.pending.cacheContext;
-        const fromCacheComplete = this.state.pending.fromCacheComplete;
-
-        // Mark ability complete (for Raiders)
-        this.completeAbility(this.state.pending);
-
-        if (this.activeAbilityContext && !this.state.pending) {
-          this.finalizeAbilityExecution(this.activeAbilityContext);
-        }
-
-        if (fromCache && !fromCacheComplete) {
-          // Continue with Cache's punk placement
-          console.log("Cache: Raiders resolved, now place your punk");
-
-          this.state.pending = {
-            type: "place_punk",
-            source: cacheSourceCard,
-            sourceCard: cacheSourceCard,
-            sourcePlayerId: cacheContext.playerId,
-            fromCache: true,
-          };
-        } else if (fromCacheComplete) {
-          // Cache is fully complete after this Raiders
-          if (cacheSourceCard && cacheSourceCard.type === "camp") {
-            cacheSourceCard.isReady = false;
-            console.log("Cache marked as not ready after Raiders resolution");
-          }
-          this.state.pending = null;
-        } else {
-          // Normal Raiders resolution
-          this.state.pending = null;
-        }
-
-        // Check for game end
-        this.checkGameEnd();
-
-        // If we're in events phase, continue with the phase progression
-        if (this.state.phase === "events" && !this.state.pending) {
-          // Advance remaining events
-          const player = this.state.players[this.state.currentPlayer];
-          for (let i = 0; i < 2; i++) {
-            player.eventQueue[i] = player.eventQueue[i + 1];
-          }
-          player.eventQueue[2] = null;
-
-          // Continue to replenish
-          this.continueToReplenishPhase();
-        }
-
-        return true;
-      }
-
       case "junk_injure": {
         // Verify it's a valid target
         const isValidTarget = this.state.pending.validTargets?.some(
@@ -5828,124 +5744,6 @@ export class CommandSystem {
         }
 
         return damaged;
-      }
-
-      case "injure": {
-        // Verify it's a valid target
-        const isValidTarget = this.state.pending.validTargets?.some(
-          (t) =>
-            t.playerId === targetPlayer &&
-            t.columnIndex === targetColumn &&
-            t.position === targetPosition
-        );
-
-        if (!isValidTarget) {
-          console.log("Not a valid injure target");
-          return false;
-        }
-
-        const target = this.state.getCard(
-          targetPlayer,
-          targetColumn,
-          targetPosition
-        );
-        if (!target || target.type !== "person") {
-          console.log("Can only injure people");
-          return false;
-        }
-
-        // CRITICAL: Store Parachute Base damage info BEFORE calling resolveInjure
-        const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
-        console.log("Parachute Base damage info stored:", parachuteBaseDamage);
-
-        this.completeAbility(this.state.pending);
-
-        if (this.activeAbilityContext && !this.state.pending) {
-          this.finalizeAbilityExecution(this.activeAbilityContext);
-        }
-
-        // Call resolveInjure (which will clear pending)
-        const result = this.resolveInjure(
-          targetPlayer,
-          targetColumn,
-          targetPosition
-        );
-
-        // ADD THIS: Finalize ability execution if there's an active context
-        if (this.activeAbilityContext && !this.state.pending) {
-          this.finalizeAbilityExecution(this.activeAbilityContext);
-        }
-
-        // Now apply Parachute Base damage if it existed
-        if (parachuteBaseDamage) {
-          console.log("Applying Parachute Base damage to Vigilante");
-          this.applyParachuteBaseDamage(
-            parachuteBaseDamage.targetPlayer,
-            parachuteBaseDamage.targetColumn,
-            parachuteBaseDamage.targetPosition
-          );
-        }
-
-        return result;
-      }
-
-      case "restore": {
-        const target = this.state.getCard(
-          targetPlayer,
-          targetColumn,
-          targetPosition
-        );
-        if (!target || !target.isDamaged) {
-          console.log("Must target a damaged card");
-          return false;
-        }
-
-        target.isDamaged = false;
-        if (target.type === "person") {
-          target.isReady = false;
-        }
-
-        console.log(`Restored ${target.name}!`);
-
-        // Mark ability complete for ALL restore abilities
-        this.completeAbility(this.state.pending);
-
-        if (this.activeAbilityContext && !this.state.pending) {
-          this.finalizeAbilityExecution(this.activeAbilityContext);
-        }
-
-        // Check if this restore was from Parachute Base
-        if (this.state.pending?.parachuteBaseDamage) {
-          const pbDamage = this.state.pending.parachuteBaseDamage;
-          console.log(
-            "Parachute Base: Restore ability completed, now applying damage"
-          );
-
-          // Clear pending first
-          this.state.pending = null;
-
-          // Finalize ability execution before applying Parachute damage
-          if (this.activeAbilityContext) {
-            this.finalizeAbilityExecution(this.activeAbilityContext);
-          }
-
-          // Apply damage to the card that was played via Parachute Base
-          this.applyParachuteBaseDamage(
-            pbDamage.targetPlayer,
-            pbDamage.targetColumn,
-            pbDamage.targetPosition
-          );
-        } else {
-          // Normal restore, just clear pending
-          this.state.pending = null;
-
-          // Finalize ability execution after clearing pending
-          if (this.activeAbilityContext) {
-            this.finalizeAbilityExecution(this.activeAbilityContext);
-          }
-        }
-
-        return true;
       }
 
       case "repair_bot_entry_restore": {

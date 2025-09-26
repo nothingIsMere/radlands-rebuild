@@ -33,10 +33,10 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "mercenarycamp",
+    name: "atomicgarden",
     type: "camp",
-    campDraw: 0,
-    abilities: [{ effect: "damagecamp", cost: 2 }], // Requires 4+ people
+    campDraw: 1,
+    abilities: [{ effect: "restoreready", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });

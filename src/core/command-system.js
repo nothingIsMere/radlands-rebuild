@@ -1,6 +1,7 @@
 import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
+import { getPendingHandler } from "./pending-handlers.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -2058,10 +2059,21 @@ export class CommandSystem {
 
   handleSelectTarget(payload) {
     console.log("handleSelectTarget called, pending:", this.state.pending);
+
     // Add safety check
     if (!this.state.pending) {
       console.error("No pending action to select target for");
       return false;
+    }
+
+    //Try to use a handler if one exists
+    const handler = getPendingHandler(
+      this.state.pending.type,
+      this.state,
+      this
+    );
+    if (handler) {
+      return handler.handle(payload);
     }
 
     const { targetPlayer, targetColumn, targetPosition } = payload;

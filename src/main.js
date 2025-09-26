@@ -53,13 +53,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "constructionyard",
+    name: "scudlauncher",
     type: "camp",
-    campDraw: 1,
-    abilities: [
-      { effect: "moveperson", cost: 1 },
-      { effect: "raid", cost: 2 },
-    ],
+    campDraw: 0,
+    abilities: [{ effect: "damage", cost: 1 }], // Opponent chooses target
     isReady: true,
     isDamaged: false,
   });

@@ -1698,6 +1698,74 @@ export class UIRenderer {
       return modal;
     }
 
+    // Handle Adrenaline Lab ability selection
+    if (this.state.pending?.type === "adrenalinelab_select_ability") {
+      const modal = this.createElement("div", "ability-selection-modal");
+      const backdrop = this.createElement("div", "modal-backdrop");
+
+      const content = this.createElement("div", "modal-content");
+      const title = this.createElement("h3", "modal-title");
+      title.textContent = `Adrenaline Lab: Choose which ${this.state.pending.selectedPerson.card.name} ability to use`;
+      content.appendChild(title);
+
+      const buttonContainer = this.createElement("div", "ability-buttons");
+
+      this.state.pending.selectedPerson.abilities.forEach((ability, index) => {
+        const btn = this.createElement("button", "ability-select-btn");
+
+        // Check if player can afford it
+        const player = this.state.players[this.state.pending.sourcePlayerId];
+        const canAfford = player.water >= ability.cost;
+
+        // Special text for conditional abilities
+        let abilityText = `${ability.effect} (${ability.cost}💧)`;
+        if (ability.effect === "punkdamage") {
+          abilityText = `Damage if Punk (${ability.cost}💧)`;
+        } else if (ability.effect === "gainpunk") {
+          abilityText = `Gain Punk (${ability.cost}💧)`;
+        }
+
+        btn.textContent = abilityText;
+        btn.disabled = !canAfford;
+
+        if (!canAfford) {
+          btn.title = "Not enough water";
+          btn.classList.add("disabled");
+        }
+
+        btn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          this.commands.execute({
+            type: "SELECT_TARGET",
+            abilityIndex: index,
+          });
+        });
+
+        buttonContainer.appendChild(btn);
+      });
+
+      // Add cancel button
+      const cancelBtn = this.createElement("button", "cancel-btn");
+      cancelBtn.textContent = "Cancel";
+
+      cancelBtn.addEventListener("click", () => {
+        if (this.state.phase === "game_over") return;
+        // Mark Adrenaline Lab as ready again since we're cancelling
+        if (this.state.pending.sourceCard) {
+          this.state.pending.sourceCard.isReady = true;
+        }
+        this.state.pending = null;
+        this.render();
+      });
+
+      buttonContainer.appendChild(cancelBtn);
+      content.appendChild(buttonContainer);
+      modal.appendChild(backdrop);
+      modal.appendChild(content);
+
+      return modal;
+    }
+
     // The Octagon opponent must destroy
     if (this.state.pending?.type === "octagon_opponent_destroy") {
       // Don't show a modal - just highlight valid targets on the board

@@ -2518,6 +2518,7 @@ export class CommandSystem {
         const sourcePlayerId = this.state.pending?.sourcePlayerId;
         const fromScientist = this.state.pending?.fromScientist;
         const scientistCard = this.state.pending?.scientistCard;
+        const adrenalineLabDestroy = this.state.pending?.adrenalineLabDestroy;
 
         // Resolve the punk placement
         const result = this.resolvePlacePunk(targetColumn, targetPosition);
@@ -2570,6 +2571,7 @@ export class CommandSystem {
                 targetPlayerId: opponentId,
                 fromCacheComplete: true, // Cache is done after this
                 cacheSourceCard: sourceCard,
+                adrenalineLabDestroy: adrenalineLabDestroy, // PRESERVE
               };
 
               console.log(
@@ -2586,7 +2588,14 @@ export class CommandSystem {
                 console.log("Cache marked as not ready after both effects");
                 this.state.turnEvents.abilityUsedThisTurn = true;
               }
-              this.state.pending = null;
+
+              // Handle Adrenaline Lab destruction if needed
+              if (adrenalineLabDestroy) {
+                this.state.pending = { adrenalineLabDestroy };
+                this.finalizeAbilityExecution(this.activeAbilityContext);
+              } else {
+                this.state.pending = null;
+              }
             }
           } else {
             // No raid after, just mark Cache complete
@@ -2595,7 +2604,14 @@ export class CommandSystem {
               console.log("Cache marked as not ready after both effects");
               this.state.turnEvents.abilityUsedThisTurn = true;
             }
-            this.state.pending = null;
+
+            // Handle Adrenaline Lab destruction if needed
+            if (adrenalineLabDestroy) {
+              this.state.pending = { adrenalineLabDestroy };
+              this.finalizeAbilityExecution(this.activeAbilityContext);
+            } else {
+              this.state.pending = null;
+            }
           }
 
           return result;
@@ -2607,7 +2623,15 @@ export class CommandSystem {
           console.log(
             `${scientistCard.name} marked not ready after Scientist junk completed`
           );
-          this.state.pending = null;
+
+          // Handle Adrenaline Lab destruction if needed
+          if (adrenalineLabDestroy) {
+            this.state.pending = { adrenalineLabDestroy };
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          } else {
+            this.state.pending = null;
+          }
+
           return result;
         }
 
@@ -2712,11 +2736,25 @@ export class CommandSystem {
         } else if (result && (fromVanguardEntry || fromArgoEntry)) {
           // Normal entry trait punk placement (not from Parachute Base)
           console.log("Entry trait punk placed");
-          this.state.pending = null;
+
+          // Handle Adrenaline Lab destruction if needed
+          if (adrenalineLabDestroy) {
+            this.state.pending = { adrenalineLabDestroy };
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          } else {
+            this.state.pending = null;
+          }
         } else {
           // Normal punk placement
           console.log("Normal punk placement completion");
-          this.state.pending = null;
+
+          // Handle Adrenaline Lab destruction if needed
+          if (adrenalineLabDestroy) {
+            this.state.pending = { adrenalineLabDestroy };
+            this.finalizeAbilityExecution(this.activeAbilityContext);
+          } else {
+            this.state.pending = null;
+          }
         }
 
         return result;

@@ -526,6 +526,13 @@ export const personAbilities = {
           type: "place_punk",
           source: context.source,
           sourcePlayerId: context.playerId,
+          adrenalineLabDestroy: context.fromAdrenalineLab
+            ? {
+                playerId: context.playerId,
+                columnIndex: context.columnIndex,
+                position: context.position,
+              }
+            : undefined,
         };
 
         console.log("Rabble Rouser: Select where to place the punk");

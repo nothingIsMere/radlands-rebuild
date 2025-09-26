@@ -793,59 +793,23 @@ class MolgurDestroyCampHandler extends PendingHandler {
 
     // Store values before clearing
     const sourcePlayerId = this.state.pending.sourcePlayerId;
-    const shouldStayReady = this.state.pending.shouldStayReady;
-    const sourceColumn = this.state.pending.sourceColumn;
-    const sourcePosition = this.state.pending.sourcePosition;
 
-    this.finalizeAbility();
+    // Clear pending FIRST so UI updates
+    this.state.pending = null;
 
     // Destroy the camp immediately
     target.isDestroyed = true;
     console.log(`Molgur Stang destroyed ${target.name}!`);
 
-    // Damage Molgur himself
-    const molgur = this.state.getCard(
-      sourcePlayerId,
-      sourceColumn,
-      sourcePosition
-    );
-    if (molgur && !molgur.isDestroyed) {
-      if (molgur.isDamaged) {
-        molgur.isDestroyed = true;
-        this.state.discard.push(molgur);
-        this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
-          sourcePosition,
-          null
-        );
-
-        // Handle shifting
-        if (sourcePosition === 1) {
-          const cardInFront =
-            this.state.players[sourcePlayerId].columns[sourceColumn].getCard(2);
-          if (cardInFront) {
-            this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
-              1,
-              cardInFront
-            );
-            this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
-              2,
-              null
-            );
-          }
-        }
-
-        console.log("Molgur Stang destroyed himself!");
-      } else {
-        molgur.isDamaged = true;
-        if (!shouldStayReady) {
-          molgur.isReady = false;
-        }
-        console.log("Molgur Stang damaged himself");
-      }
-    }
-
     // Check for game end
     this.commandSystem.checkGameEnd();
+
+    // Finalize ability context if it exists
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
 
     return true;
   }

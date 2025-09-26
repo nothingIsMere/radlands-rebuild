@@ -1435,35 +1435,83 @@ class MutantDamageHandler extends PendingHandler {
     }
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Store ALL values we need before modifying state
     const shouldRestore = this.state.pending.shouldRestore;
     const restoreTargets = this.state.pending.restoreTargets;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceColumn = this.state.pending.sourceColumn;
+    const sourcePosition = this.state.pending.sourcePosition;
 
-    // Clear pending for damage phase
-    this.state.pending = null;
-
-    // Apply damage
-    const damaged = this.resolveDamage(
+    // Apply damage to target FIRST (don't clear pending yet)
+    const damaged = this.commandSystem.resolveDamage(
       targetPlayer,
       targetColumn,
       targetPosition
     );
 
-    if (damaged && shouldRestore && restoreTargets.length > 0) {
-      // Set up restore phase
-      this.state.pending = {
-        type: "mutant_restore",
-        validTargets: restoreTargets,
-      };
-      console.log("Mutant: Now select card to restore");
-    } else {
-      if (this.commandSystem.activeAbilityContext) {
-        this.commandSystem.finalizeAbilityExecution(
-          this.commandSystem.activeAbilityContext
+    if (damaged) {
+      console.log("Mutant damage successful");
+
+      if (shouldRestore && restoreTargets && restoreTargets.length > 0) {
+        // Set up restore phase with ALL necessary data
+        this.state.pending = {
+          type: "mutant_restore",
+          validTargets: restoreTargets,
+          sourcePlayerId: sourcePlayerId,
+          sourceColumn: sourceColumn,
+          sourcePosition: sourcePosition,
+          shouldDamage: false, // Already did damage
+        };
+        console.log(
+          `Mutant: Now select card to restore (${restoreTargets.length} targets)`
         );
+      } else {
+        // No restore phase - clear pending, damage Mutant and finish
+        this.state.pending = null;
+        this.damageMutant(sourcePlayerId, sourceColumn, sourcePosition);
+
+        if (this.commandSystem.activeAbilityContext) {
+          this.commandSystem.finalizeAbilityExecution(
+            this.commandSystem.activeAbilityContext
+          );
+        }
       }
+    } else {
+      console.log("Mutant damage failed");
+      this.state.pending = null;
     }
 
     return damaged;
+  }
+
+  damageMutant(playerId, column, position) {
+    const mutant = this.state.getCard(playerId, column, position);
+    if (mutant && !mutant.isDestroyed) {
+      if (mutant.isDamaged) {
+        mutant.isDestroyed = true;
+        this.state.discard.push(mutant);
+        this.state.players[playerId].columns[column].setCard(position, null);
+
+        // Handle shifting
+        if (position === 1) {
+          const cardInFront =
+            this.state.players[playerId].columns[column].getCard(2);
+          if (cardInFront) {
+            this.state.players[playerId].columns[column].setCard(
+              1,
+              cardInFront
+            );
+            this.state.players[playerId].columns[column].setCard(2, null);
+          }
+        }
+        console.log("Mutant destroyed itself!");
+      } else {
+        mutant.isDamaged = true;
+        mutant.isReady = false;
+        console.log("Mutant damaged itself");
+      }
+    }
   }
 }
 
@@ -1482,11 +1530,12 @@ class MutantRestoreHandler extends PendingHandler {
       return false;
     }
 
+    // Store ALL values we need before modifying state
     const shouldDamage = this.state.pending.shouldDamage;
     const damageTargets = this.state.pending.damageTargets;
-
-    // Clear pending
-    this.state.pending = null;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceColumn = this.state.pending.sourceColumn;
+    const sourcePosition = this.state.pending.sourcePosition;
 
     // Restore the card
     target.isDamaged = false;
@@ -1496,14 +1545,23 @@ class MutantRestoreHandler extends PendingHandler {
     console.log(`Mutant restored ${target.name}`);
 
     if (shouldDamage && damageTargets && damageTargets.length > 0) {
-      // Set up damage phase
+      // Set up damage phase with ALL necessary data
       this.state.pending = {
         type: "mutant_damage",
         validTargets: damageTargets,
-        shouldRestore: false,
+        sourcePlayerId: sourcePlayerId,
+        sourceColumn: sourceColumn,
+        sourcePosition: sourcePosition,
+        shouldRestore: false, // Already did restore
       };
-      console.log("Mutant: Now select target to damage");
+      console.log(
+        `Mutant: Now select target to damage (${damageTargets.length} targets)`
+      );
     } else {
+      // No damage phase - clear pending, damage Mutant and finish
+      this.state.pending = null;
+      this.damageMutant(sourcePlayerId, sourceColumn, sourcePosition);
+
       if (this.commandSystem.activeAbilityContext) {
         this.commandSystem.finalizeAbilityExecution(
           this.commandSystem.activeAbilityContext
@@ -1512,6 +1570,35 @@ class MutantRestoreHandler extends PendingHandler {
     }
 
     return true;
+  }
+
+  damageMutant(playerId, column, position) {
+    const mutant = this.state.getCard(playerId, column, position);
+    if (mutant && !mutant.isDestroyed) {
+      if (mutant.isDamaged) {
+        mutant.isDestroyed = true;
+        this.state.discard.push(mutant);
+        this.state.players[playerId].columns[column].setCard(position, null);
+
+        // Handle shifting
+        if (position === 1) {
+          const cardInFront =
+            this.state.players[playerId].columns[column].getCard(2);
+          if (cardInFront) {
+            this.state.players[playerId].columns[column].setCard(
+              1,
+              cardInFront
+            );
+            this.state.players[playerId].columns[column].setCard(2, null);
+          }
+        }
+        console.log("Mutant destroyed itself!");
+      } else {
+        mutant.isDamaged = true;
+        mutant.isReady = false;
+        console.log("Mutant damaged itself");
+      }
+    }
   }
 }
 

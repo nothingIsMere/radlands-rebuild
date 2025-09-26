@@ -3996,100 +3996,74 @@ export class CommandSystem {
       }
 
       case "mutant_choose_mode": {
-        const mode = payload.mode; // 'damage', 'restore', or 'both'
-        const pending = this.state.pending;
-
-        console.log(`Mutant: Mode selected - ${mode}`);
+        const { mode } = payload;
 
         if (mode === "damage") {
-          if (pending.damageTargets.length === 0) {
-            console.log("No valid damage targets");
-            return false;
-          }
-
-          // Set up damage targeting
           this.state.pending = {
             type: "mutant_damage",
-            source: pending.source,
-            sourceCard: pending.sourceCard,
-            sourcePlayerId: pending.sourcePlayerId,
-            sourceColumn: pending.sourceColumn,
-            sourcePosition: pending.sourcePosition,
-            validTargets: pending.damageTargets,
-            context: pending.context,
+            validTargets: this.state.pending.damageTargets,
+            shouldRestore: false,
+            sourcePlayerId: this.state.pending.sourcePlayerId,
+            sourceColumn: this.state.pending.sourceColumn,
+            sourcePosition: this.state.pending.sourcePosition,
           };
-          console.log("Mutant: Select target to damage");
         } else if (mode === "restore") {
-          if (pending.restoreTargets.length === 0) {
-            console.log("No valid restore targets");
-            return false;
-          }
-
-          // Set up restore targeting
           this.state.pending = {
             type: "mutant_restore",
-            source: pending.source,
-            sourceCard: pending.sourceCard,
-            sourcePlayerId: pending.sourcePlayerId,
-            sourceColumn: pending.sourceColumn,
-            sourcePosition: pending.sourcePosition,
-            validTargets: pending.restoreTargets,
-            context: pending.context,
+            validTargets: this.state.pending.restoreTargets,
+            shouldDamage: false,
+            sourcePlayerId: this.state.pending.sourcePlayerId,
+            sourceColumn: this.state.pending.sourceColumn,
+            sourcePosition: this.state.pending.sourcePosition,
           };
-          console.log("Mutant: Select card to restore");
         } else if (mode === "both") {
-          // Player wants to do both - let them choose order
+          // Set up order selection, preserving all the data
           this.state.pending = {
             type: "mutant_choose_order",
-            source: pending.source,
-            sourceCard: pending.sourceCard,
-            sourcePlayerId: pending.sourcePlayerId,
-            sourceColumn: pending.sourceColumn,
-            sourcePosition: pending.sourcePosition,
-            damageTargets: pending.damageTargets,
-            restoreTargets: pending.restoreTargets,
-            context: pending.context,
+            damageTargets: this.state.pending.damageTargets,
+            restoreTargets: this.state.pending.restoreTargets,
+            sourcePlayerId: this.state.pending.sourcePlayerId,
+            sourceColumn: this.state.pending.sourceColumn,
+            sourcePosition: this.state.pending.sourcePosition,
           };
-          console.log("Mutant: Choose order - Damage first or Restore first?");
+          console.log("Mutant: Choose which to do first");
         }
 
         return true;
       }
 
       case "mutant_choose_order": {
-        const order = payload.order; // 'damage_first' or 'restore_first'
-        const pending = this.state.pending;
+        const { order } = payload;
+
+        // Get the stored data from pending
+        const damageTargets = this.state.pending.damageTargets;
+        const restoreTargets = this.state.pending.restoreTargets;
+        const sourcePlayerId = this.state.pending.sourcePlayerId;
+        const sourceColumn = this.state.pending.sourceColumn;
+        const sourcePosition = this.state.pending.sourcePosition;
 
         if (order === "damage_first") {
-          // Set up damage targeting, will do restore after
           this.state.pending = {
             type: "mutant_damage",
-            source: pending.source,
-            sourceCard: pending.sourceCard,
-            sourcePlayerId: pending.sourcePlayerId,
-            sourceColumn: pending.sourceColumn,
-            sourcePosition: pending.sourcePosition,
-            validTargets: pending.damageTargets,
-            restoreTargets: pending.restoreTargets, // Save for after damage
-            doRestoreAfter: true,
-            context: pending.context,
+            validTargets: damageTargets,
+            shouldRestore: true,
+            restoreTargets: restoreTargets,
+            sourcePlayerId: sourcePlayerId,
+            sourceColumn: sourceColumn,
+            sourcePosition: sourcePosition,
           };
-          console.log("Mutant: Select target to damage (will restore after)");
+          console.log("Mutant: Damage first - select target to damage");
         } else {
-          // Set up restore targeting, will do damage after
           this.state.pending = {
             type: "mutant_restore",
-            source: pending.source,
-            sourceCard: pending.sourceCard,
-            sourcePlayerId: pending.sourcePlayerId,
-            sourceColumn: pending.sourceColumn,
-            sourcePosition: pending.sourcePosition,
-            validTargets: pending.restoreTargets,
-            damageTargets: pending.damageTargets, // Save for after restore
-            doDamageAfter: true,
-            context: pending.context,
+            validTargets: restoreTargets,
+            shouldDamage: true,
+            damageTargets: damageTargets,
+            sourcePlayerId: sourcePlayerId,
+            sourceColumn: sourceColumn,
+            sourcePosition: sourcePosition,
           };
-          console.log("Mutant: Select card to restore (will damage after)");
+          console.log("Mutant: Restore first - select card to restore");
         }
 
         return true;

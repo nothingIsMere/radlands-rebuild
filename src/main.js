@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "garage",
+    name: "catapult",
     type: "camp",
     campDraw: 0,
-    abilities: [{ effect: "raid", cost: 1 }],
+    abilities: [{ effect: "damage", cost: 2 }], // Damage any, then destroy own person
     isReady: true,
     isDamaged: false,
   });

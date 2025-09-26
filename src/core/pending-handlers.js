@@ -707,18 +707,68 @@ class VanguardCounterHandler extends PendingHandler {
     }
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
 
-    this.state.pending = null;
-
-    // Resolve the counter damage
-    const damaged = this.resolveDamage(
-      targetPlayer,
-      targetColumn,
-      targetPosition
+    console.log(
+      `Counter-damaging ${target?.name} at ${targetPlayer} ${targetColumn},${targetPosition}`
     );
 
-    if (damaged) {
-      console.log("Vanguard counter-damage successful!");
+    // Clear pending FIRST so UI updates
+    this.state.pending = null;
+
+    // Apply damage to the target
+    if (target.isDamaged) {
+      target.isDestroyed = true;
+
+      if (target.type === "camp") {
+        this.commandSystem.checkGameEnd();
+        console.log(`Counter-damage destroyed ${target.name} camp!`);
+      } else if (target.isPunk) {
+        const returnCard = {
+          id: target.id,
+          name: target.originalName || "Unknown Card",
+          type: "person",
+          cost: target.cost || 0,
+        };
+        this.state.deck.unshift(returnCard);
+        console.log("Counter-damage destroyed punk");
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Shift cards if needed
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+      } else {
+        this.state.discard.push(target);
+        console.log(`Counter-damage destroyed ${target.name}`);
+
+        // Remove from column
+        const column = this.state.players[targetPlayer].columns[targetColumn];
+        column.setCard(targetPosition, null);
+
+        // Shift cards if needed
+        if (targetPosition === 1) {
+          const cardInFront = column.getCard(2);
+          if (cardInFront) {
+            column.setCard(1, cardInFront);
+            column.setCard(2, null);
+          }
+        }
+      }
+    } else {
+      // Just damage it
+      target.isDamaged = true;
+      if (target.type === "person") {
+        target.isReady = false;
+      }
+      console.log(`Counter-damage injured ${target.name}`);
     }
 
     return true;

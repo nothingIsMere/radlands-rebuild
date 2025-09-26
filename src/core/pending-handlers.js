@@ -1154,6 +1154,367 @@ class AtomicGardenRestoreHandler extends PendingHandler {
   }
 }
 
+// Cult Leader handlers
+class CultLeaderSelectDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid cult leader target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Must select one of your people");
+      return false;
+    }
+
+    // Store values before modifying state
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const adrenalineLabDestroy = this.state.pending.adrenalineLabDestroy;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("Cult Leader: Destroyed own punk");
+    } else {
+      this.state.discard.push(target);
+      console.log(`Cult Leader: Destroyed own ${target.name}`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Now set up damage targeting
+    const validTargets = TargetValidator.findValidTargets(
+      this.state,
+      sourcePlayerId,
+      { allowProtected: false }
+    );
+
+    if (validTargets.length > 0) {
+      this.state.pending = {
+        type: "cultleader_damage",
+        sourcePlayerId: sourcePlayerId,
+        validTargets: validTargets,
+        adrenalineLabDestroy: adrenalineLabDestroy,
+      };
+      console.log(
+        `Cult Leader: Now select enemy target to damage (${validTargets.length} targets)`
+      );
+    } else {
+      console.log("Cult Leader: No valid targets to damage");
+      this.state.pending = null;
+
+      // Handle Adrenaline Lab cleanup if needed
+      if (adrenalineLabDestroy) {
+        this.commandSystem.handleAdrenalineLabCleanup(adrenalineLabDestroy);
+      }
+    }
+
+    return true;
+  }
+}
+
+class CultLeaderDamageHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid cult leader damage target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const adrenalineLabDestroy = this.state.pending.adrenalineLabDestroy;
+
+    // Clear pending first
+    this.state.pending = null;
+
+    // Apply damage
+    const damaged = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (damaged) {
+      console.log("Cult Leader damage successful");
+    }
+
+    // Handle Adrenaline Lab cleanup if needed
+    if (adrenalineLabDestroy) {
+      this.commandSystem.handleAdrenalineLabCleanup(adrenalineLabDestroy);
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return damaged;
+  }
+}
+
+// Rescue Team select handler
+class RescueTeamSelectHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid rescue team target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Can only return people to hand");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Return the person to hand
+    const player = this.state.players[targetPlayer];
+
+    if (target.isPunk) {
+      // Reveal punk when returning to hand
+      const revealedCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.originalCard?.cost || target.cost || 0,
+        abilities: target.originalCard?.abilities || target.abilities || [],
+        junkEffect: target.originalCard?.junkEffect || target.junkEffect,
+      };
+      player.hand.push(revealedCard);
+      console.log(
+        `Rescue Team: Punk revealed as ${revealedCard.name} and returned to hand`
+      );
+    } else {
+      const returnCard = {
+        id: target.id,
+        name: target.name,
+        type: target.type,
+        cost: target.cost,
+        abilities: target.abilities,
+        junkEffect: target.junkEffect,
+      };
+      player.hand.push(returnCard);
+      console.log(`Rescue Team: ${target.name} returned to hand`);
+    }
+
+    // Remove from column
+    const column = player.columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Magnus Karv column damage handler
+class MagnusSelectColumnHandler extends PendingHandler {
+  handle(payload) {
+    const { targetColumn } = payload;
+
+    // Verify it's a valid column
+    if (!this.state.pending.validColumns.includes(targetColumn)) {
+      console.log("Not a valid column selection");
+      return false;
+    }
+
+    const targetPlayerId = this.state.pending.targetPlayerId;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Damage ALL cards in that column
+    const column = this.state.players[targetPlayerId].columns[targetColumn];
+    let damagedCount = 0;
+
+    // Process from back to front for proper removal
+    for (let pos = 2; pos >= 0; pos--) {
+      const card = column.getCard(pos);
+      if (card && !card.isDestroyed) {
+        if (card.isDamaged) {
+          card.isDestroyed = true;
+
+          if (card.type === "camp") {
+            console.log(`Magnus destroyed ${card.name} camp!`);
+          } else if (card.isPunk) {
+            const returnCard = {
+              id: card.id,
+              name: card.originalName || "Unknown Card",
+              type: "person",
+              cost: card.cost || 0,
+            };
+            this.state.deck.unshift(returnCard);
+            column.setCard(pos, null);
+            console.log("Magnus destroyed punk");
+          } else {
+            this.state.discard.push(card);
+            column.setCard(pos, null);
+            console.log(`Magnus destroyed ${card.name}`);
+          }
+
+          // Handle shifting for people slots
+          if (pos === 1) {
+            const cardInFront = column.getCard(2);
+            if (cardInFront && !cardInFront.isDestroyed) {
+              column.setCard(1, cardInFront);
+              column.setCard(2, null);
+            }
+          }
+        } else {
+          card.isDamaged = true;
+          if (card.type === "person") {
+            card.isReady = false;
+          }
+          console.log(`Magnus damaged ${card.name}`);
+        }
+        damagedCount++;
+      }
+    }
+
+    console.log(
+      `Magnus Karv damaged ${damagedCount} cards in column ${targetColumn}`
+    );
+
+    // Check for game end
+    this.commandSystem.checkGameEnd();
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Mutant handlers (simplified for now - the complex mode selection stays in switch)
+class MutantDamageHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid mutant damage target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const shouldRestore = this.state.pending.shouldRestore;
+    const restoreTargets = this.state.pending.restoreTargets;
+
+    // Clear pending for damage phase
+    this.state.pending = null;
+
+    // Apply damage
+    const damaged = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (damaged && shouldRestore && restoreTargets.length > 0) {
+      // Set up restore phase
+      this.state.pending = {
+        type: "mutant_restore",
+        validTargets: restoreTargets,
+      };
+      console.log("Mutant: Now select card to restore");
+    } else {
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+    }
+
+    return damaged;
+  }
+}
+
+class MutantRestoreHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid mutant restore target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || !target.isDamaged) {
+      console.log("Must target a damaged card");
+      return false;
+    }
+
+    const shouldDamage = this.state.pending.shouldDamage;
+    const damageTargets = this.state.pending.damageTargets;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Restore the card
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+    console.log(`Mutant restored ${target.name}`);
+
+    if (shouldDamage && damageTargets && damageTargets.length > 0) {
+      // Set up damage phase
+      this.state.pending = {
+        type: "mutant_damage",
+        validTargets: damageTargets,
+        shouldRestore: false,
+      };
+      console.log("Mutant: Now select target to damage");
+    } else {
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -1175,6 +1536,12 @@ export const pendingHandlers = {
   scudlauncher_select_target: ScudLauncherSelectTargetHandler,
   repair_bot_entry_restore: RepairBotEntryRestoreHandler,
   atomic_garden_restore: AtomicGardenRestoreHandler,
+  cultleader_select_destroy: CultLeaderSelectDestroyHandler,
+  cultleader_damage: CultLeaderDamageHandler,
+  rescue_team_select: RescueTeamSelectHandler,
+  magnus_select_column: MagnusSelectColumnHandler,
+  mutant_damage: MutantDamageHandler,
+  mutant_restore: MutantRestoreHandler,
 };
 
 // Export a function to get the right handler

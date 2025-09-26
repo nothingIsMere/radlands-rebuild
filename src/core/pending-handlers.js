@@ -464,6 +464,343 @@ class RaidersSelectCampHandler extends PendingHandler {
   }
 }
 
+class AssassinDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid assassin target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Assassin can only destroy people");
+      return false;
+    }
+
+    // Store values before clearing pending
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const entryTrait = this.state.pending.entryTrait; // ADD THIS
+
+    // Clear pending BEFORE destroying (important!)
+    this.state.pending = null;
+
+    // Now destroy the target
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+        abilities: target.abilities || [],
+        junkEffect: target.junkEffect,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("Assassin destroyed punk (returned to deck)");
+    } else {
+      this.state.discard.push(target);
+      console.log(`Assassin destroyed ${target.name}`);
+    }
+
+    // Remove from column and handle shifting
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Handle entry trait if present (like Parachute Base damage)
+    if (entryTrait) {
+      console.log("Executing entry trait after Assassin destroy");
+      this.commandSystem.handleEntryTrait(entryTrait);
+    }
+
+    // Finalize ability context if it exists
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Junk effect handlers
+class JunkRestoreHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid restore target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || !target.isDamaged) {
+      console.log("Must target a damaged card");
+      return false;
+    }
+
+    // Store junk card before clearing pending
+    const junkCard = this.state.pending.junkCard;
+
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+    console.log(`Junk restored ${target.name}!`);
+
+    // Discard the junk card
+    if (junkCard) {
+      this.state.discard.push(junkCard);
+      console.log(`Discarded ${junkCard.name} after junk restore`);
+    }
+
+    this.state.pending = null;
+    return true;
+  }
+}
+
+class JunkInjureHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid injure target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Can only injure people");
+      return false;
+    }
+
+    // Store junk card before clearing pending
+    const junkCard = this.state.pending.junkCard;
+
+    // Apply injury
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+
+    if (target.isDamaged || target.isPunk) {
+      // Destroy instead
+      target.isDestroyed = true;
+
+      if (target.isPunk) {
+        const returnCard = {
+          id: target.id,
+          name: target.originalName || "Unknown Card",
+          type: "person",
+          cost: target.cost || 0,
+        };
+        this.state.deck.unshift(returnCard);
+      } else {
+        this.state.discard.push(target);
+      }
+
+      column.setCard(targetPosition, null);
+      if (targetPosition === 1) {
+        const cardInFront = column.getCard(2);
+        if (cardInFront) {
+          column.setCard(1, cardInFront);
+          column.setCard(2, null);
+        }
+      }
+
+      console.log(`Junk destroyed ${target.isPunk ? "punk" : target.name}`);
+    } else {
+      target.isDamaged = true;
+      target.isReady = false;
+      console.log(`Junk injured ${target.name}`);
+    }
+
+    // Discard the junk card
+    if (junkCard) {
+      this.state.discard.push(junkCard);
+      console.log(`Discarded ${junkCard.name} after junk injure`);
+    }
+
+    this.state.pending = null;
+    return true;
+  }
+}
+
+// Vanguard handlers
+class VanguardDamageHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid vanguard target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Store values before clearing pending
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const vanguardCard = this.state.pending.sourceCard;
+
+    this.finalizeAbility();
+
+    // Resolve the damage
+    const damaged = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (damaged) {
+      console.log("Vanguard damage successful - opponent may counter-damage");
+
+      // Set up counter-damage opportunity
+      const counterTargets = TargetValidator.findValidTargets(
+        this.state,
+        targetPlayer, // The damaged player gets to counter
+        {
+          allowProtected: false,
+        }
+      );
+
+      if (
+        counterTargets.length > 0 &&
+        vanguardCard &&
+        !vanguardCard.isDestroyed
+      ) {
+        this.state.pending = {
+          type: "vanguard_counter",
+          sourcePlayerId: targetPlayer, // Opponent becomes source
+          originalSourcePlayerId: sourcePlayerId,
+          vanguardCard: vanguardCard,
+          validTargets: counterTargets,
+        };
+        console.log(
+          `Opponent may counter-damage (${counterTargets.length} targets)`
+        );
+      }
+    }
+
+    return damaged;
+  }
+}
+
+class VanguardCounterHandler extends PendingHandler {
+  handle(payload) {
+    const { cancel } = payload;
+
+    if (cancel) {
+      console.log("Opponent chose not to counter-damage");
+      this.state.pending = null;
+      return true;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid counter target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    this.state.pending = null;
+
+    // Resolve the counter damage
+    const damaged = this.resolveDamage(
+      targetPlayer,
+      targetColumn,
+      targetPosition
+    );
+
+    if (damaged) {
+      console.log("Vanguard counter-damage successful!");
+    }
+
+    return true;
+  }
+}
+
+// Special camp damage handlers
+class MolgurDestroyCampHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Molgur target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "camp") {
+      console.log("Molgur Stang can only destroy camps");
+      return false;
+    }
+
+    // Store values before clearing
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const shouldStayReady = this.state.pending.shouldStayReady;
+    const sourceColumn = this.state.pending.sourceColumn;
+    const sourcePosition = this.state.pending.sourcePosition;
+
+    this.finalizeAbility();
+
+    // Destroy the camp immediately
+    target.isDestroyed = true;
+    console.log(`Molgur Stang destroyed ${target.name}!`);
+
+    // Damage Molgur himself
+    const molgur = this.state.getCard(
+      sourcePlayerId,
+      sourceColumn,
+      sourcePosition
+    );
+    if (molgur && !molgur.isDestroyed) {
+      if (molgur.isDamaged) {
+        molgur.isDestroyed = true;
+        this.state.discard.push(molgur);
+        this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
+          sourcePosition,
+          null
+        );
+
+        // Handle shifting
+        if (sourcePosition === 1) {
+          const cardInFront =
+            this.state.players[sourcePlayerId].columns[sourceColumn].getCard(2);
+          if (cardInFront) {
+            this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
+              1,
+              cardInFront
+            );
+            this.state.players[sourcePlayerId].columns[sourceColumn].setCard(
+              2,
+              null
+            );
+          }
+        }
+
+        console.log("Molgur Stang destroyed himself!");
+      } else {
+        molgur.isDamaged = true;
+        if (!shouldStayReady) {
+          molgur.isReady = false;
+        }
+        console.log("Molgur Stang damaged himself");
+      }
+    }
+
+    // Check for game end
+    this.commandSystem.checkGameEnd();
+
+    return true;
+  }
+}
+
 // Export a registry of all handlers
 export const pendingHandlers = {
   damage: DamageHandler,
@@ -474,6 +811,12 @@ export const pendingHandlers = {
   sniper_damage: SniperDamageHandler,
   pyromaniac_damage: PyromanciacDamageHandler,
   looter_damage: LooterDamageHandler,
+  assassin_destroy: AssassinDestroyHandler,
+  junk_restore: JunkRestoreHandler,
+  junk_injure: JunkInjureHandler,
+  vanguard_damage: VanguardDamageHandler,
+  vanguard_counter: VanguardCounterHandler,
+  molgur_destroy_camp: MolgurDestroyCampHandler,
 };
 
 // Export a function to get the right handler

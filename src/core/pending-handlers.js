@@ -2060,29 +2060,20 @@ class ConstructionYardSelectPersonHandler extends PendingHandler {
       return false;
     }
 
-    // Find which player this person belongs to
-    const isValidPerson = this.state.pending.availablePeople?.some(
-      (p) =>
-        p.playerId === targetPlayer &&
-        p.columnIndex === targetColumn &&
-        p.position === targetPosition
-    );
+    // Store the source camp info
+    const sourceCard = this.state.pending.sourceCard;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
 
-    if (!isValidPerson) {
-      console.log("Not a valid person selection");
-      return false;
-    }
-
-    // Store the person and prepare for destination selection
+    // Set up destination selection
     this.state.pending = {
       type: "constructionyard_select_destination",
-      sourcePlayerId: this.state.pending.sourcePlayerId,
-      sourceCard: this.state.pending.sourceCard,
+      sourcePlayerId: sourcePlayerId,
+      sourceCard: sourceCard,
       movingPerson: target,
       movingFromPlayerId: targetPlayer,
       movingFromColumn: targetColumn,
       movingFromPosition: targetPosition,
-      movingToPlayerId: targetPlayer, // Will move within same player's board
+      movingToPlayerId: targetPlayer, // Same player's board
     };
 
     console.log(`Construction Yard: Now select where to move ${target.name}`);
@@ -2106,13 +2097,22 @@ class ConstructionYardSelectDestinationHandler extends PendingHandler {
       return false;
     }
 
+    // Can't move to same spot
+    if (
+      targetColumn === this.state.pending.movingFromColumn &&
+      targetPosition === this.state.pending.movingFromPosition
+    ) {
+      console.log("Must move to a different slot");
+      return false;
+    }
+
     // Store needed values
     const sourceCard = this.state.pending.sourceCard;
     const movingPerson = this.state.pending.movingPerson;
     const fromColumn = this.state.pending.movingFromColumn;
     const fromPosition = this.state.pending.movingFromPosition;
 
-    // Clear pending
+    // Clear pending FIRST
     this.state.pending = null;
 
     // Get the columns
@@ -2120,45 +2120,76 @@ class ConstructionYardSelectDestinationHandler extends PendingHandler {
     const fromCol = player.columns[fromColumn];
     const toCol = player.columns[targetColumn];
 
-    // Check what's in destination
+    // Get what's currently in destination
     const destCard = toCol.getCard(targetPosition);
 
-    // Remove from original position
+    // Remove from original position FIRST
     fromCol.setCard(fromPosition, null);
+    console.log(
+      `Removed ${movingPerson.name} from column ${fromColumn}, position ${fromPosition}`
+    );
 
-    // Handle shifting in source column if needed
+    // Handle shifting in source column if position 1 is now empty
     if (fromPosition === 1) {
       const cardInFront = fromCol.getCard(2);
       if (cardInFront) {
         fromCol.setCard(1, cardInFront);
         fromCol.setCard(2, null);
+        console.log(
+          `Shifted ${cardInFront.name} from position 2 to position 1`
+        );
       }
     }
 
-    // Place in new position
+    // Now handle placement in destination
     if (!destCard) {
       // Empty slot - just place
       toCol.setCard(targetPosition, movingPerson);
+      console.log(
+        `Placed ${movingPerson.name} in empty slot at column ${targetColumn}, position ${targetPosition}`
+      );
     } else {
-      // Occupied - push existing card
+      // Occupied - need to push
       if (targetPosition === 1) {
-        // Moving to slot 1, push existing to slot 2
-        toCol.setCard(2, destCard);
-        toCol.setCard(1, movingPerson);
+        // Check if position 2 is empty
+        const pos2Card = toCol.getCard(2);
+        if (!pos2Card) {
+          // Position 2 is empty, push existing card there
+          toCol.setCard(2, destCard);
+          toCol.setCard(1, movingPerson);
+          console.log(
+            `Pushed ${destCard.name} to position 2, placed ${movingPerson.name} at position 1`
+          );
+        } else {
+          console.log("Cannot move - no room to push");
+          // Revert the removal
+          fromCol.setCard(fromPosition, movingPerson);
+          return false;
+        }
       } else {
-        // Moving to slot 2, push existing to slot 1
-        toCol.setCard(1, destCard);
-        toCol.setCard(2, movingPerson);
+        // Moving to position 2
+        // Check if position 1 is empty
+        const pos1Card = toCol.getCard(1);
+        if (!pos1Card) {
+          // Position 1 is empty, push existing card there
+          toCol.setCard(1, destCard);
+          toCol.setCard(2, movingPerson);
+          console.log(
+            `Pushed ${destCard.name} to position 1, placed ${movingPerson.name} at position 2`
+          );
+        } else {
+          console.log("Cannot move - no room to push");
+          // Revert the removal
+          fromCol.setCard(fromPosition, movingPerson);
+          return false;
+        }
       }
     }
 
-    console.log(
-      `Construction Yard: Moved ${movingPerson.name} to column ${targetColumn}, position ${targetPosition}`
-    );
-
     // Mark Construction Yard as not ready
-    if (sourceCard && !this.state.pending?.shouldStayReady) {
+    if (sourceCard) {
       sourceCard.isReady = false;
+      console.log("Construction Yard marked as not ready");
     }
 
     if (this.commandSystem.activeAbilityContext) {

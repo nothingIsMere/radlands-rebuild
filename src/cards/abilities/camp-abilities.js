@@ -1191,6 +1191,7 @@ export const campAbilities = {
           source: context.source,
           sourceCard: context.campCard || context.source,
           sourcePlayerId: context.playerId,
+          shouldStayReady: context.shouldStayReady || false,
           validTargets: validTargets,
           context,
         };

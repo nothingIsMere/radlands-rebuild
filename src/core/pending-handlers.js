@@ -1898,14 +1898,14 @@ class BloodbankSelectDestroyHandler extends PendingHandler {
     const target = this.getTarget(payload);
 
     const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard;
+    const shouldStayReady = this.state.pending.shouldStayReady;
 
     // Clear pending
     this.state.pending = null;
 
     // Destroy the selected person
     target.isDestroyed = true;
-
-    let waterGain = 0;
 
     if (target.isPunk) {
       const returnCard = {
@@ -1915,18 +1915,11 @@ class BloodbankSelectDestroyHandler extends PendingHandler {
         cost: target.cost || 0,
       };
       this.state.deck.unshift(returnCard);
-      waterGain = 2; // Punks give 2 water
-      console.log("Blood Bank: Destroyed punk for 2 water");
+      console.log("Blood Bank: Destroyed punk");
     } else {
       this.state.discard.push(target);
-      waterGain = Math.min(3, target.cost); // Max 3 water
-      console.log(
-        `Blood Bank: Destroyed ${target.name} for ${waterGain} water`
-      );
+      console.log(`Blood Bank: Destroyed ${target.name}`);
     }
-
-    // Give water
-    this.state.players[sourcePlayerId].water += waterGain;
 
     // Remove from column
     const column = this.state.players[targetPlayer].columns[targetColumn];
@@ -1938,6 +1931,16 @@ class BloodbankSelectDestroyHandler extends PendingHandler {
         column.setCard(1, cardInFront);
         column.setCard(2, null);
       }
+    }
+
+    // BLOOD BANK ALWAYS GIVES EXACTLY 1 WATER
+    this.state.players[sourcePlayerId].water += 1;
+    console.log("Blood Bank: Gained 1 water");
+
+    // Mark Blood Bank as not ready
+    if (sourceCard && !shouldStayReady) {
+      sourceCard.isReady = false;
+      console.log("Blood Bank marked as not ready");
     }
 
     if (this.commandSystem.activeAbilityContext) {

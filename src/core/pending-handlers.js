@@ -1803,7 +1803,7 @@ class LaborcampSelectDestroyHandler extends PendingHandler {
     const { targetPlayer, targetColumn, targetPosition } = payload;
     const target = this.getTarget(payload);
 
-    // Store restore targets
+    // Store restore targets and source info
     const validRestoreTargets = this.state.pending.validRestoreTargets;
     const sourcePlayerId = this.state.pending.sourcePlayerId;
 
@@ -1836,15 +1836,37 @@ class LaborcampSelectDestroyHandler extends PendingHandler {
       }
     }
 
-    // Set up restore selection
+    // IMPORTANT: Filter out the just-destroyed card from restore targets
+    const filteredRestoreTargets = validRestoreTargets.filter((t) => {
+      // Exclude the card we just destroyed
+      return !(
+        t.playerId === targetPlayer &&
+        t.columnIndex === targetColumn &&
+        t.position === targetPosition
+      );
+    });
+
+    if (filteredRestoreTargets.length === 0) {
+      console.log("Labor Camp: No damaged cards left to restore");
+      this.state.pending = null;
+
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+      return true;
+    }
+
+    // Set up restore selection with filtered list
     this.state.pending = {
       type: "laborcamp_select_restore",
       sourcePlayerId: sourcePlayerId,
-      validTargets: validRestoreTargets,
+      validTargets: filteredRestoreTargets,
     };
 
     console.log(
-      `Labor Camp: Now select damaged card to restore (${validRestoreTargets.length} targets)`
+      `Labor Camp: Now select damaged card to restore (${filteredRestoreTargets.length} targets)`
     );
     return true;
   }

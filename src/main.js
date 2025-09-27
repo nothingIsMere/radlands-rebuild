@@ -43,10 +43,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "omenclock",
+    name: "supplydepot",
     type: "camp",
-    campDraw: 1,
-    abilities: [{ effect: "advance", cost: 1 }], // Advance any event
+    campDraw: 2,
+    abilities: [{ effect: "drawdiscard", cost: 2 }], // Draw 2, discard 1
     isReady: true,
     isDamaged: false,
   });

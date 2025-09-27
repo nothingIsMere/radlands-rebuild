@@ -2049,6 +2049,292 @@ class MulcherSelectDestroyHandler extends PendingHandler {
   }
 }
 
+// Construction Yard person movement handlers
+class ConstructionYardSelectPersonHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person" || target.isDestroyed) {
+      console.log("Must select a valid person");
+      return false;
+    }
+
+    // Find which player this person belongs to
+    const isValidPerson = this.state.pending.availablePeople?.some(
+      (p) =>
+        p.playerId === targetPlayer &&
+        p.columnIndex === targetColumn &&
+        p.position === targetPosition
+    );
+
+    if (!isValidPerson) {
+      console.log("Not a valid person selection");
+      return false;
+    }
+
+    // Store the person and prepare for destination selection
+    this.state.pending = {
+      type: "constructionyard_select_destination",
+      sourcePlayerId: this.state.pending.sourcePlayerId,
+      sourceCard: this.state.pending.sourceCard,
+      movingPerson: target,
+      movingFromPlayerId: targetPlayer,
+      movingFromColumn: targetColumn,
+      movingFromPosition: targetPosition,
+      movingToPlayerId: targetPlayer, // Will move within same player's board
+    };
+
+    console.log(`Construction Yard: Now select where to move ${target.name}`);
+    return true;
+  }
+}
+
+class ConstructionYardSelectDestinationHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Must be same player's board
+    if (targetPlayer !== this.state.pending.movingToPlayerId) {
+      console.log("Can only move within same player's board");
+      return false;
+    }
+
+    // Must be position 1 or 2
+    if (targetPosition === 0) {
+      console.log("Cannot move to camp slot");
+      return false;
+    }
+
+    // Store needed values
+    const sourceCard = this.state.pending.sourceCard;
+    const movingPerson = this.state.pending.movingPerson;
+    const fromColumn = this.state.pending.movingFromColumn;
+    const fromPosition = this.state.pending.movingFromPosition;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Get the columns
+    const player = this.state.players[targetPlayer];
+    const fromCol = player.columns[fromColumn];
+    const toCol = player.columns[targetColumn];
+
+    // Check what's in destination
+    const destCard = toCol.getCard(targetPosition);
+
+    // Remove from original position
+    fromCol.setCard(fromPosition, null);
+
+    // Handle shifting in source column if needed
+    if (fromPosition === 1) {
+      const cardInFront = fromCol.getCard(2);
+      if (cardInFront) {
+        fromCol.setCard(1, cardInFront);
+        fromCol.setCard(2, null);
+      }
+    }
+
+    // Place in new position
+    if (!destCard) {
+      // Empty slot - just place
+      toCol.setCard(targetPosition, movingPerson);
+    } else {
+      // Occupied - push existing card
+      if (targetPosition === 1) {
+        // Moving to slot 1, push existing to slot 2
+        toCol.setCard(2, destCard);
+        toCol.setCard(1, movingPerson);
+      } else {
+        // Moving to slot 2, push existing to slot 1
+        toCol.setCard(1, destCard);
+        toCol.setCard(2, movingPerson);
+      }
+    }
+
+    console.log(
+      `Construction Yard: Moved ${movingPerson.name} to column ${targetColumn}, position ${targetPosition}`
+    );
+
+    // Mark Construction Yard as not ready
+    if (sourceCard && !this.state.pending?.shouldStayReady) {
+      sourceCard.isReady = false;
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Bonfire multiple restore handler
+class BonfireRestoreMultipleHandler extends PendingHandler {
+  handle(payload) {
+    const { finish } = payload;
+
+    if (finish) {
+      console.log(
+        `Bonfire: Finished restoring ${
+          this.state.pending.restoredCards?.length || 0
+        } cards`
+      );
+      this.state.pending = null;
+
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+      return true;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid restore target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || !target.isDamaged) {
+      console.log("Must target a damaged card");
+      return false;
+    }
+
+    // PREVENT BONFIRE FROM RESTORING ITSELF
+    if (target.type === "camp" && target.name === "Bonfire") {
+      console.log("Bonfire cannot restore itself");
+      return false;
+    }
+
+    // Restore the card
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+
+    console.log(`Bonfire restored ${target.name}`);
+
+    // Track restored card
+    if (!this.state.pending.restoredCards) {
+      this.state.pending.restoredCards = [];
+    }
+    this.state.pending.restoredCards.push({
+      playerId: targetPlayer,
+      columnIndex: targetColumn,
+      position: targetPosition,
+    });
+
+    // Remove from valid targets
+    this.state.pending.validTargets = this.state.pending.validTargets.filter(
+      (t) =>
+        !(
+          t.playerId === targetPlayer &&
+          t.columnIndex === targetColumn &&
+          t.position === targetPosition
+        )
+    );
+
+    if (this.state.pending.validTargets.length === 0) {
+      console.log("Bonfire: No more cards to restore");
+      this.state.pending = null;
+
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+    } else {
+      console.log(
+        `Bonfire: ${this.state.pending.validTargets.length} cards can still be restored`
+      );
+    }
+
+    return true;
+  }
+}
+
+// Adrenaline Lab handlers
+class AdrenalineLabSelectPersonHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Adrenaline Lab target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const targetInfo = this.state.pending.validTargets.find(
+      (t) =>
+        t.playerId === targetPlayer &&
+        t.columnIndex === targetColumn &&
+        t.position === targetPosition
+    );
+
+    if (!targetInfo) {
+      console.log("Invalid selection");
+      return false;
+    }
+
+    // Set up ability selection
+    this.state.pending = {
+      type: "adrenalinelab_select_ability",
+      sourcePlayerId: this.state.pending.sourcePlayerId,
+      sourceCard: this.state.pending.sourceCard,
+      selectedPerson: targetInfo,
+    };
+
+    console.log(
+      `Adrenaline Lab: Choose which ${targetInfo.card.name} ability to use`
+    );
+    return true;
+  }
+}
+
+class AdrenalineLabSelectAbilityHandler extends PendingHandler {
+  handle(payload) {
+    const { abilityIndex } = payload;
+    const selectedPerson = this.state.pending.selectedPerson;
+    const ability = selectedPerson.abilities[abilityIndex];
+
+    if (!ability) {
+      console.log("Invalid ability index");
+      return false;
+    }
+
+    // Store source info
+    const sourceCard = this.state.pending.sourceCard;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Mark Adrenaline Lab as not ready
+    if (sourceCard) {
+      sourceCard.isReady = false;
+    }
+
+    // Execute the selected ability (this part stays in command-system for now)
+    // The actual ability execution is complex and varies by ability type
+    console.log(
+      `Executing ${selectedPerson.card.name}'s ${ability.effect} ability via Adrenaline Lab`
+    );
+
+    // This is a simplified version - the real implementation would need
+    // to call the appropriate ability handler
+    this.commandSystem.executeAbilityViaAdrenalineLab(
+      selectedPerson,
+      abilityIndex,
+      sourcePlayerId
+    );
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -2082,6 +2368,11 @@ export const pendingHandlers = {
   laborcamp_select_restore: LaborcampSelectRestoreHandler,
   bloodbank_select_destroy: BloodbankSelectDestroyHandler,
   mulcher_select_destroy: MulcherSelectDestroyHandler,
+  constructionyard_select_person: ConstructionYardSelectPersonHandler,
+  constructionyard_select_destination: ConstructionYardSelectDestinationHandler,
+  bonfire_restore_multiple: BonfireRestoreMultipleHandler,
+  adrenalinelab_select_person: AdrenalineLabSelectPersonHandler,
+  adrenalinelab_select_ability: AdrenalineLabSelectAbilityHandler,
 };
 
 // Export a function to get the right handler

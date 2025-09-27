@@ -368,8 +368,8 @@ export const campAbilities = {
           for (let pos = 0; pos < 3; pos++) {
             const card = player.columns[col].getCard(pos);
             if (card && card.isDamaged && !card.isDestroyed) {
-              // Exclude Bonfire itself from restoration targets
-              if (!(card.type === "camp" && card.name === "Bonfire")) {
+              // THIS IS THE KEY CHECK - exclude Bonfire by its ID
+              if (card.id !== bonfire.id) {
                 validTargets.push({
                   playerId: context.playerId,
                   columnIndex: col,

@@ -33,30 +33,34 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "laborcamp",
+    name: "constructionyard",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "destroyrestore", cost: 0 }],
+    abilities: [
+      { effect: "moveperson", cost: 1 },
+      { effect: "raid", cost: 2 },
+    ],
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "theoctagon",
+    name: "bonfire",
     type: "camp",
-    campDraw: 0,
-    abilities: [{ effect: "destroy", cost: 1 }], // Destroy own, opponent destroys theirs
+    campDraw: 1,
+    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+    trait: "Cannot be restored",
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "mulcher",
+    name: "adrenalinelab",
     type: "camp",
-    campDraw: 0,
-    abilities: [{ effect: "destroydraw", cost: 0 }],
+    campDraw: 1,
+    abilities: [{ effect: "usedamaged", cost: 0 }], // Use damaged person ability
     isReady: true,
     isDamaged: false,
   });

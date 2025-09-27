@@ -2907,6 +2907,92 @@ class CacheChooseOrderHandler extends PendingHandler {
   }
 }
 
+// Add these to pending-handlers.js
+
+class MutantChooseModeHandler extends PendingHandler {
+  handle(payload) {
+    const { mode } = payload;
+
+    if (mode === "damage") {
+      this.state.pending = {
+        type: "mutant_damage",
+        validTargets: this.state.pending.damageTargets,
+        shouldRestore: false,
+        sourcePlayerId: this.state.pending.sourcePlayerId,
+        sourceColumn: this.state.pending.sourceColumn,
+        sourcePosition: this.state.pending.sourcePosition,
+      };
+      console.log("Mutant: Select target to damage");
+    } else if (mode === "restore") {
+      this.state.pending = {
+        type: "mutant_restore",
+        validTargets: this.state.pending.restoreTargets,
+        shouldDamage: false,
+        sourcePlayerId: this.state.pending.sourcePlayerId,
+        sourceColumn: this.state.pending.sourceColumn,
+        sourcePosition: this.state.pending.sourcePosition,
+      };
+      console.log("Mutant: Select card to restore");
+    } else if (mode === "both") {
+      this.state.pending = {
+        type: "mutant_choose_order",
+        damageTargets: this.state.pending.damageTargets,
+        restoreTargets: this.state.pending.restoreTargets,
+        sourcePlayerId: this.state.pending.sourcePlayerId,
+        sourceColumn: this.state.pending.sourceColumn,
+        sourcePosition: this.state.pending.sourcePosition,
+      };
+      console.log("Mutant: Choose which to do first");
+    } else {
+      console.log("Invalid mode selection");
+      return false;
+    }
+
+    return true;
+  }
+}
+
+class MutantChooseOrderHandler extends PendingHandler {
+  handle(payload) {
+    const { order } = payload;
+
+    const damageTargets = this.state.pending.damageTargets;
+    const restoreTargets = this.state.pending.restoreTargets;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceColumn = this.state.pending.sourceColumn;
+    const sourcePosition = this.state.pending.sourcePosition;
+
+    if (order === "damage_first") {
+      this.state.pending = {
+        type: "mutant_damage",
+        validTargets: damageTargets,
+        shouldRestore: true,
+        restoreTargets: restoreTargets,
+        sourcePlayerId: sourcePlayerId,
+        sourceColumn: sourceColumn,
+        sourcePosition: sourcePosition,
+      };
+      console.log("Mutant: Damage first - select target to damage");
+    } else if (order === "restore_first") {
+      this.state.pending = {
+        type: "mutant_restore",
+        validTargets: restoreTargets,
+        shouldDamage: true,
+        damageTargets: damageTargets,
+        sourcePlayerId: sourcePlayerId,
+        sourceColumn: sourceColumn,
+        sourcePosition: sourcePosition,
+      };
+      console.log("Mutant: Restore first - select card to restore");
+    } else {
+      console.log("Invalid order selection");
+      return false;
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -2953,6 +3039,8 @@ export const pendingHandlers = {
   supplydepot_select_discard: SupplydepotSelectDiscardHandler,
   omenclock_select_event: OmenclockSelectEventHandler,
   cache_choose_order: CacheChooseOrderHandler,
+  mutant_choose_mode: MutantChooseModeHandler,
+  mutant_choose_order: MutantChooseOrderHandler,
 };
 
 // Export a function to get the right handler

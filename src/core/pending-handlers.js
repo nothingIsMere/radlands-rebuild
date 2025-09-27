@@ -1965,14 +1965,14 @@ class MulcherSelectDestroyHandler extends PendingHandler {
     const target = this.getTarget(payload);
 
     const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard;
+    const shouldStayReady = this.state.pending.shouldStayReady;
 
     // Clear pending
     this.state.pending = null;
 
     // Destroy the selected person
     target.isDestroyed = true;
-
-    let drawCards = 0;
 
     if (target.isPunk) {
       const returnCard = {
@@ -1982,12 +1982,10 @@ class MulcherSelectDestroyHandler extends PendingHandler {
         cost: target.cost || 0,
       };
       this.state.deck.unshift(returnCard);
-      drawCards = 1; // Punks let you draw 1
-      console.log("Mulcher: Destroyed punk, will draw 1 card");
+      console.log("Mulcher: Destroyed punk");
     } else {
       this.state.discard.push(target);
-      drawCards = 2; // Regular people let you draw 2
-      console.log(`Mulcher: Destroyed ${target.name}, will draw 2 cards`);
+      console.log(`Mulcher: Destroyed ${target.name}`);
     }
 
     // Remove from column
@@ -2002,17 +2000,21 @@ class MulcherSelectDestroyHandler extends PendingHandler {
       }
     }
 
-    // Draw cards
-    for (let i = 0; i < drawCards; i++) {
-      const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
-      if (result.gameEnded) {
-        return true;
-      }
-      if (result.card) {
-        console.log(`Mulcher: Drew ${result.card.name}`);
-      } else {
-        break; // No more cards
-      }
+    // MULCHER ALWAYS DRAWS EXACTLY 1 CARD
+    const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
+    if (result.gameEnded) {
+      return true;
+    }
+    if (result.card) {
+      console.log(`Mulcher: Drew ${result.card.name}`);
+    } else {
+      console.log("Mulcher: Deck empty, no card drawn");
+    }
+
+    // Mark Mulcher as not ready
+    if (sourceCard && !shouldStayReady) {
+      sourceCard.isReady = false;
+      console.log("Mulcher marked as not ready");
     }
 
     if (this.commandSystem.activeAbilityContext) {

@@ -53,10 +53,10 @@ function setupTestGame() {
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "bloodbank",
+    name: "mulcher",
     type: "camp",
-    campDraw: 1,
-    abilities: [{ effect: "destroywater", cost: 0 }],
+    campDraw: 0,
+    abilities: [{ effect: "destroydraw", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

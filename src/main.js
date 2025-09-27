@@ -33,34 +33,30 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "constructionyard",
+    name: "cache",
     type: "camp",
     campDraw: 1,
-    abilities: [
-      { effect: "moveperson", cost: 1 },
-      { effect: "raid", cost: 2 },
-    ],
+    abilities: [{ effect: "raidpunk", cost: 2 }],
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "bonfire",
+    name: "omenclock",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "damagerestoremany", cost: 0 }],
-    trait: "Cannot be restored",
+    abilities: [{ effect: "advance", cost: 1 }], // Advance any event
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "adrenalinelab",
+    name: "scavengercamp",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "usedamaged", cost: 0 }], // Use damaged person ability
+    abilities: [{ effect: "discardchoose", cost: 0 }], // Discard then water or punk
     isReady: true,
     isDamaged: false,
   });

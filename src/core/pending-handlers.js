@@ -2584,6 +2584,329 @@ class ScientistSelectJunkHandler extends PendingHandler {
   }
 }
 
+class ScavengercampSelectDiscardHandler extends PendingHandler {
+  handle(payload) {
+    const { cardToDiscard } = payload;
+    const pending = this.state.pending;
+
+    if (!cardToDiscard) {
+      console.log("Must select a card to discard");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    // Find and verify the card
+    const cardIndex = player.hand.findIndex((c) => c.id === cardToDiscard);
+    if (cardIndex === -1) {
+      console.log("Card not found in hand");
+      return false;
+    }
+
+    const card = player.hand[cardIndex];
+
+    // Verify it's not Water Silo
+    if (card.isWaterSilo || card.name === "Water Silo") {
+      console.log("Cannot discard Water Silo");
+      return false;
+    }
+
+    // Remove from hand and discard
+    player.hand.splice(cardIndex, 1);
+    this.state.discard.push(card);
+    console.log(`Scavenger Camp: Discarded ${card.name}`);
+
+    // Set up benefit choice
+    this.state.pending = {
+      type: "scavengercamp_choose_benefit",
+      sourceCard: pending.sourceCard,
+      sourcePlayerId: pending.sourcePlayerId,
+      context: pending.context,
+    };
+
+    console.log("Scavenger Camp: Choose your benefit - Water or Punk");
+    return true;
+  }
+}
+
+class ScavengercampChooseBenefitHandler extends PendingHandler {
+  handle(payload) {
+    const { benefit } = payload;
+    const pending = this.state.pending;
+
+    if (!benefit || (benefit !== "water" && benefit !== "punk")) {
+      console.log("Must choose water or punk");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    if (benefit === "water") {
+      player.water += 1;
+      console.log("Scavenger Camp: Gained 1 extra water");
+
+      this.completeAbility();
+      this.state.pending = null;
+      this.finalizeAbility();
+    } else if (benefit === "punk") {
+      // Check if deck has cards
+      if (this.state.deck.length === 0) {
+        console.log("Cannot gain punk - deck is empty. Defaulting to water.");
+        player.water += 1;
+        console.log("Scavenger Camp: Gained 1 water (deck empty)");
+
+        this.completeAbility();
+        this.state.pending = null;
+        this.finalizeAbility();
+      } else {
+        // Set up punk placement
+        this.state.pending = {
+          type: "place_punk",
+          source: pending.sourceCard,
+          sourceCard: pending.sourceCard,
+          sourcePlayerId: pending.sourcePlayerId,
+        };
+
+        console.log("Scavenger Camp: Place your punk");
+      }
+    }
+
+    return true;
+  }
+}
+
+class SupplydepotSelectDiscardHandler extends PendingHandler {
+  handle(payload) {
+    const { cardToDiscard } = payload;
+    const pending = this.state.pending;
+
+    if (!cardToDiscard) {
+      console.log("Must select a card to discard");
+      return false;
+    }
+
+    // Verify the selected card is one of the drawn cards
+    const discardCard = pending.drawnCards.find((c) => c.id === cardToDiscard);
+    if (!discardCard) {
+      console.log("Invalid card selected - must be one of the drawn cards");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    // Find and discard the selected card from hand
+    const index = player.hand.findIndex((c) => c.id === cardToDiscard);
+    if (index !== -1) {
+      const discarded = player.hand.splice(index, 1)[0];
+      this.state.discard.push(discarded);
+      console.log(`Supply Depot: Discarded ${discarded.name}`);
+
+      // Identify which card was kept
+      const keptCard = pending.drawnCards.find((c) => c.id !== cardToDiscard);
+      if (keptCard) {
+        console.log(`Supply Depot: Kept ${keptCard.name}`);
+      }
+    }
+
+    this.completeAbility();
+    this.state.pending = null;
+    this.finalizeAbility();
+
+    console.log("Supply Depot: Resolved");
+    return true;
+  }
+}
+
+class OmenclockSelectEventHandler extends PendingHandler {
+  handle(payload) {
+    const pending = this.state.pending;
+    const { eventPlayerId, eventSlot } = payload;
+
+    // Find the matching valid target
+    const validTarget = pending.validTargets.find(
+      (t) => t.playerId === eventPlayerId && t.slotIndex === eventSlot
+    );
+
+    if (!validTarget) {
+      console.log("Not a valid event to advance");
+      return false;
+    }
+
+    const player = this.state.players[eventPlayerId];
+    const event = player.eventQueue[eventSlot];
+
+    if (!event) {
+      console.log("No event at that slot");
+      return false;
+    }
+
+    // Check if this will resolve the event (advancing from slot 1)
+    if (eventSlot === 0) {
+      console.log(`Omen Clock: Resolving ${event.name} immediately!`);
+
+      // Mark that an event resolved this turn
+      this.state.turnEvents.eventResolvedThisTurn = true;
+
+      // Remove from queue
+      player.eventQueue[0] = null;
+
+      // Handle Raiders specially
+      if (event.isRaiders) {
+        player.raiders = "available";
+
+        this.completeAbility();
+        this.finalizeAbility();
+
+        const opponentId = eventPlayerId === "left" ? "right" : "left";
+        this.state.pending = {
+          type: "raiders_select_camp",
+          sourcePlayerId: eventPlayerId,
+          targetPlayerId: opponentId,
+        };
+
+        console.log(
+          `Raiders (via Omen Clock): ${opponentId} player must choose a camp to damage`
+        );
+        return true;
+      }
+
+      // Look up event definition for non-Raiders events
+      const eventName = event.name.toLowerCase().replace(/\s+/g, "");
+      const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
+
+      if (eventDef?.effect?.handler) {
+        console.log(`Omen Clock: Executing ${event.name} event effect`);
+
+        this.completeAbility();
+        this.state.pending = null;
+        this.finalizeAbility();
+
+        // Execute the event effect
+        const eventContext = {
+          playerId: eventPlayerId,
+          eventCard: event,
+        };
+
+        const result = eventDef.effect.handler(this.state, eventContext);
+
+        // If event didn't create a new pending state, discard it
+        if (!this.state.pending) {
+          this.state.discard.push(event);
+        }
+      } else {
+        // No handler found, just discard
+        console.log(`Omen Clock: No handler for ${event.name}, discarding`);
+        this.state.discard.push(event);
+        this.completeAbility();
+        this.state.pending = null;
+        this.finalizeAbility();
+      }
+    } else {
+      // Normal advancement
+      const newSlot = eventSlot - 1;
+      player.eventQueue[newSlot] = event;
+      player.eventQueue[eventSlot] = null;
+
+      console.log(
+        `Omen Clock: Advanced ${event.name} from slot ${
+          eventSlot + 1
+        } to slot ${newSlot + 1}`
+      );
+
+      this.completeAbility();
+      this.state.pending = null;
+      this.finalizeAbility();
+    }
+
+    return true;
+  }
+}
+
+class CacheChooseOrderHandler extends PendingHandler {
+  handle(payload) {
+    const { effectFirst } = payload;
+    const pending = this.state.pending;
+
+    if (!effectFirst || (effectFirst !== "raid" && effectFirst !== "punk")) {
+      console.log("Must choose raid or punk first");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    if (effectFirst === "raid") {
+      console.log("Cache: Processing Raid first");
+
+      // Check if Raiders will resolve immediately
+      if (player.raiders === "in_queue") {
+        let raidersIndex = -1;
+        for (let i = 0; i < 3; i++) {
+          if (player.eventQueue[i]?.isRaiders) {
+            raidersIndex = i;
+            break;
+          }
+        }
+
+        if (raidersIndex === 0) {
+          console.log(
+            "Cache: Raiders advancing off slot 1 - will resolve before punk"
+          );
+
+          player.eventQueue[0] = null;
+          player.raiders = "available";
+
+          const opponentId =
+            pending.sourcePlayerId === "left" ? "right" : "left";
+          this.state.pending = {
+            type: "raiders_select_camp",
+            sourcePlayerId: pending.sourcePlayerId,
+            targetPlayerId: opponentId,
+            fromCache: true,
+            cacheSourceCard: pending.sourceCard,
+            cacheContext: pending.context,
+          };
+
+          console.log(
+            `Raiders: ${opponentId} player must choose a camp to damage (Cache will continue after)`
+          );
+          return true;
+        }
+      }
+
+      // Raiders won't resolve immediately, just advance/place it
+      this.commandSystem.executeRaid(pending.sourcePlayerId);
+
+      // Now set up punk placement
+      this.state.pending = {
+        type: "place_punk",
+        source: pending.sourceCard,
+        sourceCard: pending.sourceCard,
+        sourcePlayerId: pending.sourcePlayerId,
+        fromCache: true,
+      };
+
+      console.log("Cache: Raid processed, now place your punk");
+    } else {
+      // Do punk first, then raid
+      console.log("Cache: Processing Gain Punk first");
+
+      this.state.pending = {
+        type: "place_punk",
+        source: pending.sourceCard,
+        sourceCard: pending.sourceCard,
+        sourcePlayerId: pending.sourcePlayerId,
+        fromCache: true,
+        doRaidAfter: true,
+        cacheContext: pending.context,
+      };
+
+      console.log("Cache: Place your punk (will Raid after)");
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -2625,6 +2948,11 @@ export const pendingHandlers = {
   interrogate_keep: InterrogateKeepHandler,
   zeto_discard_selection: ZetoDiscardSelectionHandler,
   scientist_select_junk: ScientistSelectJunkHandler,
+  scavengercamp_select_discard: ScavengercampSelectDiscardHandler,
+  scavengercamp_choose_benefit: ScavengercampChooseBenefitHandler,
+  supplydepot_select_discard: SupplydepotSelectDiscardHandler,
+  omenclock_select_event: OmenclockSelectEventHandler,
+  cache_choose_order: CacheChooseOrderHandler,
 };
 
 // Export a function to get the right handler

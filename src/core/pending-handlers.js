@@ -2366,6 +2366,224 @@ class AdrenalineLabSelectAbilityHandler extends PendingHandler {
   }
 }
 
+class InterrogateKeepHandler extends PendingHandler {
+  handle(payload) {
+    const { cardToKeep } = payload;
+    const pending = this.state.pending;
+
+    if (!cardToKeep) {
+      console.log("Must select a card to keep");
+      return false;
+    }
+
+    const keepCard = pending.drawnCards.find((c) => c.id === cardToKeep);
+    if (!keepCard) {
+      console.log("Invalid card selected - must be one of the drawn cards");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    // Discard the other 3 cards
+    for (const card of pending.drawnCards) {
+      if (card.id !== cardToKeep) {
+        const index = player.hand.findIndex((c) => c.id === card.id);
+        if (index !== -1) {
+          const discarded = player.hand.splice(index, 1)[0];
+          this.state.discard.push(discarded);
+          console.log(`Discarded ${discarded.name}`);
+        }
+      }
+    }
+
+    console.log(`Kept ${keepCard.name}`);
+    this.state.pending = null;
+    console.log("Interrogate: Resolved");
+
+    return true;
+  }
+}
+
+class ZetoDiscardSelectionHandler extends PendingHandler {
+  handle(payload) {
+    const { cardsToDiscard } = payload;
+    const pending = this.state.pending;
+
+    if (!cardsToDiscard || cardsToDiscard.length !== pending.mustDiscard) {
+      console.log(
+        `Must select exactly ${pending.mustDiscard} cards to discard`
+      );
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    // Verify and discard cards
+    for (const cardId of cardsToDiscard) {
+      const card = player.hand.find((c) => c.id === cardId);
+      if (!card) {
+        console.log("Invalid card selected");
+        return false;
+      }
+      if (card.isWaterSilo) {
+        console.log("Cannot discard Water Silo");
+        return false;
+      }
+    }
+
+    // Discard the selected cards
+    for (const cardId of cardsToDiscard) {
+      const index = player.hand.findIndex((c) => c.id === cardId);
+      const card = player.hand.splice(index, 1)[0];
+      this.state.discard.push(card);
+      console.log(`Discarded ${card.name}`);
+    }
+
+    // Store Parachute Base damage info
+    const parachuteBaseDamage = pending.parachuteBaseDamage;
+
+    this.completeAbility();
+    this.state.pending = null;
+    this.finalizeAbility();
+
+    console.log("Zeto Kahn: Draw and discard complete");
+
+    // Apply Parachute Base damage if needed
+    if (parachuteBaseDamage) {
+      this.handleParachuteBaseDamage();
+    }
+
+    return true;
+  }
+}
+
+class ScientistSelectJunkHandler extends PendingHandler {
+  handle(payload) {
+    const selectedIndex = payload.junkIndex;
+
+    // Store info before clearing pending
+    const sourceCard =
+      this.state.pending.sourceCard || this.state.pending.source;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Handle "no junk" option
+    if (selectedIndex === -1) {
+      console.log(
+        "Scientist: Discarded all cards without using any junk effect"
+      );
+
+      if (sourceCard) {
+        sourceCard.isReady = false;
+      }
+
+      this.state.pending = null;
+      this.finalizeAbility();
+
+      if (parachuteBaseDamage) {
+        this.handleParachuteBaseDamage();
+      }
+
+      return true;
+    }
+
+    const selectedCard = this.state.pending.discardedCards[selectedIndex];
+    if (!selectedCard) {
+      console.log("Invalid junk selection");
+      return false;
+    }
+
+    console.log(
+      `Scientist: Using ${selectedCard.name}'s junk effect: ${selectedCard.junkEffect}`
+    );
+
+    const junkEffect = selectedCard.junkEffect?.toLowerCase();
+    const player = this.state.players[sourcePlayerId];
+
+    // Clear pending before processing immediate effects
+    this.state.pending = null;
+
+    // Process the junk effect
+    switch (junkEffect) {
+      case "water":
+        player.water += 1;
+        console.log("Gained 1 water from Scientist junk");
+        if (sourceCard) sourceCard.isReady = false;
+        this.finalizeAbility();
+        break;
+
+      case "card":
+      case "draw":
+        const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
+        if (result.gameEnded) return true;
+        if (result.card) {
+          console.log(`Drew ${result.card.name} from Scientist junk`);
+        }
+        if (sourceCard) sourceCard.isReady = false;
+        this.finalizeAbility();
+        break;
+
+      case "raid":
+        this.commandSystem.executeRaid(sourcePlayerId);
+        if (sourceCard) sourceCard.isReady = false;
+        this.finalizeAbility();
+        break;
+
+      case "punk":
+        // Check deck before setting up placement
+        if (this.state.deck.length === 0) {
+          const result = this.state.drawCardWithReshuffle(false);
+          if (result.gameEnded) {
+            console.log("Game ended - deck exhausted twice");
+            this.state.pending = null;
+            if (sourceCard) sourceCard.isReady = false;
+            this.finalizeAbility();
+            return true;
+          }
+
+          if (!result.card) {
+            console.log(
+              "Cannot gain punk from Scientist junk - no cards available"
+            );
+            if (sourceCard) sourceCard.isReady = false;
+            this.state.pending = null;
+            this.finalizeAbility();
+            return true;
+          }
+
+          this.state.deck.unshift(result.card);
+        }
+
+        // Set up punk placement
+        this.state.pending = {
+          type: "place_punk",
+          sourcePlayerId: sourcePlayerId,
+          fromScientist: true,
+          scientistCard: sourceCard,
+        };
+
+        if (parachuteBaseDamage) {
+          this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+        }
+
+        console.log("Scientist junk: Setting up punk placement");
+        break;
+
+      default:
+        console.log(`Unknown junk effect: ${junkEffect}`);
+        if (sourceCard) sourceCard.isReady = false;
+        this.finalizeAbility();
+    }
+
+    // Apply Parachute Base damage if no new pending was created
+    if (parachuteBaseDamage && !this.state.pending) {
+      this.handleParachuteBaseDamage();
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -2404,6 +2622,9 @@ export const pendingHandlers = {
   bonfire_restore_multiple: BonfireRestoreMultipleHandler,
   adrenalinelab_select_person: AdrenalineLabSelectPersonHandler,
   adrenalinelab_select_ability: AdrenalineLabSelectAbilityHandler,
+  interrogate_keep: InterrogateKeepHandler,
+  zeto_discard_selection: ZetoDiscardSelectionHandler,
+  scientist_select_junk: ScientistSelectJunkHandler,
 };
 
 // Export a function to get the right handler

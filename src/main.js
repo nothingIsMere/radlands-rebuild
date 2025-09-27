@@ -32,11 +32,10 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    id: "camp_left_1",
-    name: "cache",
+    name: "parachutebase",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "raidpunk", cost: 2 }],
+    abilities: [{ effect: "paradrop", cost: 0 }], // Play person and use ability
     isReady: true,
     isDamaged: false,
   });

@@ -876,12 +876,43 @@ export class UIRenderer {
       this.state.pending?.type === "parachute_place_person" &&
       playerId === this.state.pending.sourcePlayerId
     ) {
-      // Highlight ALL slots in player's own columns for placement
-      cardDiv.classList.add("parachute-placement-target");
+      // Check if this slot is actually eligible for placement
+      const isEligibleSlot = () => {
+        // Can't place in camp slot (position 0)
+        if (position === 0) return false;
 
-      // Add extra visual cue for empty slots
-      if (!card) {
-        cardDiv.classList.add("parachute-placement-empty");
+        // Check what's currently in the slot
+        if (card) {
+          // Can't place on camps
+          if (card.type === "camp") return false;
+
+          // Can't place on Juggernaut (it's a camp that can be in any position)
+          if (card.name === "Juggernaut") return false;
+
+          // Can place on regular people if there's room to push
+          if (card.type === "person") {
+            const otherSlot = position === 1 ? 2 : 1;
+            const otherCard =
+              this.state.players[playerId].columns[columnIndex].getCard(
+                otherSlot
+              );
+
+            // Can only push if the other slot is empty
+            return !otherCard;
+          }
+        }
+
+        // Empty slots in positions 1 or 2 are always eligible
+        return true;
+      };
+
+      if (isEligibleSlot()) {
+        cardDiv.classList.add("parachute-placement-target");
+
+        // Add extra visual cue for empty slots
+        if (!card) {
+          cardDiv.classList.add("parachute-placement-empty");
+        }
       }
     }
 
@@ -1242,10 +1273,17 @@ export class UIRenderer {
           return;
         }
         // Handle Parachute Base placement
+        // Handle Parachute Base placement
         if (
           this.state.pending?.type === "parachute_place_person" &&
           playerId === this.state.pending.sourcePlayerId
         ) {
+          // Check if this empty slot is eligible (not camp slot)
+          if (position === 0) {
+            console.log("Cannot place person in camp slot");
+            return;
+          }
+
           console.log("Executing Parachute placement for empty slot");
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -1590,11 +1628,34 @@ export class UIRenderer {
             this.state.pending.type === "parachute_place_person" &&
             playerId === this.state.pending.sourcePlayerId
           ) {
+            // Check if this occupied slot is eligible for placement
+            if (
+              position === 0 ||
+              card.type === "camp" ||
+              card.name === "Juggernaut"
+            ) {
+              console.log("Cannot place on this slot - camp or Juggernaut");
+              return;
+            }
+
+            // Check if we can push the person
+            if (card.type === "person") {
+              const otherSlot = position === 1 ? 2 : 1;
+              const otherCard =
+                this.state.players[playerId].columns[columnIndex].getCard(
+                  otherSlot
+                );
+              if (otherCard) {
+                console.log("Cannot place - no room to push");
+                return;
+              }
+            }
+
             console.log(
               "Clicking slot for Parachute placement:",
               columnIndex,
               position
-            ); // ADD THIS DEBUG
+            );
             this.commands.execute({
               type: "SELECT_TARGET",
               targetType: "slot",

@@ -2,53 +2,17 @@
 import { TargetValidator } from "./target-validator.js";
 
 // Base handler that all specific handlers will extend
+// Fix the base class (remove duplicates):
 class PendingHandler {
   constructor(state, commandSystem) {
     this.state = state;
     this.commandSystem = commandSystem;
   }
 
-  // Every handler must implement this method
   handle(payload) {
     throw new Error("Handler must implement handle method");
   }
 
-  // Helper methods that many handlers will use
-  isValidTarget(payload) {
-    const { targetPlayer, targetColumn, targetPosition } = payload;
-    return this.state.pending.validTargets?.some(
-      (t) =>
-        t.playerId === targetPlayer &&
-        t.columnIndex === targetColumn &&
-        t.position === targetPosition
-    );
-  }
-
-  getTarget(payload) {
-    const { targetPlayer, targetColumn, targetPosition } = payload;
-    return this.state.getCard(targetPlayer, targetColumn, targetPosition);
-  }
-
-  handleParachuteBaseDamage() {
-    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
-    if (parachuteBaseDamage) {
-      console.log("Applying Parachute Base damage");
-      this.commandSystem.applyParachuteBaseDamage(
-        parachuteBaseDamage.targetPlayer,
-        parachuteBaseDamage.targetColumn,
-        parachuteBaseDamage.targetPosition
-      );
-    }
-  }
-
-  finalizeAbility() {
-    this.completeAbility();
-    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
-      this.commandSystem.finalizeAbilityExecution(
-        this.commandSystem.activeAbilityContext
-      );
-    }
-  }
   isValidTarget(payload) {
     const { targetPlayer, targetColumn, targetPosition } = payload;
     return this.state.pending.validTargets?.some(
@@ -110,26 +74,27 @@ class PendingHandler {
 class DamageHandler extends PendingHandler {
   handle(payload) {
     const { targetPlayer, targetColumn, targetPosition } = payload;
-
-    // Store Parachute info
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-    // Use the new helper
     this.finalizeAbility();
 
-    // Resolve the damage
-    const result = this.resolveDamage(
+    const damaged = this.resolveDamage(
       targetPlayer,
       targetColumn,
       targetPosition
     );
 
-    // Use the new helper for Parachute
-    if (result && parachuteBaseDamage) {
-      this.handleParachuteBaseDamage();
+    // Apply Parachute Base damage if present
+    if (damaged && parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
-    return result;
+    return damaged;
   }
 }
 
@@ -143,6 +108,7 @@ class PlacePunkHandler extends PendingHandler {
     const doRaidAfter = this.state.pending?.doRaidAfter;
     const sourcePlayerId = this.state.pending?.sourcePlayerId;
     const sourceCard = this.state.pending?.sourceCard;
+    const parachuteBaseContext = this.state.pending?.parachuteBaseContext; // ADD THIS
 
     // Resolve the punk placement
     const result = this.commandSystem.resolvePlacePunk(
@@ -162,8 +128,81 @@ class PlacePunkHandler extends PendingHandler {
       this.commandSystem.executeRaid(sourcePlayerId);
     }
 
+    // Handle Parachute Base continuation
+    if (result && parachuteBaseContext) {
+      console.log(
+        "Entry trait (punk placement) complete, continuing Parachute Base"
+      );
+
+      const person = parachuteBaseContext.person;
+      const hasAbility = parachuteBaseContext.hasAbility;
+
+      // Check if the person has abilities to use
+      if (hasAbility && person.abilities?.length > 0) {
+        if (person.abilities.length > 1) {
+          // Multiple abilities - let player choose
+          this.state.pending = {
+            type: "parachute_select_ability",
+            person: person,
+            sourcePlayerId: parachuteBaseContext.sourcePlayerId,
+            targetColumn: parachuteBaseContext.targetColumn,
+            targetSlot: parachuteBaseContext.targetSlot,
+            sourceCard: parachuteBaseContext.sourceCard,
+            shouldStayReady: parachuteBaseContext.shouldStayReady,
+          };
+          console.log(
+            `Parachute Base: Choose which ${person.name} ability to use`
+          );
+          return true;
+        }
+
+        // Single ability - use it automatically
+        const ability = person.abilities[0];
+        const player = this.state.players[parachuteBaseContext.sourcePlayerId];
+
+        // Check if player can afford it
+        if (player.water >= ability.cost) {
+          player.water -= ability.cost;
+          console.log(
+            `Parachute Base: Paid ${ability.cost} for ${person.name}'s ability`
+          );
+
+          this.commandSystem.executeAbility(ability, {
+            source: person,
+            playerId: parachuteBaseContext.sourcePlayerId,
+            columnIndex: parachuteBaseContext.targetColumn,
+            position: parachuteBaseContext.targetSlot,
+            fromParachuteBase: true,
+          });
+
+          if (this.state.pending) {
+            this.state.pending.parachuteBaseDamage = {
+              targetPlayer: parachuteBaseContext.sourcePlayerId,
+              targetColumn: parachuteBaseContext.targetColumn,
+              targetPosition: parachuteBaseContext.targetSlot,
+            };
+          } else {
+            // Apply damage immediately
+            this.applyParachuteBaseDamage(parachuteBaseContext);
+          }
+        } else {
+          console.log("Not enough water for ability, just applying damage");
+          this.applyParachuteBaseDamage(parachuteBaseContext);
+        }
+      } else {
+        // No abilities - just apply damage
+        this.applyParachuteBaseDamage(parachuteBaseContext);
+      }
+    }
+
     // Mark camp ability complete if this was from a camp
-    if (result && sourceCard && sourceCard.type === "camp" && !fromCache) {
+    if (
+      result &&
+      sourceCard &&
+      sourceCard.type === "camp" &&
+      !fromCache &&
+      !parachuteBaseContext
+    ) {
       if (!this.state.pending?.shouldStayReady) {
         sourceCard.isReady = false;
         console.log(
@@ -174,6 +213,30 @@ class PlacePunkHandler extends PendingHandler {
     }
 
     return result;
+  }
+
+  applyParachuteBaseDamage(context) {
+    this.state.pending = {
+      type: "parachute_damage_self",
+      sourcePlayerId: context.sourcePlayerId,
+    };
+
+    const damaged = this.commandSystem.resolveDamage(
+      context.sourcePlayerId,
+      context.targetColumn,
+      context.targetSlot
+    );
+
+    if (damaged) {
+      console.log("Parachute Base: Damaged the person");
+    }
+
+    this.state.pending = null;
+
+    // Mark Parachute Base as not ready
+    if (context.sourceCard && !context.shouldStayReady) {
+      context.sourceCard.isReady = false;
+    }
   }
 }
 
@@ -191,46 +254,32 @@ class RestoreHandler extends PendingHandler {
       return false;
     }
 
+    // Store parachuteBaseDamage before clearing pending
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
     target.isDamaged = false;
     if (target.type === "person") {
       target.isReady = false;
     }
-
     console.log(`Restored ${target.name}!`);
 
-    // Mark ability complete
     this.completeAbility();
+    this.state.pending = null;
 
-    if (this.commandSystem.activeAbilityContext && !this.state.pending) {
+    if (this.commandSystem.activeAbilityContext) {
       this.commandSystem.finalizeAbilityExecution(
         this.commandSystem.activeAbilityContext
       );
     }
 
-    // Check for Parachute Base damage
-    if (this.state.pending?.parachuteBaseDamage) {
-      const pbDamage = this.state.pending.parachuteBaseDamage;
-      this.state.pending = null;
-
-      if (this.commandSystem.activeAbilityContext) {
-        this.commandSystem.finalizeAbilityExecution(
-          this.commandSystem.activeAbilityContext
-        );
-      }
-
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Restore ability completed, applying Parachute Base damage");
       this.commandSystem.applyParachuteBaseDamage(
-        pbDamage.targetPlayer,
-        pbDamage.targetColumn,
-        pbDamage.targetPosition
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
       );
-    } else {
-      this.state.pending = null;
-
-      if (this.commandSystem.activeAbilityContext) {
-        this.commandSystem.finalizeAbilityExecution(
-          this.commandSystem.activeAbilityContext
-        );
-      }
     }
 
     return true;
@@ -262,8 +311,14 @@ class InjureHandler extends PendingHandler {
       targetPosition
     );
 
+    // Apply Parachute Base damage if present
     if (parachuteBaseDamage) {
-      this.handleParachuteBaseDamage();
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return result;
@@ -295,8 +350,14 @@ class DamageBasedHandler extends PendingHandler {
       targetPosition
     );
 
-    if (result && parachuteBaseDamage) {
-      this.handleParachuteBaseDamage();
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return result;
@@ -330,8 +391,14 @@ class SniperDamageHandler extends DamageBasedHandler {
       targetPosition
     );
 
-    if (result && parachuteBaseDamage) {
-      this.handleParachuteBaseDamage();
+    // NOW handle Parachute Base damage after Sniper's damage is done
+    if (parachuteBaseDamage) {
+      console.log("Sniper ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return result;
@@ -373,9 +440,14 @@ class LooterDamageHandler extends DamageBasedHandler {
       }
     }
 
+    // Apply Parachute Base damage if present
     if (parachuteBaseDamage) {
-      this.state.pending = { parachuteBaseDamage };
-      this.commandSystem.checkAndApplyParachuteBaseDamage();
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return damaged;
@@ -530,6 +602,16 @@ class AssassinDestroyHandler extends PendingHandler {
       );
     }
 
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+
     return true;
   }
 }
@@ -647,6 +729,7 @@ class VanguardDamageHandler extends PendingHandler {
     // Store values before clearing pending
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const vanguardCard = this.state.pending.sourceCard;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     this.finalizeAbility();
 
@@ -685,6 +768,16 @@ class VanguardDamageHandler extends PendingHandler {
           `Opponent may counter-damage (${counterTargets.length} targets)`
         );
       }
+    }
+
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return damaged;
@@ -793,6 +886,7 @@ class MolgurDestroyCampHandler extends PendingHandler {
 
     // Store values before clearing
     const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Clear pending FIRST so UI updates
     this.state.pending = null;
@@ -808,6 +902,16 @@ class MolgurDestroyCampHandler extends PendingHandler {
     if (this.commandSystem.activeAbilityContext) {
       this.commandSystem.finalizeAbilityExecution(
         this.commandSystem.activeAbilityContext
+      );
+    }
+
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
       );
     }
 
@@ -1173,6 +1277,7 @@ class CultLeaderSelectDestroyHandler extends PendingHandler {
     // Store values before modifying state
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const adrenalineLabDestroy = this.state.pending.adrenalineLabDestroy;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Destroy the selected person
     target.isDestroyed = true;
@@ -1243,6 +1348,7 @@ class CultLeaderDamageHandler extends PendingHandler {
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
     const adrenalineLabDestroy = this.state.pending.adrenalineLabDestroy;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Clear pending first
     this.state.pending = null;
@@ -1266,6 +1372,16 @@ class CultLeaderDamageHandler extends PendingHandler {
     if (this.commandSystem.activeAbilityContext) {
       this.commandSystem.finalizeAbilityExecution(
         this.commandSystem.activeAbilityContext
+      );
+    }
+
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
       );
     }
 
@@ -1294,6 +1410,7 @@ class RescueTeamSelectHandler extends PendingHandler {
 
     // Return the person to hand
     const player = this.state.players[targetPlayer];
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     if (target.isPunk) {
       // Reveal punk when returning to hand
@@ -1340,6 +1457,16 @@ class RescueTeamSelectHandler extends PendingHandler {
       );
     }
 
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+
     return true;
   }
 }
@@ -1357,6 +1484,7 @@ class MagnusSelectColumnHandler extends PendingHandler {
 
     const targetPlayerId = this.state.pending.targetPlayerId;
     const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Clear pending
     this.state.pending = null;
@@ -1416,6 +1544,16 @@ class MagnusSelectColumnHandler extends PendingHandler {
     // Check for game end
     this.commandSystem.checkGameEnd();
 
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+
     if (this.commandSystem.activeAbilityContext) {
       this.commandSystem.finalizeAbilityExecution(
         this.commandSystem.activeAbilityContext
@@ -1442,6 +1580,7 @@ class MutantDamageHandler extends PendingHandler {
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const sourceColumn = this.state.pending.sourceColumn;
     const sourcePosition = this.state.pending.sourcePosition;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Apply damage to target FIRST (don't clear pending yet)
     const damaged = this.commandSystem.resolveDamage(
@@ -1470,6 +1609,18 @@ class MutantDamageHandler extends PendingHandler {
         // No restore phase - clear pending, damage Mutant and finish
         this.state.pending = null;
         this.damageMutant(sourcePlayerId, sourceColumn, sourcePosition);
+
+        // Apply Parachute Base damage if present
+        if (parachuteBaseDamage) {
+          console.log(
+            "Damage ability completed, applying Parachute Base damage"
+          );
+          this.commandSystem.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
 
         if (this.commandSystem.activeAbilityContext) {
           this.commandSystem.finalizeAbilityExecution(
@@ -1536,6 +1687,7 @@ class MutantRestoreHandler extends PendingHandler {
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const sourceColumn = this.state.pending.sourceColumn;
     const sourcePosition = this.state.pending.sourcePosition;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     // Restore the card
     target.isDamaged = false;
@@ -1567,6 +1719,16 @@ class MutantRestoreHandler extends PendingHandler {
           this.commandSystem.activeAbilityContext
         );
       }
+    }
+
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return true;
@@ -1901,6 +2063,16 @@ class LaborcampSelectRestoreHandler extends PendingHandler {
     if (this.commandSystem.activeAbilityContext) {
       this.commandSystem.finalizeAbilityExecution(
         this.commandSystem.activeAbilityContext
+      );
+    }
+
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
       );
     }
 
@@ -2448,9 +2620,14 @@ class ZetoDiscardSelectionHandler extends PendingHandler {
 
     console.log("Zeto Kahn: Draw and discard complete");
 
-    // Apply Parachute Base damage if needed
+    // Apply Parachute Base damage if present
     if (parachuteBaseDamage) {
-      this.handleParachuteBaseDamage();
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return true;
@@ -2575,9 +2752,14 @@ class ScientistSelectJunkHandler extends PendingHandler {
         this.finalizeAbility();
     }
 
-    // Apply Parachute Base damage if no new pending was created
-    if (parachuteBaseDamage && !this.state.pending) {
-      this.handleParachuteBaseDamage();
+    // Apply Parachute Base damage if present
+    if (parachuteBaseDamage) {
+      console.log("Damage ability completed, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return true;
@@ -2993,6 +3175,319 @@ class MutantChooseOrderHandler extends PendingHandler {
   }
 }
 
+class ParachuteSelectPersonHandler extends PendingHandler {
+  handle(payload) {
+    if (payload.targetType !== "hand_card") return false;
+
+    const pending = this.state.pending;
+    const player = this.state.players[pending.sourcePlayerId];
+    const selectedCard = player.hand.find((c) => c.id === payload.cardId);
+
+    if (!selectedCard) {
+      console.log("Card not found in hand");
+      return false;
+    }
+
+    // Move to placement phase
+    this.state.pending = {
+      type: "parachute_place_person",
+      source: pending.source,
+      sourceCard: pending.sourceCard || pending.source,
+      sourcePlayerId: pending.sourcePlayerId,
+      selectedPerson: selectedCard,
+      campIndex: pending.campIndex,
+      shouldStayReady: pending.shouldStayReady,
+    };
+
+    console.log(`Parachute Base: Now place ${selectedCard.name}`);
+    return true;
+  }
+}
+
+class ParachutePlacePersonHandler extends PendingHandler {
+  handle(payload) {
+    if (payload.targetType !== "slot") return false;
+
+    const pb = this.state.pending;
+    const targetColumn = payload.columnIndex;
+    const targetSlot = payload.position;
+
+    // CRITICAL FIX: Prevent placing in camp slot
+    if (targetSlot === 0) {
+      console.log("Cannot place person in camp slot");
+      return false;
+    }
+
+    const column = this.state.players[pb.sourcePlayerId].columns[targetColumn];
+    const player = this.state.players[pb.sourcePlayerId];
+
+    // Calculate adjusted cost
+    const adjustedCost = this.commandSystem.getAdjustedCost(
+      pb.selectedPerson,
+      targetColumn,
+      pb.sourcePlayerId
+    );
+
+    const abilityCost = pb.selectedPerson.abilities?.[0]?.cost || 0;
+    const totalCost = adjustedCost + abilityCost;
+
+    if (player.water < totalCost) {
+      console.log(`Need ${totalCost} water for Parachute Base`);
+      return false;
+    }
+
+    const existingCard = column.getCard(targetSlot);
+
+    // Handle pushing if needed - BUT ONLY PEOPLE, NEVER CAMPS
+    if (existingCard) {
+      if (existingCard.type === "camp") {
+        console.log("ERROR: Cannot push a camp card!");
+        return false;
+      }
+
+      const otherSlot = targetSlot === 1 ? 2 : 1;
+
+      // Check if we can push to the other slot
+      const otherCard = column.getCard(otherSlot);
+      if (otherCard) {
+        console.log("Column is full, cannot place");
+        return false;
+      }
+
+      // Only push if it's a person
+      column.setCard(otherSlot, existingCard);
+      column.setCard(targetSlot, null);
+      console.log(`Pushed ${existingCard.name} to position ${otherSlot}`);
+    }
+
+    // Pay cost and remove from hand
+    player.water -= adjustedCost;
+    const cardIndex = player.hand.findIndex(
+      (c) => c.id === pb.selectedPerson.id
+    );
+    player.hand.splice(cardIndex, 1);
+
+    // Create person object
+    const person = {
+      ...pb.selectedPerson,
+      isReady: false,
+      isDamaged: false,
+      position: targetSlot,
+      columnIndex: targetColumn,
+    };
+
+    // Check for Karli Blaze trait
+    const hasActiveKarli = this.commandSystem.checkForActiveKarli(
+      pb.sourcePlayerId
+    );
+    if (hasActiveKarli) {
+      person.isReady = true;
+      console.log(
+        `${person.name} enters play ready due to Karli Blaze's trait!`
+      );
+    }
+
+    // Place in column
+    column.setCard(targetSlot, person);
+    console.log(
+      `Parachute Base: Placed ${person.name} at column ${targetColumn}, position ${targetSlot}`
+    );
+
+    // Clear pending first
+    this.state.pending = null;
+
+    // Trigger entry traits
+    this.commandSystem.triggerEntryTraits(
+      person,
+      pb.sourcePlayerId,
+      targetColumn,
+      targetSlot
+    );
+
+    // Check if entry trait set up a pending state
+    if (this.state.pending) {
+      this.state.pending.parachuteBaseContext = {
+        person,
+        sourcePlayerId: pb.sourcePlayerId,
+        targetColumn,
+        targetSlot,
+        hasAbility: person.abilities?.length > 0,
+        abilityCost: person.abilities?.[0]?.cost || 0,
+        sourceCard: pb.sourceCard,
+        shouldStayReady: pb.shouldStayReady,
+      };
+      console.log(
+        "Parachute Base: Entry trait triggered, will continue after it resolves"
+      );
+      return true;
+    }
+
+    // Handle abilities
+    if (person.abilities?.length > 0) {
+      if (person.abilities.length > 1) {
+        // Multiple abilities - let player choose
+        this.state.pending = {
+          type: "parachute_select_ability",
+          person: person,
+          sourcePlayerId: pb.sourcePlayerId,
+          targetColumn: targetColumn,
+          targetSlot: targetSlot,
+          sourceCard: pb.sourceCard,
+          shouldStayReady: pb.shouldStayReady,
+        };
+        console.log(
+          `Parachute Base: Choose which ${person.name} ability to use`
+        );
+        return true;
+      }
+
+      // Single ability - use it automatically
+      const ability = person.abilities[0];
+      player.water -= ability.cost;
+      console.log(
+        `Parachute Base: Paid ${ability.cost} for ${person.name}'s ability`
+      );
+
+      this.commandSystem.executeAbility(ability, {
+        source: person,
+        playerId: pb.sourcePlayerId,
+        columnIndex: targetColumn,
+        position: targetSlot,
+        fromParachuteBase: true,
+      });
+
+      if (this.state.pending) {
+        this.state.pending.parachuteBaseDamage = {
+          targetPlayer: pb.sourcePlayerId,
+          targetColumn: targetColumn,
+          targetPosition: targetSlot,
+        };
+        this.state.pending.parachuteSourceCard = pb.sourceCard;
+        this.state.pending.parachuteShouldStayReady = pb.shouldStayReady;
+      } else {
+        // Apply damage immediately
+        this.applyParachuteBaseSelfDamage(
+          pb.sourcePlayerId,
+          targetColumn,
+          targetSlot
+        );
+        if (pb.sourceCard && !pb.shouldStayReady) {
+          pb.sourceCard.isReady = false;
+        }
+      }
+    } else {
+      // No abilities - just damage
+      this.applyParachuteBaseSelfDamage(
+        pb.sourcePlayerId,
+        targetColumn,
+        targetSlot
+      );
+      if (pb.sourceCard && !pb.shouldStayReady) {
+        pb.sourceCard.isReady = false;
+      }
+    }
+
+    return true;
+  }
+
+  applyParachuteBaseSelfDamage(playerId, column, position) {
+    this.state.pending = {
+      type: "parachute_damage_self",
+      sourcePlayerId: playerId,
+    };
+
+    const damaged = this.commandSystem.resolveDamage(
+      playerId,
+      column,
+      position
+    );
+    if (damaged) {
+      console.log("Parachute Base: Damaged the person");
+    }
+
+    this.state.pending = null;
+  }
+}
+
+class ParachuteSelectAbilityHandler extends PendingHandler {
+  handle(payload) {
+    const pending = this.state.pending;
+    const abilityIndex = payload.abilityIndex;
+
+    if (abilityIndex === undefined || !pending.person.abilities[abilityIndex]) {
+      console.log("Invalid ability selection");
+      return false;
+    }
+
+    const ability = pending.person.abilities[abilityIndex];
+    const player = this.state.players[pending.sourcePlayerId];
+
+    if (player.water < ability.cost) {
+      console.log(`Not enough water for ${ability.effect}`);
+      this.state.pending = null;
+      this.commandSystem.applyParachuteBaseDamage(
+        pending.sourcePlayerId,
+        pending.targetColumn,
+        pending.targetSlot
+      );
+      return true;
+    }
+
+    // Pay and execute
+    player.water -= ability.cost;
+    const personId = pending.person.id;
+    const sourcePlayerId = pending.sourcePlayerId;
+
+    this.state.pending = null;
+
+    this.commandSystem.executeAbility(ability, {
+      source: pending.person,
+      playerId: sourcePlayerId,
+      columnIndex: pending.targetColumn,
+      position: pending.targetSlot,
+      fromParachuteBase: true,
+    });
+
+    // Find where person is NOW
+    let currentPosition = null;
+    let currentColumn = null;
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card =
+          this.state.players[sourcePlayerId].columns[col].getCard(pos);
+        if (card && card.id === personId) {
+          currentColumn = col;
+          currentPosition = pos;
+          break;
+        }
+      }
+      if (currentPosition !== null) break;
+    }
+
+    if (currentPosition === null) {
+      console.log("ERROR: Can't find the person that was paradropped");
+      return true;
+    }
+
+    // Apply damage at current position
+    if (this.state.pending) {
+      this.state.pending.parachuteBaseDamage = {
+        targetPlayer: sourcePlayerId,
+        targetColumn: currentColumn,
+        targetPosition: currentPosition,
+      };
+    } else {
+      this.commandSystem.applyParachuteBaseDamage(
+        sourcePlayerId,
+        currentColumn,
+        currentPosition
+      );
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -3041,6 +3536,9 @@ export const pendingHandlers = {
   cache_choose_order: CacheChooseOrderHandler,
   mutant_choose_mode: MutantChooseModeHandler,
   mutant_choose_order: MutantChooseOrderHandler,
+  parachute_select_person: ParachuteSelectPersonHandler,
+  parachute_place_person: ParachutePlacePersonHandler,
+  parachute_select_ability: ParachuteSelectAbilityHandler,
 };
 
 // Export a function to get the right handler

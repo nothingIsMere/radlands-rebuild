@@ -1602,6 +1602,426 @@ class MutantRestoreHandler extends PendingHandler {
   }
 }
 
+// The Octagon handlers
+class OctagonChooseDestroyHandler extends PendingHandler {
+  handle(payload) {
+    const { cancel } = payload;
+
+    if (cancel) {
+      console.log("The Octagon: Chose not to destroy anyone");
+
+      // Mark The Octagon as not ready (it was used even if cancelled)
+      const sourceCard = this.state.pending.sourceCard;
+      if (sourceCard && !this.state.pending.shouldStayReady) {
+        sourceCard.isReady = false;
+      }
+
+      this.state.pending = null;
+
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+      return true;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Octagon target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    // Store source info
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard;
+    const shouldStayReady = this.state.pending.shouldStayReady;
+    const opponentId = sourcePlayerId === "left" ? "right" : "left";
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("The Octagon: You destroyed your punk");
+    } else {
+      this.state.discard.push(target);
+      console.log(`The Octagon: You destroyed your ${target.name}`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Check for opponent people
+    const opponentPeople = [];
+    const opponent = this.state.players[opponentId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 1; pos <= 2; pos++) {
+        const card = opponent.columns[col].getCard(pos);
+        if (card && card.type === "person" && !card.isDestroyed) {
+          opponentPeople.push({
+            playerId: opponentId,
+            columnIndex: col,
+            position: pos,
+            card,
+          });
+        }
+      }
+    }
+
+    if (opponentPeople.length > 0) {
+      // Continue to opponent destroy
+      this.state.pending = {
+        type: "octagon_opponent_destroy",
+        sourcePlayerId: sourcePlayerId,
+        targetPlayerId: opponentId,
+        validTargets: opponentPeople,
+        sourceCard: sourceCard, // Pass the camp reference
+        shouldStayReady: shouldStayReady, // Pass Vera status
+      };
+      console.log(
+        `The Octagon: ${opponentId} must destroy one of their people`
+      );
+    } else {
+      console.log("The Octagon: Opponent has no people to destroy");
+
+      // Mark The Octagon as not ready
+      if (sourceCard && !shouldStayReady) {
+        sourceCard.isReady = false;
+      }
+
+      this.state.pending = null;
+
+      if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      }
+    }
+
+    return true;
+  }
+}
+
+class OctagonOpponentDestroyHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Verify it's the correct player selecting
+    if (targetPlayer !== this.state.pending.targetPlayerId) {
+      console.log("You must select your own person");
+      return false;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid target");
+      return false;
+    }
+
+    const target = this.getTarget(payload);
+
+    // Store camp info before clearing pending
+    const sourceCard = this.state.pending.sourceCard;
+    const shouldStayReady = this.state.pending.shouldStayReady;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("The Octagon: Opponent destroyed their punk");
+    } else {
+      this.state.discard.push(target);
+      console.log(`The Octagon: Opponent destroyed their ${target.name}`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Mark The Octagon as not ready NOW
+    if (sourceCard && !shouldStayReady) {
+      sourceCard.isReady = false;
+      console.log("The Octagon marked as not ready");
+    }
+
+    console.log("The Octagon effect complete");
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Labor Camp handlers
+class LaborcampSelectDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Labor Camp target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    // Store restore targets
+    const validRestoreTargets = this.state.pending.validRestoreTargets;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      console.log("Labor Camp: Destroyed punk");
+    } else {
+      this.state.discard.push(target);
+      console.log(`Labor Camp: Destroyed ${target.name}`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Set up restore selection
+    this.state.pending = {
+      type: "laborcamp_select_restore",
+      sourcePlayerId: sourcePlayerId,
+      validTargets: validRestoreTargets,
+    };
+
+    console.log(
+      `Labor Camp: Now select damaged card to restore (${validRestoreTargets.length} targets)`
+    );
+    return true;
+  }
+}
+
+class LaborcampSelectRestoreHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid restore target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || !target.isDamaged) {
+      console.log("Must target a damaged card");
+      return false;
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Restore the card
+    target.isDamaged = false;
+    if (target.type === "person") {
+      target.isReady = false;
+    }
+
+    console.log(`Labor Camp: Restored ${target.name}`);
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Blood Bank handler
+class BloodbankSelectDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Blood Bank target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    let waterGain = 0;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      waterGain = 2; // Punks give 2 water
+      console.log("Blood Bank: Destroyed punk for 2 water");
+    } else {
+      this.state.discard.push(target);
+      waterGain = Math.min(3, target.cost); // Max 3 water
+      console.log(
+        `Blood Bank: Destroyed ${target.name} for ${waterGain} water`
+      );
+    }
+
+    // Give water
+    this.state.players[sourcePlayerId].water += waterGain;
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
+// Mulcher handler
+class MulcherSelectDestroyHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Mulcher target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+
+    // Clear pending
+    this.state.pending = null;
+
+    // Destroy the selected person
+    target.isDestroyed = true;
+
+    let drawCards = 0;
+
+    if (target.isPunk) {
+      const returnCard = {
+        id: target.id,
+        name: target.originalName || "Unknown Card",
+        type: "person",
+        cost: target.cost || 0,
+      };
+      this.state.deck.unshift(returnCard);
+      drawCards = 1; // Punks let you draw 1
+      console.log("Mulcher: Destroyed punk, will draw 1 card");
+    } else {
+      this.state.discard.push(target);
+      drawCards = 2; // Regular people let you draw 2
+      console.log(`Mulcher: Destroyed ${target.name}, will draw 2 cards`);
+    }
+
+    // Remove from column
+    const column = this.state.players[targetPlayer].columns[targetColumn];
+    column.setCard(targetPosition, null);
+
+    if (targetPosition === 1) {
+      const cardInFront = column.getCard(2);
+      if (cardInFront) {
+        column.setCard(1, cardInFront);
+        column.setCard(2, null);
+      }
+    }
+
+    // Draw cards
+    for (let i = 0; i < drawCards; i++) {
+      const result = this.state.drawCardWithReshuffle(true, sourcePlayerId);
+      if (result.gameEnded) {
+        return true;
+      }
+      if (result.card) {
+        console.log(`Mulcher: Drew ${result.card.name}`);
+      } else {
+        break; // No more cards
+      }
+    }
+
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -1629,6 +2049,12 @@ export const pendingHandlers = {
   magnus_select_column: MagnusSelectColumnHandler,
   mutant_damage: MutantDamageHandler,
   mutant_restore: MutantRestoreHandler,
+  octagon_choose_destroy: OctagonChooseDestroyHandler,
+  octagon_opponent_destroy: OctagonOpponentDestroyHandler,
+  laborcamp_select_destroy: LaborcampSelectDestroyHandler,
+  laborcamp_select_restore: LaborcampSelectRestoreHandler,
+  bloodbank_select_destroy: BloodbankSelectDestroyHandler,
+  mulcher_select_destroy: MulcherSelectDestroyHandler,
 };
 
 // Export a function to get the right handler

@@ -33,30 +33,30 @@ function setupTestGame() {
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
     id: "camp_left_1",
-    name: "atomicgarden",
+    name: "laborcamp",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "restoreready", cost: 2 }],
+    abilities: [{ effect: "destroyrestore", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[1].setCard(0, {
     id: "camp_left_2",
-    name: "catapult",
+    name: "theoctagon",
     type: "camp",
     campDraw: 0,
-    abilities: [{ effect: "damage", cost: 2 }], // Damage any, then destroy own person
+    abilities: [{ effect: "destroy", cost: 1 }], // Destroy own, opponent destroys theirs
     isReady: true,
     isDamaged: false,
   });
 
   gameState.players.left.columns[2].setCard(0, {
     id: "camp_left_3",
-    name: "scudlauncher",
+    name: "bloodbank",
     type: "camp",
-    campDraw: 0,
-    abilities: [{ effect: "damage", cost: 1 }], // Opponent chooses target
+    campDraw: 1,
+    abilities: [{ effect: "destroywater", cost: 0 }],
     isReady: true,
     isDamaged: false,
   });

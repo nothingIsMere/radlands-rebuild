@@ -9,6 +9,8 @@ import {
   canPlayEvent,
   calculateDamageResult,
   calculatePlacementOptions,
+  calculateEventSlotPlacement,
+  shouldEventResolveImmediately,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -709,24 +711,26 @@ export class CommandSystem {
       const cost = card.cost || 0;
 
       // Validate event can be played
-      const validation = canPlayEvent(player, eventDef.cost, player.eventQueue);
+      const validation = canPlayEvent(player, cost, player.eventQueue);
       if (!validation.valid) {
         console.log(validation.reason);
         return false;
       }
 
-      // Check for Zeto Kahn's trait (first event of turn becomes instant)
-      if (
-        !this.state.turnEvents.firstEventPlayedThisTurn &&
+      // Determine if event should resolve immediately
+      const shouldResolve = shouldEventResolveImmediately(
+        queueNumber,
+        !this.state.turnEvents.firstEventPlayedThisTurn,
         this.checkForActiveZetoKahn(playerId)
-      ) {
+      );
+
+      if (shouldResolve && queueNumber !== 0) {
         console.log(
           `Zeto Kahn's trait: ${card.name} becomes instant (queue 0)!`
         );
-        queueNumber = 0;
       }
 
-      if (queueNumber === 0) {
+      if (shouldResolve) {
         // Instant due to Zeto
         player.water -= cost;
         player.hand.splice(cardIndex, 1);
@@ -740,24 +744,18 @@ export class CommandSystem {
 
       // Try to place in queue
       const desiredSlot = queueNumber - 1;
+      const placement = calculateEventSlotPlacement(
+        player.eventQueue,
+        desiredSlot
+      );
 
-      if (!player.eventQueue[desiredSlot]) {
-        player.eventQueue[desiredSlot] = card;
-      } else {
-        let placed = false;
-        for (let i = desiredSlot + 1; i < 3; i++) {
-          if (!player.eventQueue[i]) {
-            player.eventQueue[i] = card;
-            placed = true;
-            break;
-          }
-        }
-
-        if (!placed) {
-          console.log("Event queue is full!");
-          return false;
-        }
+      if (!placement.canPlace) {
+        console.log(placement.reason);
+        return false;
       }
+
+      // Place the event
+      player.eventQueue[placement.slot] = card;
 
       // Pay cost and remove from hand
       player.water -= cost;
@@ -778,22 +776,24 @@ export class CommandSystem {
     );
     console.log("About to check queue number:", eventDef.queueNumber);
 
-    // Check cost
-    if (player.water < eventDef.cost) {
-      console.log("Not enough water for event");
+    // Validate event can be played
+    const validation = canPlayEvent(player, eventDef.cost, player.eventQueue);
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 
-    // Determine effective queue number
-    let effectiveQueueNumber = eventDef.queueNumber;
-
-    // Check for Zeto Kahn's trait (first event of turn becomes instant)
-    if (
-      !this.state.turnEvents.firstEventPlayedThisTurn &&
+    // Determine if event should resolve immediately
+    const shouldResolve = shouldEventResolveImmediately(
+      eventDef.queueNumber,
+      !this.state.turnEvents.firstEventPlayedThisTurn,
       this.checkForActiveZetoKahn(playerId)
-    ) {
+    );
+
+    const effectiveQueueNumber = shouldResolve ? 0 : eventDef.queueNumber;
+
+    if (shouldResolve && eventDef.queueNumber !== 0) {
       console.log(`Zeto Kahn's trait: ${card.name} becomes instant (queue 0)!`);
-      effectiveQueueNumber = 0;
     }
 
     console.log(
@@ -837,34 +837,20 @@ export class CommandSystem {
     }
 
     // Queue placement logic for non-instant events
-    const desiredSlot = effectiveQueueNumber - 1; // Convert queue number to array index
-    console.log(
-      `Trying to place in slot ${desiredSlot} (queue ${effectiveQueueNumber})`
+    const desiredSlot = effectiveQueueNumber - 1;
+    const placement = calculateEventSlotPlacement(
+      player.eventQueue,
+      desiredSlot
     );
 
-    if (!player.eventQueue[desiredSlot]) {
-      // Desired slot is empty
-      player.eventQueue[desiredSlot] = card;
-      console.log(`Placed ${card.name} in slot ${desiredSlot}`);
-    } else {
-      // Desired slot is occupied, find next available slot
-      let placed = false;
-      for (let i = desiredSlot + 1; i < 3; i++) {
-        if (!player.eventQueue[i]) {
-          player.eventQueue[i] = card;
-          console.log(
-            `Slot ${desiredSlot} occupied, placed ${card.name} in slot ${i}`
-          );
-          placed = true;
-          break;
-        }
-      }
-
-      if (!placed) {
-        console.log("Event queue is full!");
-        return false;
-      }
+    if (!placement.canPlace) {
+      console.log(placement.reason);
+      return false;
     }
+
+    // Place the event
+    player.eventQueue[placement.slot] = card;
+    console.log(`Placed ${card.name} in slot ${placement.slot}`);
 
     // Pay cost
     player.water -= eventDef.cost;

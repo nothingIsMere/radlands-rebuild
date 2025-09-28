@@ -154,3 +154,47 @@ export function calculatePlacementOptions(column, targetPosition, newCard) {
 
   return { canPlace: false, reason: "No room to place card" };
 }
+
+export function calculateEventSlotPlacement(eventQueue, desiredSlot) {
+  // Check if desired slot is available
+  if (!eventQueue[desiredSlot]) {
+    return {
+      canPlace: true,
+      slot: desiredSlot,
+    };
+  }
+
+  // Desired slot occupied, find next available
+  for (let i = desiredSlot + 1; i < 3; i++) {
+    if (!eventQueue[i]) {
+      return {
+        canPlace: true,
+        slot: i,
+      };
+    }
+  }
+
+  // No slots available
+  return {
+    canPlace: false,
+    reason: "Event queue is full",
+  };
+}
+
+export function shouldEventResolveImmediately(
+  queueNumber,
+  isFirstEventOfTurn,
+  hasZetoKahn
+) {
+  // Instant events (queue 0) always resolve immediately
+  if (queueNumber === 0) {
+    return true;
+  }
+
+  // Zeto Kahn makes first event of turn instant
+  if (isFirstEventOfTurn && hasZetoKahn) {
+    return true;
+  }
+
+  return false;
+}

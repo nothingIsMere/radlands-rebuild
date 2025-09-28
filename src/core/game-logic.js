@@ -98,3 +98,59 @@ export function calculateDamageResult(target, isAlreadyDamaged) {
   // First damage just damages the card
   return { result: "damage", wasDestroyed: false };
 }
+
+export function calculatePlacementOptions(column, targetPosition, newCard) {
+  // Can't place if position is camp slot and card isn't a camp
+  if (targetPosition === 0 && newCard.type !== "camp") {
+    return { canPlace: false, reason: "Cannot place person in camp slot" };
+  }
+
+  const existingCard = column.getCard(targetPosition);
+
+  // Empty slot - easy placement
+  if (!existingCard) {
+    return {
+      canPlace: true,
+      action: "place",
+      targetPosition,
+    };
+  }
+
+  // Slot occupied - check if we can push
+  // Check for Juggernaut (special camp that can be anywhere)
+  let juggernautPos = -1;
+  for (let i = 0; i < 3; i++) {
+    const card = column.getCard(i);
+    if (card?.name === "Juggernaut") {
+      juggernautPos = i;
+      break;
+    }
+  }
+
+  if (juggernautPos === -1) {
+    // No Juggernaut - normal push rules
+    if (targetPosition < 2 && !column.getCard(targetPosition + 1)) {
+      return {
+        canPlace: true,
+        action: "push",
+        pushFrom: targetPosition,
+        pushTo: targetPosition + 1,
+      };
+    }
+  } else {
+    // Juggernaut present - special push rules
+    const positions = [0, 1, 2].filter((p) => p !== juggernautPos);
+    const otherPosition = positions.find((p) => p !== targetPosition);
+
+    if (otherPosition !== undefined && !column.getCard(otherPosition)) {
+      return {
+        canPlace: true,
+        action: "push",
+        pushFrom: targetPosition,
+        pushTo: otherPosition,
+      };
+    }
+  }
+
+  return { canPlace: false, reason: "No room to place card" };
+}

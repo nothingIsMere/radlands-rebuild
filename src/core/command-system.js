@@ -8,6 +8,7 @@ import {
   canUseAbility,
   canPlayEvent,
   calculateDamageResult,
+  calculatePlacementOptions,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -574,53 +575,30 @@ export class CommandSystem {
   }
 
   placeCardWithPush(column, position, newCard) {
-    const existingCard = column.getCard(position);
+    const placement = calculatePlacementOptions(column, position, newCard);
 
-    if (!existingCard) {
-      column.setCard(position, newCard);
-      return true;
-    }
-
-    // Find where to push
-    let pushToPosition = -1;
-
-    // Check for Juggernaut
-    let juggernautPos = -1;
-    for (let i = 0; i < 3; i++) {
-      const card = column.getCard(i);
-      if (card?.name === "Juggernaut") {
-        juggernautPos = i;
-        break;
-      }
-    }
-
-    if (juggernautPos === -1) {
-      // No Juggernaut - normal push forward
-      if (position < CONSTANTS.MAX_POSITION && !column.getCard(position + 1)) {
-        pushToPosition = position + 1;
-      }
-    } else {
-      // Juggernaut present
-      const nonJuggernautPositions = [0, 1, 2].filter(
-        (p) => p !== juggernautPos
-      );
-      const otherPosition = nonJuggernautPositions.find((p) => p !== position);
-
-      if (otherPosition !== undefined && !column.getCard(otherPosition)) {
-        pushToPosition = otherPosition;
-      }
-    }
-
-    if (pushToPosition === -1) {
-      console.log("Cannot place - no empty position for push");
+    if (!placement.canPlace) {
+      console.log(placement.reason);
       return false;
     }
 
-    // Push and place
-    column.setCard(pushToPosition, existingCard);
-    column.setCard(position, newCard);
-    console.log(`Pushed ${existingCard.name} to position ${pushToPosition}`);
-    return true;
+    // Execute the placement based on what was calculated
+    if (placement.action === "place") {
+      column.setCard(placement.targetPosition, newCard);
+      return true;
+    }
+
+    if (placement.action === "push") {
+      const existingCard = column.getCard(placement.pushFrom);
+      column.setCard(placement.pushTo, existingCard);
+      column.setCard(placement.pushFrom, newCard);
+      console.log(
+        `Pushed ${existingCard.name} to position ${placement.pushTo}`
+      );
+      return true;
+    }
+
+    return false;
   }
 
   applyDamageToCard(target, targetPlayer, targetColumn, targetPosition) {

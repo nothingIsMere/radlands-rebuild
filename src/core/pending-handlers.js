@@ -108,7 +108,11 @@ class PlacePunkHandler extends PendingHandler {
     const doRaidAfter = this.state.pending?.doRaidAfter;
     const sourcePlayerId = this.state.pending?.sourcePlayerId;
     const sourceCard = this.state.pending?.sourceCard;
-    const parachuteBaseContext = this.state.pending?.parachuteBaseContext; // ADD THIS
+    const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const parachuteSourceCard = this.state.pending?.parachuteSourceCard;
+    const parachuteShouldStayReady =
+      this.state.pending?.parachuteShouldStayReady;
 
     // Resolve the punk placement
     const result = this.commandSystem.resolvePlacePunk(
@@ -126,6 +130,35 @@ class PlacePunkHandler extends PendingHandler {
     if (result && fromCache && doRaidAfter) {
       console.log("Cache: Punk placed, now executing Raid");
       this.commandSystem.executeRaid(sourcePlayerId);
+    }
+
+    // Handle direct Parachute Base damage (from abilities like Rabble Rouser's gain punk)
+    if (result && parachuteBaseDamage && !parachuteBaseContext) {
+      console.log("Punk placement complete, applying Parachute Base damage");
+
+      this.state.pending = {
+        type: "parachute_damage_self",
+        sourcePlayerId: parachuteBaseDamage.targetPlayer,
+      };
+
+      const damaged = this.commandSystem.resolveDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+
+      if (damaged) {
+        console.log("Parachute Base: Damaged the person after punk placement");
+      }
+
+      this.state.pending = null;
+
+      // Mark Parachute Base as not ready
+      if (parachuteSourceCard && !parachuteShouldStayReady) {
+        parachuteSourceCard.isReady = false;
+      }
+
+      return true;
     }
 
     // Handle Parachute Base continuation

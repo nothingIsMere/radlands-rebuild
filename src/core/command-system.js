@@ -2,6 +2,7 @@ import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
 import { getPendingHandler } from "./pending-handlers.js";
+import { calculateCardCost } from "./game-logic.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -1525,32 +1526,8 @@ export class CommandSystem {
   }
 
   getAdjustedCost(card, columnIndex, playerId) {
-    let cost = card.cost || 0;
-
-    // Check for cost modifiers (Holdout, Oasis, etc)
-    // Use the playerId passed in, not this.state.currentPlayer
     const player = this.state.players[playerId];
-    if (!player || !player.columns || !player.columns[columnIndex]) {
-      return cost;
-    }
-
-    const column = player.columns[columnIndex];
-    const camp = column.getCard(0);
-
-    // Holdout discount
-    if (card.name === "Holdout" && camp?.isDestroyed) {
-      cost = 0;
-    }
-
-    // Oasis discount
-    if (camp?.name === "Oasis" && !camp.isDestroyed) {
-      const peopleCount = [1, 2].filter((pos) => column.getCard(pos)).length;
-      if (peopleCount === 0) {
-        cost = Math.max(0, cost - 1);
-      }
-    }
-
-    return cost;
+    return calculateCardCost(card, columnIndex, player);
   }
 
   handleUseAbility(payload) {

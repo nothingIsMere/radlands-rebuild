@@ -84,3 +84,17 @@ export function canPlayEvent(player, eventCost, eventQueue) {
 
   return { valid: true };
 }
+
+export function calculateDamageResult(target, isAlreadyDamaged) {
+  if (!target) {
+    return { result: "invalid", reason: "No target" };
+  }
+
+  // Punks or already damaged cards are destroyed
+  if (target.isPunk || isAlreadyDamaged) {
+    return { result: "destroy", wasDestroyed: true };
+  }
+
+  // First damage just damages the card
+  return { result: "damage", wasDestroyed: false };
+}

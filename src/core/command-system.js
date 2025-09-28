@@ -7,6 +7,7 @@ import {
   canPlayPerson,
   canUseAbility,
   canPlayEvent,
+  calculateDamageResult,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -625,7 +626,15 @@ export class CommandSystem {
   applyDamageToCard(target, targetPlayer, targetColumn, targetPosition) {
     const column = this.state.players[targetPlayer].columns[targetColumn];
 
-    if (target.isDamaged || target.isPunk) {
+    // Calculate what should happen
+    const damageResult = calculateDamageResult(target, target.isDamaged);
+
+    if (damageResult.result === "invalid") {
+      console.log(damageResult.reason);
+      return null;
+    }
+
+    if (damageResult.result === "destroy") {
       target.isDestroyed = true;
       if (target.type === "person") {
         this.destroyPerson(

@@ -1600,6 +1600,10 @@ class MagnusSelectColumnHandler extends PendingHandler {
 // Mutant handlers (simplified for now - the complex mode selection stays in switch)
 class MutantDamageHandler extends PendingHandler {
   handle(payload) {
+    console.log(
+      "MutantDamageHandler - parachuteBaseDamage:",
+      this.state.pending?.parachuteBaseDamage
+    );
     if (!this.isValidTarget(payload)) {
       console.log("Not a valid mutant damage target");
       return false;
@@ -1607,7 +1611,7 @@ class MutantDamageHandler extends PendingHandler {
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
 
-    // Store ALL values we need before modifying state
+    // Store ALL values before modifying state
     const shouldRestore = this.state.pending.shouldRestore;
     const restoreTargets = this.state.pending.restoreTargets;
     const sourcePlayerId = this.state.pending.sourcePlayerId;
@@ -1615,7 +1619,7 @@ class MutantDamageHandler extends PendingHandler {
     const sourcePosition = this.state.pending.sourcePosition;
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-    // Apply damage to target FIRST (don't clear pending yet)
+    // Apply damage to target
     const damaged = this.commandSystem.resolveDamage(
       targetPlayer,
       targetColumn,
@@ -1626,33 +1630,47 @@ class MutantDamageHandler extends PendingHandler {
       console.log("Mutant damage successful");
 
       if (shouldRestore && restoreTargets && restoreTargets.length > 0) {
-        // Set up restore phase with ALL necessary data
+        // Set up restore phase
         this.state.pending = {
           type: "mutant_restore",
           validTargets: restoreTargets,
           sourcePlayerId: sourcePlayerId,
           sourceColumn: sourceColumn,
           sourcePosition: sourcePosition,
-          shouldDamage: false, // Already did damage
+          shouldDamage: false,
+          parachuteBaseDamage: parachuteBaseDamage, // PRESERVE IT
         };
         console.log(
           `Mutant: Now select card to restore (${restoreTargets.length} targets)`
         );
       } else {
-        // No restore phase - clear pending, damage Mutant and finish
+        // No restore phase - clear pending, damage Mutant
         this.state.pending = null;
+
+        // First apply Mutant's self-damage
         this.damageMutant(sourcePlayerId, sourceColumn, sourcePosition);
 
-        // Apply Parachute Base damage if present
+        // THEN apply Parachute Base damage if present
+        // This means Mutant takes damage TWICE when used via Parachute Base
         if (parachuteBaseDamage) {
           console.log(
-            "Damage ability completed, applying Parachute Base damage"
+            "Mutant ability completed, applying Parachute Base damage (second damage to Mutant)"
           );
-          this.commandSystem.applyParachuteBaseDamage(
+
+          // Set up pending for the damage
+          this.state.pending = {
+            type: "parachute_damage_self",
+            sourcePlayerId: parachuteBaseDamage.targetPlayer,
+          };
+
+          // Apply the damage - this should destroy Mutant if it was already damaged
+          this.commandSystem.resolveDamage(
             parachuteBaseDamage.targetPlayer,
             parachuteBaseDamage.targetColumn,
             parachuteBaseDamage.targetPosition
           );
+
+          this.state.pending = null;
         }
 
         if (this.commandSystem.activeAbilityContext) {
@@ -1677,7 +1695,6 @@ class MutantDamageHandler extends PendingHandler {
         this.state.discard.push(mutant);
         this.state.players[playerId].columns[column].setCard(position, null);
 
-        // Handle shifting
         if (position === 1) {
           const cardInFront =
             this.state.players[playerId].columns[column].getCard(2);
@@ -1738,30 +1755,43 @@ class MutantRestoreHandler extends PendingHandler {
         sourceColumn: sourceColumn,
         sourcePosition: sourcePosition,
         shouldRestore: false, // Already did restore
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log(
         `Mutant: Now select target to damage (${damageTargets.length} targets)`
       );
     } else {
-      // No damage phase - clear pending, damage Mutant and finish
+      // No damage phase - clear pending, damage Mutant
       this.state.pending = null;
+
+      // First apply Mutant's self-damage
       this.damageMutant(sourcePlayerId, sourceColumn, sourcePosition);
+
+      // THEN apply Parachute Base damage if present
+      if (parachuteBaseDamage) {
+        console.log(
+          "Mutant ability completed, applying Parachute Base damage (second damage to Mutant)"
+        );
+
+        this.state.pending = {
+          type: "parachute_damage_self",
+          sourcePlayerId: parachuteBaseDamage.targetPlayer,
+        };
+
+        this.commandSystem.resolveDamage(
+          parachuteBaseDamage.targetPlayer,
+          parachuteBaseDamage.targetColumn,
+          parachuteBaseDamage.targetPosition
+        );
+
+        this.state.pending = null;
+      }
 
       if (this.commandSystem.activeAbilityContext) {
         this.commandSystem.finalizeAbilityExecution(
           this.commandSystem.activeAbilityContext
         );
       }
-    }
-
-    // Apply Parachute Base damage if present
-    if (parachuteBaseDamage) {
-      console.log("Damage ability completed, applying Parachute Base damage");
-      this.commandSystem.applyParachuteBaseDamage(
-        parachuteBaseDamage.targetPlayer,
-        parachuteBaseDamage.targetColumn,
-        parachuteBaseDamage.targetPosition
-      );
     }
 
     return true;
@@ -3128,6 +3158,8 @@ class MutantChooseModeHandler extends PendingHandler {
   handle(payload) {
     const { mode } = payload;
 
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+
     if (mode === "damage") {
       this.state.pending = {
         type: "mutant_damage",
@@ -3136,6 +3168,7 @@ class MutantChooseModeHandler extends PendingHandler {
         sourcePlayerId: this.state.pending.sourcePlayerId,
         sourceColumn: this.state.pending.sourceColumn,
         sourcePosition: this.state.pending.sourcePosition,
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log("Mutant: Select target to damage");
     } else if (mode === "restore") {
@@ -3146,6 +3179,7 @@ class MutantChooseModeHandler extends PendingHandler {
         sourcePlayerId: this.state.pending.sourcePlayerId,
         sourceColumn: this.state.pending.sourceColumn,
         sourcePosition: this.state.pending.sourcePosition,
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log("Mutant: Select card to restore");
     } else if (mode === "both") {
@@ -3156,6 +3190,7 @@ class MutantChooseModeHandler extends PendingHandler {
         sourcePlayerId: this.state.pending.sourcePlayerId,
         sourceColumn: this.state.pending.sourceColumn,
         sourcePosition: this.state.pending.sourcePosition,
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log("Mutant: Choose which to do first");
     } else {
@@ -3176,6 +3211,7 @@ class MutantChooseOrderHandler extends PendingHandler {
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const sourceColumn = this.state.pending.sourceColumn;
     const sourcePosition = this.state.pending.sourcePosition;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     if (order === "damage_first") {
       this.state.pending = {
@@ -3186,6 +3222,7 @@ class MutantChooseOrderHandler extends PendingHandler {
         sourcePlayerId: sourcePlayerId,
         sourceColumn: sourceColumn,
         sourcePosition: sourcePosition,
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log("Mutant: Damage first - select target to damage");
     } else if (order === "restore_first") {
@@ -3197,6 +3234,7 @@ class MutantChooseOrderHandler extends PendingHandler {
         sourcePlayerId: sourcePlayerId,
         sourceColumn: sourceColumn,
         sourcePosition: sourcePosition,
+        parachuteBaseDamage: parachuteBaseDamage,
       };
       console.log("Mutant: Restore first - select card to restore");
     } else {
@@ -3375,11 +3413,15 @@ class ParachutePlacePersonHandler extends PendingHandler {
       }
 
       // Single ability - use it automatically
+      // Single ability - use it automatically
       const ability = person.abilities[0];
       player.water -= ability.cost;
       console.log(
         `Parachute Base: Paid ${ability.cost} for ${person.name}'s ability`
       );
+
+      // Clear pending before executing ability
+      this.state.pending = null;
 
       this.commandSystem.executeAbility(ability, {
         source: person,
@@ -3389,7 +3431,9 @@ class ParachutePlacePersonHandler extends PendingHandler {
         fromParachuteBase: true,
       });
 
+      // Check if a new pending was created by the ability
       if (this.state.pending) {
+        console.log("Setting parachuteBaseDamage in pending state");
         this.state.pending.parachuteBaseDamage = {
           targetPlayer: pb.sourcePlayerId,
           targetColumn: targetColumn,

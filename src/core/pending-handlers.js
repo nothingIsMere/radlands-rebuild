@@ -3655,6 +3655,211 @@ class ParachuteSelectAbilityHandler extends PendingHandler {
   }
 }
 
+class MimicSelectTargetHandler extends PendingHandler {
+  handle(payload) {
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid mimic target");
+      return false;
+    }
+
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+    const target = this.getTarget(payload);
+
+    if (!target || target.type !== "person") {
+      console.log("Mimic can only copy people");
+      return false;
+    }
+
+    // Store all needed values before changing pending
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard;
+    const sourceColumn = this.state.pending.sourceColumn;
+    const sourcePosition = this.state.pending.sourcePosition;
+
+    // Check if target has abilities
+    if (!target.abilities || target.abilities.length === 0) {
+      console.log(`${target.name} has no abilities to copy`);
+
+      // Mark Mimic as not ready
+      if (sourceCard) {
+        sourceCard.isReady = false;
+      }
+
+      this.state.pending = null;
+
+      // Apply Parachute Base damage if present
+      if (parachuteBaseDamage) {
+        console.log(
+          "Mimic found no abilities to copy, applying Parachute Base damage"
+        );
+        this.commandSystem.applyParachuteBaseDamage(
+          parachuteBaseDamage.targetPlayer,
+          parachuteBaseDamage.targetColumn,
+          parachuteBaseDamage.targetPosition
+        );
+      }
+
+      return true;
+    }
+
+    if (target.abilities.length === 1) {
+      // Single ability - execute immediately
+      const ability = target.abilities[0];
+      const player = this.state.players[sourcePlayerId];
+
+      if (player.water < ability.cost) {
+        console.log(`Not enough water to copy ${ability.effect}`);
+
+        // Mark Mimic as not ready even if couldn't afford the copy
+        if (sourceCard) {
+          sourceCard.isReady = false;
+        }
+
+        this.state.pending = null;
+
+        // Apply Parachute Base damage if present
+        if (parachuteBaseDamage) {
+          this.commandSystem.applyParachuteBaseDamage(
+            parachuteBaseDamage.targetPlayer,
+            parachuteBaseDamage.targetColumn,
+            parachuteBaseDamage.targetPosition
+          );
+        }
+        return true;
+      }
+
+      // Pay cost and execute
+      player.water -= ability.cost;
+      console.log(
+        `Mimic: Paid ${ability.cost} to copy ${target.name}'s ${ability.effect}`
+      );
+
+      // Mark Mimic as not ready BEFORE clearing pending
+      if (sourceCard) {
+        sourceCard.isReady = false;
+      }
+
+      this.state.pending = null;
+
+      this.commandSystem.executeAbility(ability, {
+        source: sourceCard,
+        playerId: sourcePlayerId,
+        columnIndex: sourceColumn,
+        position: sourcePosition,
+        fromMimic: true,
+        copiedFrom: target.name,
+      });
+
+      // If ability created new pending, add parachuteBaseDamage
+      if (this.state.pending && parachuteBaseDamage) {
+        this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+      } else if (parachuteBaseDamage) {
+        // Apply Parachute damage immediately
+        this.commandSystem.applyParachuteBaseDamage(
+          parachuteBaseDamage.targetPlayer,
+          parachuteBaseDamage.targetColumn,
+          parachuteBaseDamage.targetPosition
+        );
+      }
+    } else {
+      // Multiple abilities - let player choose
+      this.state.pending = {
+        type: "mimic_select_ability",
+        sourcePlayerId: sourcePlayerId,
+        sourceCard: sourceCard,
+        sourceColumn: sourceColumn,
+        sourcePosition: sourcePosition,
+        targetCard: target,
+        parachuteBaseDamage: parachuteBaseDamage,
+      };
+      console.log(`Mimic: Choose which ${target.name} ability to copy`);
+    }
+
+    return true;
+  }
+}
+
+class MimicSelectAbilityHandler extends PendingHandler {
+  handle(payload) {
+    const { abilityIndex } = payload;
+    const pending = this.state.pending;
+    const ability = pending.targetCard.abilities[abilityIndex];
+
+    if (!ability) {
+      console.log("Invalid ability index");
+      return false;
+    }
+
+    const player = this.state.players[pending.sourcePlayerId];
+
+    if (player.water < ability.cost) {
+      console.log(`Not enough water to copy ${ability.effect}`);
+
+      // Mark Mimic as not ready
+      if (pending.sourceCard) {
+        pending.sourceCard.isReady = false;
+      }
+
+      // Cancel and apply Parachute damage if present
+      const parachuteBaseDamage = pending.parachuteBaseDamage;
+      this.state.pending = null;
+
+      if (parachuteBaseDamage) {
+        this.commandSystem.applyParachuteBaseDamage(
+          parachuteBaseDamage.targetPlayer,
+          parachuteBaseDamage.targetColumn,
+          parachuteBaseDamage.targetPosition
+        );
+      }
+      return true;
+    }
+
+    // Store all values before clearing pending
+    const parachuteBaseDamage = pending.parachuteBaseDamage;
+    const sourceCard = pending.sourceCard;
+    const sourcePlayerId = pending.sourcePlayerId;
+    const sourceColumn = pending.sourceColumn;
+    const sourcePosition = pending.sourcePosition;
+
+    // Pay and execute
+    player.water -= ability.cost;
+    console.log(
+      `Mimic: Paid ${ability.cost} to copy ${pending.targetCard.name}'s ${ability.effect}`
+    );
+
+    // Mark Mimic as not ready BEFORE clearing pending
+    if (sourceCard) {
+      sourceCard.isReady = false;
+    }
+
+    this.state.pending = null;
+
+    this.commandSystem.executeAbility(ability, {
+      source: sourceCard,
+      playerId: sourcePlayerId,
+      columnIndex: sourceColumn,
+      position: sourcePosition,
+      fromMimic: true,
+      copiedFrom: pending.targetCard.name,
+    });
+
+    // If ability created new pending, add parachuteBaseDamage
+    if (this.state.pending && parachuteBaseDamage) {
+      this.state.pending.parachuteBaseDamage = parachuteBaseDamage;
+    } else if (parachuteBaseDamage) {
+      // Apply Parachute damage immediately
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -3706,6 +3911,8 @@ export const pendingHandlers = {
   parachute_select_person: ParachuteSelectPersonHandler,
   parachute_place_person: ParachutePlacePersonHandler,
   parachute_select_ability: ParachuteSelectAbilityHandler,
+  mimic_select_target: MimicSelectTargetHandler,
+  mimic_select_ability: MimicSelectAbilityHandler,
 };
 
 // Export a function to get the right handler

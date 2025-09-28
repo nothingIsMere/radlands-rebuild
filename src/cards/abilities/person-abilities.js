@@ -1162,9 +1162,13 @@ export const personAbilities = {
         state.pending = {
           type: "mimic_select_target",
           source: context.source,
+          sourceCard: context.source, // ADD THIS
           sourcePlayerId: playerId,
+          sourceColumn: context.columnIndex, // ADD THIS
+          sourcePosition: context.position, // ADD THIS
           sourceContext: context,
           validTargets: validTargets.map((t) => ({
+            card: t.card,
             cardId: t.card.id,
             playerId: t.playerId,
             columnIndex: t.columnIndex,

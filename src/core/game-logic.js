@@ -47,3 +47,26 @@ export function canPlayPerson(player, card, cost, targetPosition) {
 
   return { valid: true };
 }
+
+export function canUseAbility(card, player, abilityCost) {
+  // Basic checks
+  if (!card || !card.isReady) {
+    return { valid: false, reason: "Card not ready" };
+  }
+
+  if (card.isDestroyed) {
+    return { valid: false, reason: "Card is destroyed" };
+  }
+
+  // Person-specific checks
+  if (card.type === "person" && card.isDamaged) {
+    return { valid: false, reason: "Person is damaged" };
+  }
+
+  // Cost check
+  if (player.water < abilityCost) {
+    return { valid: false, reason: "Not enough water" };
+  }
+
+  return { valid: true };
+}

@@ -2,7 +2,11 @@ import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
 import { getPendingHandler } from "./pending-handlers.js";
-import { calculateCardCost, canPlayPerson } from "./game-logic.js";
+import {
+  calculateCardCost,
+  canPlayPerson,
+  canUseAbility,
+} from "./game-logic.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -1655,29 +1659,13 @@ export class CommandSystem {
 
     const ability = card.abilities[abilityIndex];
 
-    // Check if ready - different rules for camps vs people
-    if (!card.isReady) {
-      console.log("Card has already used its ability this turn");
-      return false;
-    }
-
-    if (card.isDestroyed) {
-      console.log("Destroyed cards cannot use abilities");
-      return false;
-    }
-
-    // People also can't use abilities when damaged
-    if (card.type === "person" && card.isDamaged) {
-      console.log("Damaged people cannot use abilities");
-      return false;
-    }
-
-    // Check cost
+    // Get the player
     const player = this.state.players[playerId];
-    if (player.water < ability.cost) {
-      console.log(
-        `Not enough water! Need ${ability.cost}, have ${player.water}`
-      );
+
+    // Use validation function
+    const validation = canUseAbility(card, player, ability.cost);
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 

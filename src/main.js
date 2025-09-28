@@ -32,10 +32,11 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    name: "parachutebase",
+    name: "obelisk",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "paradrop", cost: 0 }], // Play person and use ability
+    abilities: [], // Win condition trait, no ability
+    trait: "When the last card is drawn from the deck, you win.",
     isReady: true,
     isDamaged: false,
   });

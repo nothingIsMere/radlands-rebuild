@@ -11,6 +11,8 @@ import {
   calculatePlacementOptions,
   calculateEventSlotPlacement,
   shouldEventResolveImmediately,
+  shouldTriggerObelisk,
+  calculateExhaustionResult,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -217,16 +219,10 @@ export class CommandSystem {
   }
 
   checkDeckExhaustion() {
-    if (this.state.deck.length === 0 && this.state.discard.length === 0) {
-      // Check if this is the second exhaustion
-      if (this.state.deckExhaustedCount >= 2) {
-        this.state.phase = "game_over";
-        this.state.winner = "draw";
-        this.state.winReason = "deck_exhausted_twice";
-        console.log("Game ends in draw - deck exhausted twice!");
-        this.notifyUI("GAME_OVER", "draw");
-        return true;
-      }
+    const result = this.state.checkDeckExhaustion();
+    if (result.gameEnded) {
+      this.notifyUI("GAME_OVER", this.state.winner);
+      return true;
     }
     return false;
   }

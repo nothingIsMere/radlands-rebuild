@@ -1,4 +1,8 @@
 import { Column } from "./column.js";
+import {
+  shouldTriggerObelisk,
+  calculateExhaustionResult,
+} from "./game-logic.js";
 
 export class GameState {
   constructor() {
@@ -31,61 +35,79 @@ export class GameState {
   }
 
   checkDeckExhaustion() {
-    // Called after any card removal from deck
-    if (this.deck.length === 0) {
-      console.log(
-        `[EXHAUSTION CHECK] Deck empty, exhaustion count: ${this.deckExhaustedCount}`
+    // Only check if deck is empty
+    if (this.deck.length > 0) {
+      return { gameEnded: false };
+    }
+
+    console.log(
+      `[EXHAUSTION] Deck empty. Count: ${this.deckExhaustedCount}, Discard: ${this.discard.length}`
+    );
+
+    // FIRST: Always check for Obelisk when deck becomes empty
+    // This happens BEFORE we even think about reshuffling
+    if (this.deckExhaustedCount === 0) {
+      // This is the first time the deck is empty
+      const obelisk = shouldTriggerObelisk(
+        this.deck.length,
+        this.deckExhaustedCount,
+        this.players
       );
 
-      if (this.deckExhaustedCount >= 1) {
-        // Second exhaustion
-        const obeliskOwner = this.checkForObelisk();
-        if (obeliskOwner) {
-          console.log(`[EXHAUSTION] ${obeliskOwner} wins due to Obelisk!`);
-          this.phase = "game_over";
-          this.winner = obeliskOwner;
-          this.winReason = "obelisk";
-          return { gameEnded: true };
-        }
-
-        console.log("[EXHAUSTION] Deck exhausted twice - game ends in tie!");
+      if (obelisk.trigger) {
+        console.log(
+          `[EXHAUSTION] ${obelisk.winner} wins due to Obelisk on FIRST exhaustion!`
+        );
         this.phase = "game_over";
-        this.winner = "draw";
-        this.winReason = "deck_exhausted_twice";
+        this.winner = obelisk.winner;
+        this.winReason = obelisk.reason;
         return { gameEnded: true };
       }
+    }
 
-      // First exhaustion
-      this.deckExhaustedCount = 1;
-      console.log("[EXHAUSTION] First exhaustion");
+    // No Obelisk - now check exhaustion outcomes
+    const exhaustion = calculateExhaustionResult(
+      this.deck.length,
+      this.discard.length,
+      this.deckExhaustedCount
+    );
 
-      const obeliskOwner = this.checkForObelisk();
-      if (obeliskOwner) {
-        console.log(`[EXHAUSTION] ${obeliskOwner} wins due to Obelisk!`);
-        this.phase = "game_over";
-        this.winner = obeliskOwner;
-        this.winReason = "obelisk";
-        return { gameEnded: true };
+    if (exhaustion.gameEnds) {
+      console.log(`[EXHAUSTION] Game ends - ${exhaustion.reason}`);
+      this.phase = "game_over";
+      this.winner = exhaustion.result;
+      this.winReason = exhaustion.reason;
+      return { gameEnded: true };
+    }
+
+    if (exhaustion.shouldReshuffle) {
+      // First exhaustion with no Obelisk - reshuffle
+      this.deckExhaustedCount++;
+      console.log(
+        `[EXHAUSTION] First exhaustion, no Obelisk, reshuffling ${this.discard.length} cards`
+      );
+
+      this.deck = [...this.discard];
+      this.discard = [];
+
+      // Shuffle
+      for (let i = this.deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
       }
 
-      // Reshuffle immediately
-      if (this.discard.length > 0) {
-        console.log(`[EXHAUSTION] Reshuffling ${this.discard.length} cards`);
-        this.deck = [...this.discard];
-        this.discard = [];
+      return { gameEnded: false, reshuffled: true };
+    }
 
-        for (let i = this.deck.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
-        }
-        return { gameEnded: false, reshuffled: true };
-      } else {
-        console.log("[EXHAUSTION] No cards to reshuffle - game ends!");
-        this.phase = "game_over";
-        this.winner = "draw";
-        this.winReason = "deck_exhausted_twice";
-        return { gameEnded: true };
-      }
+    // First exhaustion but no cards to reshuffle
+    if (this.deckExhaustedCount === 0 && this.discard.length === 0) {
+      this.deckExhaustedCount++;
+      console.log(
+        "[EXHAUSTION] First exhaustion but no cards to reshuffle - continuing"
+      );
+      // Don't end the game yet - this counts as first exhaustion
+      // Next time deck empties will be second exhaustion
+      return { gameEnded: false };
     }
 
     return { gameEnded: false };

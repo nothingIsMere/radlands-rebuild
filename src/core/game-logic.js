@@ -198,3 +198,73 @@ export function shouldEventResolveImmediately(
 
   return false;
 }
+
+export function shouldTriggerObelisk(deckSize, exhaustionCount, players) {
+  // Deck must be empty (we're checking at the moment of exhaustion)
+  if (deckSize !== 0) {
+    return { trigger: false };
+  }
+
+  // This should be the FIRST exhaustion (count = 0 since we check before incrementing)
+  if (exhaustionCount !== 0) {
+    return { trigger: false };
+  }
+
+  // Check for Obelisk owner
+  for (const playerId of ["left", "right"]) {
+    const player = players[playerId];
+    for (let col = 0; col < 3; col++) {
+      const camp = player.columns[col].getCard(0);
+      if (camp && camp.name.toLowerCase() === "obelisk" && !camp.isDestroyed) {
+        return {
+          trigger: true,
+          winner: playerId,
+          reason: "obelisk",
+        };
+      }
+    }
+  }
+
+  return { trigger: false };
+}
+
+export function calculateExhaustionResult(
+  deckSize,
+  discardSize,
+  exhaustionCount
+) {
+  if (deckSize > 0) {
+    return { exhausted: false };
+  }
+
+  // Deck is empty - this is an exhaustion event
+  // Check exhaustion count BEFORE incrementing it
+  if (exhaustionCount >= 1) {
+    // Already had one exhaustion, this is the second
+    return {
+      exhausted: true,
+      gameEnds: true,
+      result: "draw",
+      reason: "deck_exhausted_twice",
+    };
+  }
+
+  // This is the FIRST exhaustion
+  // Check if we can reshuffle
+  if (discardSize > 0) {
+    return {
+      exhausted: true,
+      gameEnds: false,
+      shouldReshuffle: true,
+      isFirstExhaustion: true,
+    };
+  }
+
+  // No cards to reshuffle even on first exhaustion
+  return {
+    exhausted: true,
+    gameEnds: true,
+    result: "draw",
+    reason: "no_cards_available",
+  };
+}

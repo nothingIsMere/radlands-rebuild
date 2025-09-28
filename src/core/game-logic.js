@@ -268,3 +268,58 @@ export function calculateExhaustionResult(
     reason: "no_cards_available",
   };
 }
+
+export function calculateRaidPlacement(eventQueue, raidersState) {
+  // Raiders can't be placed if already in queue or used
+  if (raidersState !== "available") {
+    return {
+      canPlace: false,
+      reason: `Raiders ${
+        raidersState === "in_queue" ? "already in queue" : "already used"
+      }`,
+    };
+  }
+
+  // Raiders wants slot 2 (index 1)
+  const desiredSlot = 1;
+
+  // Find first available slot at or after desired position
+  for (let i = desiredSlot; i < 3; i++) {
+    if (!eventQueue[i]) {
+      return {
+        canPlace: true,
+        slot: i,
+      };
+    }
+  }
+
+  return {
+    canPlace: false,
+    reason: "Event queue is full",
+  };
+}
+
+export function shouldRaidersResolve(eventQueue, raidersState) {
+  if (raidersState !== "in_queue") {
+    return { shouldResolve: false };
+  }
+
+  // Check if Raiders is in slot 1 (index 0)
+  return {
+    shouldResolve: eventQueue[0]?.isRaiders === true,
+    isInQueue: true,
+  };
+}
+
+export function canJunkCard(player, cardIndex, currentPhase) {
+  // Basic validation
+  if (currentPhase !== "actions") {
+    return { valid: false, reason: "Can only junk during actions phase" };
+  }
+
+  if (!player.hand[cardIndex]) {
+    return { valid: false, reason: "Card not found" };
+  }
+
+  return { valid: true };
+}

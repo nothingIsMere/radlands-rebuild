@@ -13,6 +13,9 @@ import {
   shouldEventResolveImmediately,
   shouldTriggerObelisk,
   calculateExhaustionResult,
+  calculateRaidPlacement,
+  shouldRaidersResolve,
+  canJunkCard,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -1076,19 +1079,19 @@ export class CommandSystem {
     console.log("=== handleJunkCard called ===");
     const { playerId, cardIndex } = payload;
     const player = this.state.players[playerId];
-    const card = player.hand[cardIndex];
 
-    if (!card) {
-      console.log("ERROR: Card not found");
+    // Use validation function
+    const validation = canJunkCard(player, cardIndex, this.state.phase);
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 
-    // Check if it's the player's turn and in actions phase
-    if (
-      playerId !== this.state.currentPlayer ||
-      this.state.phase !== "actions"
-    ) {
-      console.log("Can only junk cards on your turn during actions phase");
+    const card = player.hand[cardIndex];
+
+    // Check if it's the player's turn
+    if (playerId !== this.state.currentPlayer) {
+      console.log("Can only junk cards on your turn");
       return false;
     }
 
@@ -1711,8 +1714,6 @@ export class CommandSystem {
 
         // Mark that an event was played this turn
         this.state.turnEvents.firstEventPlayedThisTurn = true;
-
-        // Mark that an event resolved this turn (for Watchtower)
         this.state.turnEvents.eventResolvedThisTurn = true;
 
         // Resolve Raiders immediately
@@ -1729,60 +1730,39 @@ export class CommandSystem {
         return true;
       }
 
-      // Raiders has queue number 2, so tries for slot 2 (index 1)
-      const desiredSlot = 1;
+      // Normal raid placement
+      const placement = calculateRaidPlacement(
+        player.eventQueue,
+        player.raiders
+      );
 
-      // Find first available slot at or behind desired position
-      let targetSlot = -1;
-      if (!player.eventQueue[desiredSlot]) {
-        targetSlot = desiredSlot;
-      } else {
-        // Check slots behind (higher indices)
-        for (let i = desiredSlot + 1; i < 3; i++) {
-          if (!player.eventQueue[i]) {
-            targetSlot = i;
-            break;
-          }
-        }
-      }
-
-      if (targetSlot === -1) {
-        console.log("Raid: Cannot place Raiders - event queue is full");
+      if (!placement.canPlace) {
+        console.log(`Raid: ${placement.reason}`);
         return false;
       }
 
-      // Place Raiders in the target slot
-      player.eventQueue[targetSlot] = {
+      // Place Raiders in the calculated slot
+      player.eventQueue[placement.slot] = {
         id: `${playerId}_raiders`,
         name: "Raiders",
         isRaiders: true,
         queueNumber: 2,
       };
       player.raiders = "in_queue";
-      // Mark that an event was played this turn
       this.state.turnEvents.firstEventPlayedThisTurn = true;
       console.log(
-        `Raid: Raiders placed in event queue at slot ${targetSlot + 1}`
+        `Raid: Raiders placed in event queue at slot ${placement.slot + 1}`
       );
       return true;
     } else if (player.raiders === "in_queue") {
-      // Find where Raiders currently is
-      let raidersIndex = -1;
-      for (let i = 0; i < 3; i++) {
-        if (player.eventQueue[i]?.isRaiders) {
-          raidersIndex = i;
-          break;
-        }
-      }
+      // Check if Raiders should resolve
+      const raiders = shouldRaidersResolve(player.eventQueue, player.raiders);
 
-      if (raidersIndex === 0) {
+      if (raiders.shouldResolve) {
         // Raiders in slot 1 - resolve it
         console.log("Raid: Advancing Raiders off slot 1 - resolving effect!");
 
-        // Mark that an event resolved this turn (for Watchtower)
         this.state.turnEvents.eventResolvedThisTurn = true;
-
-        // Remove from queue
         player.eventQueue[0] = null;
         player.raiders = "available";
 
@@ -1798,8 +1778,18 @@ export class CommandSystem {
           `Raiders: ${opponentId} player must choose a camp to damage`
         );
         return true;
-      } else if (raidersIndex > 0) {
-        // Try to advance
+      }
+
+      // Try to advance Raiders
+      let raidersIndex = -1;
+      for (let i = 0; i < 3; i++) {
+        if (player.eventQueue[i]?.isRaiders) {
+          raidersIndex = i;
+          break;
+        }
+      }
+
+      if (raidersIndex > 0) {
         const newIndex = raidersIndex - 1;
         if (!player.eventQueue[newIndex]) {
           player.eventQueue[newIndex] = player.eventQueue[raidersIndex];
@@ -1812,16 +1802,14 @@ export class CommandSystem {
           return true;
         } else {
           console.log(
-            `Raid: Cannot advance Raiders - slot ${
-              newIndex + 1
-            } is occupied by ${player.eventQueue[newIndex].name}`
+            `Raid: Cannot advance Raiders - slot ${newIndex + 1} is occupied`
           );
           return false;
         }
-      } else {
-        console.log("Raid: Raiders not found in queue");
-        return false;
       }
+
+      console.log("Raid: Raiders not found in queue");
+      return false;
     } else {
       console.log("Raid: Raiders already used this game");
       return false;

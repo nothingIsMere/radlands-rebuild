@@ -26,3 +26,24 @@ export function calculateCardCost(card, columnIndex, player) {
 
   return cost;
 }
+
+export function canPlayPerson(player, card, cost, targetPosition) {
+  // Basic validation
+  if (!player || !card) {
+    return { valid: false, reason: "Invalid player or card" };
+  }
+
+  if (card.type !== "person") {
+    return { valid: false, reason: "Card is not a person" };
+  }
+
+  if (player.water < cost) {
+    return { valid: false, reason: "Not enough water" };
+  }
+
+  if (targetPosition === 0) {
+    return { valid: false, reason: "Cannot play person in camp slot" };
+  }
+
+  return { valid: true };
+}

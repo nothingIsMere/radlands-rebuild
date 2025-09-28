@@ -2,7 +2,7 @@ import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
 import { getPendingHandler } from "./pending-handlers.js";
-import { calculateCardCost } from "./game-logic.js";
+import { calculateCardCost, canPlayPerson } from "./game-logic.js";
 
 export class CommandSystem {
   constructor(gameState) {
@@ -1464,10 +1464,13 @@ export class CommandSystem {
     const player = this.state.players[playerId];
     const column = player.columns[columnIndex];
 
-    // Check cost
+    // Calculate cost once at the beginning
     const cost = this.getAdjustedCost(card, columnIndex, playerId);
-    if (player.water < cost) {
-      console.log("Not enough water!");
+
+    // Use our validation function
+    const validation = canPlayPerson(player, card, cost, position);
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 

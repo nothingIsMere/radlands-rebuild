@@ -1222,9 +1222,18 @@ class RepairBotEntryRestoreHandler extends PendingHandler {
   handle(payload) {
     const { skip } = payload;
 
+    // Store parachuteBaseContext BEFORE clearing pending
+    const parachuteBaseContext = this.state.pending?.parachuteBaseContext;
+
     if (skip) {
       console.log("Skipping Repair Bot entry restore");
       this.state.pending = null;
+
+      // Continue with Parachute Base flow if applicable
+      if (parachuteBaseContext) {
+        this.continueParachuteBase(parachuteBaseContext);
+      }
+
       return true;
     }
 
@@ -1252,7 +1261,88 @@ class RepairBotEntryRestoreHandler extends PendingHandler {
 
     console.log(`Repair Bot entry trait: Restored ${target.name}`);
 
+    // Continue with Parachute Base flow to use Repair Bot's ability
+    if (parachuteBaseContext) {
+      console.log(
+        "Entry trait complete, continuing Parachute Base to use Repair Bot's ability"
+      );
+      this.continueParachuteBase(parachuteBaseContext);
+    }
+
     return true;
+  }
+
+  continueParachuteBase(context) {
+    const person = context.person;
+
+    // Repair Bot has a restore ability that costs 1
+    if (person.abilities?.length > 0) {
+      const ability = person.abilities[0];
+      const player = this.state.players[context.sourcePlayerId];
+
+      if (player.water >= ability.cost) {
+        player.water -= ability.cost;
+        console.log(
+          `Parachute Base: Paid ${ability.cost} for Repair Bot's restore ability`
+        );
+
+        // Execute Repair Bot's restore ability
+        this.commandSystem.executeAbility(ability, {
+          source: person,
+          playerId: context.sourcePlayerId,
+          columnIndex: context.targetColumn,
+          position: context.targetSlot,
+          fromParachuteBase: true,
+        });
+
+        // Check if ability created a new pending state
+        if (this.state.pending) {
+          // Store Parachute damage info in the new pending state
+          this.state.pending.parachuteBaseDamage = {
+            targetPlayer: context.sourcePlayerId,
+            targetColumn: context.targetColumn,
+            targetPosition: context.targetSlot,
+          };
+          this.state.pending.parachuteSourceCard = context.sourceCard;
+          this.state.pending.parachuteShouldStayReady = context.shouldStayReady;
+        } else {
+          // Apply Parachute damage immediately
+          this.applyParachuteBaseDamage(context);
+        }
+      } else {
+        console.log(
+          "Not enough water for Repair Bot's ability, just applying Parachute damage"
+        );
+        this.applyParachuteBaseDamage(context);
+      }
+    } else {
+      // No ability to use, just apply damage
+      this.applyParachuteBaseDamage(context);
+    }
+  }
+
+  applyParachuteBaseDamage(context) {
+    this.state.pending = {
+      type: "parachute_damage_self",
+      sourcePlayerId: context.sourcePlayerId,
+    };
+
+    const damaged = this.commandSystem.resolveDamage(
+      context.sourcePlayerId,
+      context.targetColumn,
+      context.targetSlot
+    );
+
+    if (damaged) {
+      console.log("Parachute Base: Damaged Repair Bot");
+    }
+
+    this.state.pending = null;
+
+    // Mark Parachute Base as not ready
+    if (context.sourceCard && !context.shouldStayReady) {
+      context.sourceCard.isReady = false;
+    }
   }
 }
 

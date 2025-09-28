@@ -16,6 +16,10 @@ import {
   calculateRaidPlacement,
   shouldRaidersResolve,
   canJunkCard,
+  calculateNextPlayer,
+  calculatePhaseTransition,
+  calculateReplenishWater,
+  shouldCardBeReady,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -3220,14 +3224,15 @@ export class CommandSystem {
       resonatorUsedThisTurn: false,
     };
 
-    // Switch player
-    this.state.currentPlayer =
-      this.state.currentPlayer === "left" ? "right" : "left";
+    // Switch player using pure function
+    this.state.currentPlayer = calculateNextPlayer(this.state.currentPlayer);
     this.state.turnNumber++;
 
-    // Start new turn with events phase
-    this.state.phase = "events";
-    this.notifyUI("PHASE_CHANGE", "events");
+    // Determine next phase
+    const transition = calculatePhaseTransition("actions", false);
+    this.state.phase = transition.nextPhase;
+
+    this.notifyUI("PHASE_CHANGE", this.state.phase);
 
     // Process events phase after a short delay so it's visible
     setTimeout(() => {
@@ -3376,31 +3381,22 @@ export class CommandSystem {
       console.log(`${this.state.currentPlayer} drew: ${result.card.name}`);
     }
 
-    // Set water
-    if (this.state.turnNumber === 1) {
-      player.water = 100;
-    } else {
-      player.water = 100;
-    }
+    // Set water using pure function
+    player.water = calculateReplenishWater(this.state.turnNumber);
 
-    // Ready all undamaged cards (but camps are ALWAYS ready unless ability used)
+    // Ready all cards that should be ready
     for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
       for (let pos = 0; pos < 3; pos++) {
         const card = player.columns[col].getCard(pos);
-        if (card && !card.isDestroyed) {
-          if (card.type === "camp") {
-            // Camps are always ready (damaged or not)
-            card.isReady = true;
-          } else if (card.type === "person" && !card.isDamaged) {
-            // People are only ready if not damaged
-            card.isReady = true;
-          }
+        if (card && shouldCardBeReady(card)) {
+          card.isReady = true;
         }
       }
     }
 
     // Move to actions phase
-    this.state.phase = "actions";
+    const transition = calculatePhaseTransition("replenish", false);
+    this.state.phase = transition.nextPhase;
     this.notifyUI("PHASE_CHANGE", this.state.phase);
   }
 }

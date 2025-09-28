@@ -323,3 +323,47 @@ export function canJunkCard(player, cardIndex, currentPhase) {
 
   return { valid: true };
 }
+
+export function calculateNextPlayer(currentPlayer) {
+  return currentPlayer === "left" ? "right" : "left";
+}
+
+export function calculatePhaseTransition(currentPhase, hasEventsPending) {
+  switch (currentPhase) {
+    case "actions":
+      return { nextPhase: "events", automatic: true };
+    case "events":
+      if (hasEventsPending) {
+        return { nextPhase: "events", automatic: false };
+      }
+      return { nextPhase: "replenish", automatic: true };
+    case "replenish":
+      return { nextPhase: "actions", automatic: true };
+    default:
+      return { nextPhase: currentPhase, automatic: false };
+  }
+}
+
+export function calculateReplenishWater(turnNumber) {
+  // In the actual game, water might vary by turn
+  // For now, always give 3 water (you can adjust this)
+  return 3;
+}
+
+export function shouldCardBeReady(card) {
+  if (!card || card.isDestroyed) {
+    return false;
+  }
+
+  // Camps are always ready unless they used an ability
+  if (card.type === "camp") {
+    return true;
+  }
+
+  // People are ready only if not damaged
+  if (card.type === "person") {
+    return !card.isDamaged;
+  }
+
+  return false;
+}

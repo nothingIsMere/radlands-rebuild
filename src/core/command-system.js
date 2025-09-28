@@ -6,6 +6,7 @@ import {
   calculateCardCost,
   canPlayPerson,
   canUseAbility,
+  canPlayEvent,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -720,9 +721,10 @@ export class CommandSystem {
       let queueNumber = card.queueNumber || 1;
       const cost = card.cost || 0;
 
-      // Check cost
-      if (player.water < cost) {
-        console.log("Not enough water for event");
+      // Validate event can be played
+      const validation = canPlayEvent(player, eventDef.cost, player.eventQueue);
+      if (!validation.valid) {
+        console.log(validation.reason);
         return false;
       }
 

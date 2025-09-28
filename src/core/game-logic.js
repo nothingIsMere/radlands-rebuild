@@ -70,3 +70,17 @@ export function canUseAbility(card, player, abilityCost) {
 
   return { valid: true };
 }
+
+export function canPlayEvent(player, eventCost, eventQueue) {
+  if (player.water < eventCost) {
+    return { valid: false, reason: "Not enough water for event" };
+  }
+
+  // Check if event queue is full (all 3 slots occupied)
+  const fullSlots = eventQueue.filter((e) => e !== null).length;
+  if (fullSlots === 3) {
+    return { valid: false, reason: "Event queue is full" };
+  }
+
+  return { valid: true };
+}

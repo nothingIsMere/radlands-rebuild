@@ -20,6 +20,9 @@ import {
   calculatePhaseTransition,
   calculateReplenishWater,
   shouldCardBeReady,
+  canUseCampAbility,
+  calculateCampDrawCards,
+  findAvailableWaterSilo,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -268,10 +271,7 @@ export class CommandSystem {
 
   handleUseCampAbility(payload) {
     console.log("Camp ability triggered:", payload);
-    if (this.state.turnEvents.resonatorUsedThisTurn) {
-      console.log("Cannot use abilities - Resonator was used this turn");
-      return false;
-    }
+
     if (!payload) return false;
 
     // Don't allow using abilities while there's a pending action
@@ -297,18 +297,8 @@ export class CommandSystem {
     const campPosition = position !== undefined ? position : 0;
     const camp = this.state.getCard(playerId, columnIndex, campPosition);
 
-    if (!camp || camp.type !== "camp") {
+    if (!camp) {
       console.log("No camp found at this position");
-      return false;
-    }
-
-    if (!camp.isReady) {
-      console.log("Camp has already used its ability this turn");
-      return false;
-    }
-
-    if (camp.isDestroyed) {
-      console.log("Destroyed camps cannot use abilities");
       return false;
     }
 
@@ -319,12 +309,19 @@ export class CommandSystem {
       return false;
     }
 
-    // Check cost
+    // Get player
     const player = this.state.players[playerId];
-    if (player.water < ability.cost) {
-      console.log(
-        `Not enough water! Need ${ability.cost}, have ${player.water}`
-      );
+
+    // Use validation function
+    const validation = canUseCampAbility(
+      camp,
+      player,
+      ability.cost,
+      this.state.turnEvents
+    );
+
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 
@@ -983,20 +980,22 @@ export class CommandSystem {
       return false;
     }
 
-    // Check if Water Silo is available
-    if (player.waterSilo !== "available") {
-      console.log("Water Silo not available");
+    // Check availability and cost
+    const waterSilo = findAvailableWaterSilo(player);
+
+    if (!waterSilo.available || waterSilo.location !== "tableau") {
+      console.log("Water Silo not available in tableau");
       return false;
     }
 
     // Check cost
-    if (player.water < 1) {
-      console.log("Need 1 water to take Water Silo");
+    if (player.water < waterSilo.cost) {
+      console.log(`Need ${waterSilo.cost} water to take Water Silo`);
       return false;
     }
 
     // Pay cost and take to hand
-    player.water -= 1;
+    player.water -= waterSilo.cost;
     player.waterSilo = "in_hand";
 
     // Add to hand

@@ -367,3 +367,69 @@ export function shouldCardBeReady(card) {
 
   return false;
 }
+
+export function canUseCampAbility(camp, player, abilityCost, turnState) {
+  if (!camp || camp.type !== "camp") {
+    return { valid: false, reason: "Not a camp" };
+  }
+
+  if (!camp.isReady) {
+    return { valid: false, reason: "Camp already used this turn" };
+  }
+
+  if (camp.isDestroyed) {
+    return { valid: false, reason: "Destroyed camps cannot use abilities" };
+  }
+
+  if (player.water < abilityCost) {
+    return { valid: false, reason: "Not enough water" };
+  }
+
+  // Special check for Resonator
+  if (camp.name === "Resonator" && turnState.abilityUsedThisTurn) {
+    return {
+      valid: false,
+      reason: "Resonator must be the only ability used this turn",
+    };
+  }
+
+  // Check if Resonator was already used
+  if (turnState.resonatorUsedThisTurn) {
+    return { valid: false, reason: "Cannot use abilities after Resonator" };
+  }
+
+  return { valid: true };
+}
+
+export function calculateCampDrawCards(camps) {
+  // Calculate total cards to draw based on undestroyed camps
+  let totalDraw = 0;
+
+  for (const camp of camps) {
+    if (camp && !camp.isDestroyed) {
+      totalDraw += camp.campDraw || 0;
+    }
+  }
+
+  return totalDraw;
+}
+
+export function findAvailableWaterSilo(player) {
+  if (player.waterSilo === "available") {
+    return {
+      available: true,
+      cost: 1,
+      location: "tableau",
+    };
+  }
+
+  if (player.waterSilo === "in_hand") {
+    return {
+      available: true,
+      cost: 0,
+      location: "hand",
+    };
+  }
+
+  return { available: false };
+}

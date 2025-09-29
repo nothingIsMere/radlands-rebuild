@@ -508,3 +508,92 @@ export function isGameEndingState(leftPlayer, rightPlayer) {
 
   return { gameEnds: false };
 }
+
+export function calculateCardDestruction(card) {
+  if (!card || card.isDestroyed) {
+    return { shouldDestroy: false };
+  }
+
+  // Determine what happens when card is destroyed
+  if (card.isPunk) {
+    return {
+      shouldDestroy: true,
+      destination: "deck",
+      returnCard: {
+        id: card.id,
+        name: card.originalName || card.name,
+        type: card.originalCard?.type || card.type,
+        cost: card.originalCard?.cost || card.cost,
+        abilities: card.originalCard?.abilities || card.abilities,
+        junkEffect: card.originalCard?.junkEffect || card.junkEffect,
+      },
+    };
+  }
+
+  // Normal cards go to discard
+  return {
+    shouldDestroy: true,
+    destination: "discard",
+    returnCard: card,
+  };
+}
+
+export function calculateColumnShift(column, removedPosition) {
+  // When a card is removed, what moves where?
+  const moves = [];
+
+  // Only shift if not the last position
+  if (removedPosition < 2) {
+    const cardInFront = column.getCard(removedPosition + 1);
+    if (cardInFront) {
+      moves.push({
+        from: removedPosition + 1,
+        to: removedPosition,
+        card: cardInFront,
+      });
+    }
+  }
+
+  return moves;
+}
+
+export function canPlaceInSlot(column, position, cardType) {
+  // Check if a card can be placed in a specific slot
+  if (position === 0 && cardType !== "camp") {
+    return { valid: false, reason: "Only camps in position 0" };
+  }
+
+  if (position > 0 && cardType === "camp") {
+    // Exception: Juggernaut can go anywhere
+    return { valid: true };
+  }
+
+  const existingCard = column.getCard(position);
+  if (
+    existingCard &&
+    existingCard.type === "camp" &&
+    existingCard.name !== "Juggernaut"
+  ) {
+    return { valid: false, reason: "Cannot replace a camp" };
+  }
+
+  return { valid: true };
+}
+
+export function findEmptySlots(player) {
+  const emptySlots = [];
+
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 0; pos < 3; pos++) {
+      if (!player.columns[col].getCard(pos)) {
+        emptySlots.push({
+          columnIndex: col,
+          position: pos,
+          canPlacePerson: pos > 0,
+        });
+      }
+    }
+  }
+
+  return emptySlots;
+}

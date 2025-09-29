@@ -27,6 +27,10 @@ import {
   countPlayerPeople,
   countDestroyedCamps,
   isGameEndingState,
+  calculateCardDestruction,
+  calculateColumnShift,
+  canPlaceInSlot,
+  findEmptySlots,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -443,79 +447,67 @@ export class CommandSystem {
 
     if (!card || card.type !== "person") return false;
 
-    // Remove from column
-    column.setCard(position, null);
+    // Calculate what card goes back to hand
+    const destruction = calculateCardDestruction(card);
 
-    // If it's a punk, flip it over to reveal the actual card
     if (card.isPunk) {
-      const revealedCard = {
-        id: card.id,
-        name: card.originalCard?.name || card.name,
-        type: card.originalCard?.type || "person",
-        cost: card.originalCard?.cost || card.cost,
-        abilities: card.originalCard?.abilities || card.abilities,
-        junkEffect: card.originalCard?.junkEffect || card.junkEffect,
-      };
-      player.hand.push(revealedCard);
-      console.log(`Returned punk to hand - revealed as ${revealedCard.name}!`);
+      // Punk reveals as actual card when returned to hand
+      player.hand.push(destruction.returnCard);
+      console.log(
+        `Returned punk to hand - revealed as ${destruction.returnCard.name}!`
+      );
     } else {
       // Normal person returns as-is
-      const returnCard = {
+      player.hand.push({
         id: card.id,
         name: card.name,
         type: card.type,
         cost: card.cost,
         abilities: card.abilities,
         junkEffect: card.junkEffect,
-      };
-      player.hand.push(returnCard);
+      });
       console.log(`Returned ${card.name} to hand`);
-    }
-
-    // Move cards behind forward
-    if (position < CONSTANTS.MAX_POSITION) {
-      const cardInFront = column.getCard(position + 1);
-      if (cardInFront) {
-        column.setCard(position, cardInFront);
-        column.setCard(position + 1, null);
-      }
-    }
-
-    return true;
-  }
-
-  destroyPerson(player, column, position, card) {
-    if (card.isPunk) {
-      // Restore the original card to return to deck
-      const returnCard = {
-        ...card,
-        name: card.originalName, // Restore original name
-        isPunk: undefined,
-        isFaceDown: undefined,
-        originalName: undefined,
-      };
-      delete returnCard.isPunk;
-      delete returnCard.isFaceDown;
-      delete returnCard.originalName;
-
-      this.state.deck.unshift(returnCard);
-      console.log(`Punk returned to top of deck (was ${returnCard.name})`);
-    } else {
-      // Normal person to discard
-      this.state.discard.push(card);
     }
 
     // Remove from column
     column.setCard(position, null);
 
-    // Move card in front back
-    if (position < CONSTANTS.MAX_POSITION) {
-      const cardInFront = column.getCard(position + 1);
-      if (cardInFront) {
-        column.setCard(position, cardInFront);
-        column.setCard(position + 1, null);
-      }
+    // Apply column shifts
+    const shifts = calculateColumnShift(column, position);
+    shifts.forEach((shift) => {
+      column.setCard(shift.to, shift.card);
+      column.setCard(shift.from, null);
+    });
+
+    return true;
+  }
+
+  destroyPerson(player, column, position, card) {
+    // Calculate what happens to the destroyed card
+    const destruction = calculateCardDestruction(card);
+
+    if (destruction.destination === "deck") {
+      this.state.deck.unshift(destruction.returnCard);
+      console.log(
+        `Punk returned to top of deck (was ${destruction.returnCard.name})`
+      );
+    } else if (destruction.destination === "discard") {
+      this.state.discard.push(destruction.returnCard);
+      console.log(`${card.name} sent to discard`);
     }
+
+    // Remove from column
+    column.setCard(position, null);
+
+    // Calculate and apply column shifts
+    const shifts = calculateColumnShift(column, position);
+    shifts.forEach((shift) => {
+      column.setCard(shift.to, shift.card);
+      column.setCard(shift.from, null);
+      console.log(
+        `Moved ${shift.card.name} from position ${shift.from} to ${shift.to}`
+      );
+    });
 
     console.log(`${card.isPunk ? "Punk" : card.name} destroyed`);
   }

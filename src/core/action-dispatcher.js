@@ -11,8 +11,9 @@ export class ActionDispatcher {
   // Main dispatch method - all actions go through here
   dispatch(action) {
     // Validate action structure
-    if (!action.type) {
-      console.error("Action missing type:", action);
+    const validation = this.validateAction(action);
+    if (!validation.valid) {
+      console.error("Invalid action:", validation.error, action);
       return false;
     }
 
@@ -25,6 +26,52 @@ export class ActionDispatcher {
     // For now, just pass through to command system
     // Later this will check if action is local or needs to go to server
     return this.executeLocal(action);
+  }
+
+  validateAction(action) {
+    // Basic structure validation
+    if (!action || typeof action !== "object") {
+      return { valid: false, error: "Action must be an object" };
+    }
+
+    if (!action.type) {
+      return { valid: false, error: "Action missing type" };
+    }
+
+    // Check if action type is valid
+    const validTypes = Object.values(ActionTypes);
+    if (!validTypes.includes(action.type)) {
+      return { valid: false, error: `Unknown action type: ${action.type}` };
+    }
+
+    // Type-specific validation
+    switch (action.type) {
+      case ActionTypes.PLAY_CARD:
+      case ActionTypes.USE_ABILITY:
+      case ActionTypes.USE_CAMP_ABILITY:
+      case ActionTypes.JUNK_CARD:
+      case ActionTypes.END_TURN:
+      case ActionTypes.TAKE_WATER_SILO:
+        if (!action.playerId) {
+          return { valid: false, error: "Action requires playerId" };
+        }
+        if (action.playerId !== "left" && action.playerId !== "right") {
+          return { valid: false, error: "Invalid playerId" };
+        }
+        break;
+
+      case ActionTypes.SELECT_TARGET:
+        // SELECT_TARGET is special - doesn't always need playerId
+        break;
+
+      case ActionTypes.DRAW_CARD:
+        if (!action.playerId) {
+          return { valid: false, error: "Draw card requires playerId" };
+        }
+        break;
+    }
+
+    return { valid: true };
   }
 
   executeLocal(action) {
@@ -50,12 +97,21 @@ export class ActionDispatcher {
 
   notifyListeners(action) {
     this.listeners.forEach((listener) => {
-      listener(action);
+      try {
+        listener(action);
+      } catch (error) {
+        console.error("Listener error:", error);
+      }
     });
   }
 
   // Utility method to get recent actions (useful for debugging)
   getRecentActions(count = 10) {
     return this.actionLog.slice(-count);
+  }
+
+  // Clear the action log (useful for new games)
+  clearActionLog() {
+    this.actionLog = [];
   }
 }

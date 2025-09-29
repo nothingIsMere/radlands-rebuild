@@ -43,6 +43,9 @@ import {
   findAllDamagedCards,
   countValidTargets,
   selectBestTarget,
+  getEntryTraits,
+  shouldTriggerEntryTrait,
+  canResolveEntryTrait,
 } from "./game-logic.js";
 
 export class CommandSystem {

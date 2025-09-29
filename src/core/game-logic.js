@@ -852,3 +852,44 @@ export function selectBestTarget(targets, priority = "most_health") {
       return targets[0];
   }
 }
+
+export function getEntryTraits(card) {
+  // Return what entry traits a card has
+  const traits = [];
+
+  switch (card.name) {
+    case "Repair Bot":
+      traits.push({ type: "restore", optional: true });
+      break;
+    case "Vanguard":
+      traits.push({ type: "gain_punk", automatic: true });
+      break;
+    case "Argo Yesky":
+      traits.push({ type: "gain_punk", automatic: true });
+      break;
+  }
+
+  return traits;
+}
+
+export function shouldTriggerEntryTrait(card, gameContext) {
+  if (!card || card.isDestroyed || card.isDamaged) {
+    return false;
+  }
+
+  const traits = getEntryTraits(card);
+  return traits.length > 0;
+}
+
+export function canResolveEntryTrait(trait, player) {
+  switch (trait.type) {
+    case "restore":
+      // Need damaged cards to restore
+      return true; // Let the actual handler check for targets
+    case "gain_punk":
+      // Need cards in deck
+      return true; // Let handler check deck
+    default:
+      return true;
+  }
+}

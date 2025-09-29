@@ -16,37 +16,40 @@ export class NetworkClient {
       this.roomId = roomId;
 
       this.socket.onopen = () => {
-        console.log("[NETWORK] Connected!");
+        console.log("[NETWORK] WebSocket opened successfully");
         this.connected = true;
 
-        // Tell server we want to join a room
-        this.send({
+        // Log what we're sending
+        const joinMessage = {
           type: "JOIN_ROOM",
           roomId: this.roomId,
-        });
-
-        // Enable network mode in dispatcher
-        this.dispatcher.setNetworkMode(true, (action) => {
-          this.sendAction(action);
-        });
+        };
+        console.log("[NETWORK] Sending JOIN_ROOM:", joinMessage);
+        this.send(joinMessage);
       };
 
       this.socket.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        this.handleMessage(message);
+        console.log("[NETWORK] Raw message received:", event.data);
+        try {
+          const message = JSON.parse(event.data);
+          this.handleMessage(message);
+        } catch (error) {
+          console.error("[NETWORK] Failed to parse message:", error);
+        }
       };
 
-      this.socket.onclose = () => {
-        console.log("[NETWORK] Disconnected");
+      this.socket.onclose = (event) => {
+        console.log("[NETWORK] WebSocket closed:", event.code, event.reason);
         this.connected = false;
+        this.playerId = null;
         this.dispatcher.setNetworkMode(false);
       };
 
       this.socket.onerror = (error) => {
-        console.error("[NETWORK] Error:", error);
+        console.error("[NETWORK] WebSocket error:", error);
       };
     } catch (error) {
-      console.error("[NETWORK] Failed to connect:", error);
+      console.error("[NETWORK] Failed to create WebSocket:", error);
       return false;
     }
 
@@ -60,17 +63,39 @@ export class NetworkClient {
       case "PLAYER_ASSIGNED":
         this.playerId = message.playerId;
         console.log(`[NETWORK] You are player: ${this.playerId}`);
+
+        // NOW enable network mode since we have a player ID
+        this.dispatcher.setNetworkMode(true, (action) => {
+          this.sendAction(action);
+        });
+        break;
+
+      case "GAME_READY":
+        console.log("[NETWORK] Both players connected - game ready!");
         break;
 
       case "GAME_ACTION":
-        // Server confirmed our action or sent opponent's action
-        this.dispatcher.receiveNetworkAction(message.action);
+        // Only process actions from the OTHER player
+        // We already executed our own actions locally
+        if (message.fromPlayer !== this.playerId) {
+          console.log(
+            `[NETWORK] Executing opponent's action: ${message.action.type}`
+          );
+          this.dispatcher.receiveNetworkAction(message.action);
+        } else {
+          // This is our own action echoed back - just log it, don't execute
+          console.log(
+            `[NETWORK] Server confirmed our action: ${message.action.type}`
+          );
+        }
+        break;
+
+      case "PLAYER_DISCONNECTED":
+        console.log(`[NETWORK] Player ${message.playerId} disconnected`);
         break;
 
       case "GAME_STATE":
-        // Full state sync (for reconnection)
         console.log("[NETWORK] Received full game state");
-        // TODO: Update local state
         break;
 
       default:
@@ -84,6 +109,11 @@ export class NetworkClient {
       return false;
     }
 
+    if (!this.playerId) {
+      console.error("[NETWORK] No player ID assigned yet");
+      return false;
+    }
+
     const message = {
       type: "GAME_ACTION",
       action: action,
@@ -91,13 +121,28 @@ export class NetworkClient {
       roomId: this.roomId,
     };
 
-    this.send(message);
+    try {
+      this.send(message);
+      console.log("[NETWORK] Sent action:", action.type);
+    } catch (error) {
+      console.error("[NETWORK] Failed to send action:", error);
+      this.connected = false;
+      this.dispatcher.setNetworkMode(false);
+    }
+
     return true;
   }
 
   send(message) {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify(message));
+      const messageStr = JSON.stringify(message);
+      console.log("[NETWORK] Sending:", messageStr);
+      this.socket.send(messageStr);
+    } else {
+      console.error(
+        "[NETWORK] Cannot send - socket not ready. State:",
+        this.socket?.readyState
+      );
     }
   }
 

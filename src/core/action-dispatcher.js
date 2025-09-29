@@ -11,6 +11,7 @@ export class ActionDispatcher {
   }
 
   // Main dispatch method - all actions go through here
+
   dispatch(action) {
     // Validate action structure
     const validation = this.validateAction(action);
@@ -22,14 +23,16 @@ export class ActionDispatcher {
     // Log the action
     this.logAction(action);
 
-    // In network mode, send to server instead of executing locally
+    // In network mode, send to server AND execute locally
     if (this.networkMode && this.networkHandler) {
       console.log("[NETWORK] Sending to server:", action.type);
       this.networkHandler(action);
-      return true; // Assume success, server will confirm
+      // ALSO execute locally so we see immediate feedback
+      this.notifyListeners(action);
+      return this.executeLocal(action);
     }
 
-    // Local execution
+    // Local only mode
     this.notifyListeners(action);
     return this.executeLocal(action);
   }

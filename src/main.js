@@ -1,11 +1,13 @@
 import { GameState } from "./core/game-state.js";
 import { CommandSystem } from "./core/command-system.js";
 import { UIRenderer } from "./ui/ui-renderer.js";
+import { ActionDispatcher } from "./core/action-dispatcher.js";
 
 // Initialize game
 const gameState = new GameState();
 const commandSystem = new CommandSystem(gameState);
-const uiRenderer = new UIRenderer(gameState, commandSystem);
+const actionDispatcher = new ActionDispatcher(commandSystem);
+const uiRenderer = new UIRenderer(gameState, actionDispatcher);
 
 function ensureJunkEffect(card) {
   if (!card.junkEffect) {

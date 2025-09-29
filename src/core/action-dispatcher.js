@@ -6,6 +6,8 @@ export class ActionDispatcher {
     this.commandSystem = commandSystem;
     this.listeners = [];
     this.actionLog = [];
+    this.networkMode = false;
+    this.networkHandler = null;
   }
 
   // Main dispatch method - all actions go through here
@@ -17,14 +19,34 @@ export class ActionDispatcher {
       return false;
     }
 
-    // Log the action (useful for debugging and replay)
+    // Log the action
     this.logAction(action);
 
-    // Notify any listeners (for future multiplayer/replay)
-    this.notifyListeners(action);
+    // In network mode, send to server instead of executing locally
+    if (this.networkMode && this.networkHandler) {
+      console.log("[NETWORK] Sending to server:", action.type);
+      this.networkHandler(action);
+      return true; // Assume success, server will confirm
+    }
 
-    // For now, just pass through to command system
-    // Later this will check if action is local or needs to go to server
+    // Local execution
+    this.notifyListeners(action);
+    return this.executeLocal(action);
+  }
+
+  // Add these methods:
+  setNetworkMode(enabled, handler = null) {
+    this.networkMode = enabled;
+    this.networkHandler = handler;
+    console.log(`[DISPATCHER] Network mode: ${enabled ? "ON" : "OFF"}`);
+  }
+
+  // For when server sends an action to execute
+  receiveNetworkAction(action) {
+    console.log("[NETWORK] Received:", action.type);
+    // Don't re-send to network, just execute locally
+    this.logAction(action);
+    this.notifyListeners(action);
     return this.executeLocal(action);
   }
 

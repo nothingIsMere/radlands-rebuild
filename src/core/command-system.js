@@ -39,6 +39,10 @@ import {
   canAffordAction,
   calculateTotalWaterIncome,
   findWaterSources,
+  findTargetsInColumn,
+  findAllDamagedCards,
+  countValidTargets,
+  selectBestTarget,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -72,6 +76,24 @@ export class CommandSystem {
   }
 
   findValidTargets(sourcePlayerId, options = {}) {
+    // Use the pure function to count targets
+    const opponentId = sourcePlayerId === "left" ? "right" : "left";
+
+    const count = countValidTargets(
+      this.state.players[sourcePlayerId],
+      this.state.players[opponentId],
+      {
+        requireEnemy: !options.allowOwn,
+        requireDamaged: options.requireDamaged || false,
+        requirePerson: options.requirePerson || false,
+        requireCamp: options.requireCamp || false,
+        allowProtected: options.allowProtected || false,
+      }
+    );
+
+    console.log(`Found ${count} valid targets`);
+
+    // Still use TargetValidator for the actual list
     return TargetValidator.findValidTargets(
       this.state,
       sourcePlayerId,

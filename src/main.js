@@ -32,11 +32,10 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    name: "obelisk",
+    name: "warehouse",
     type: "camp",
     campDraw: 1,
-    abilities: [], // Win condition trait, no ability
-    trait: "When the last card is drawn from the deck, you win.",
+    abilities: [{ effect: "restore", cost: 1 }], // Requires opponent unprotected camp
     isReady: true,
     isDamaged: false,
   });

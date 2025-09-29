@@ -743,3 +743,112 @@ export function findWaterSources(player) {
 
   return sources;
 }
+
+export function findTargetsInColumn(player, columnIndex, targetType = "any") {
+  const targets = [];
+  const column = player.columns[columnIndex];
+
+  for (let pos = 0; pos < 3; pos++) {
+    const card = column.getCard(pos);
+    if (card && !card.isDestroyed) {
+      if (
+        targetType === "any" ||
+        (targetType === "person" && card.type === "person") ||
+        (targetType === "camp" && card.type === "camp")
+      ) {
+        targets.push({
+          card,
+          position: pos,
+          isDamaged: card.isDamaged,
+        });
+      }
+    }
+  }
+
+  return targets;
+}
+
+export function findAllDamagedCards(player) {
+  const damaged = [];
+
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 0; pos < 3; pos++) {
+      const card = player.columns[col].getCard(pos);
+      if (card && card.isDamaged && !card.isDestroyed) {
+        damaged.push({
+          card,
+          columnIndex: col,
+          position: pos,
+        });
+      }
+    }
+  }
+
+  return damaged;
+}
+
+export function countValidTargets(
+  sourcePlayer,
+  opponentPlayer,
+  targetRequirements
+) {
+  let count = 0;
+  const {
+    requireEnemy = true,
+    requireDamaged = false,
+    requirePerson = false,
+    requireCamp = false,
+    allowProtected = false,
+  } = targetRequirements;
+
+  const targetPlayer = requireEnemy ? opponentPlayer : sourcePlayer;
+
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 0; pos < 3; pos++) {
+      const card = targetPlayer.columns[col].getCard(pos);
+      if (!card || card.isDestroyed) continue;
+
+      if (requireDamaged && !card.isDamaged) continue;
+      if (requirePerson && card.type !== "person") continue;
+      if (requireCamp && card.type !== "camp") continue;
+
+      if (!allowProtected) {
+        const column = targetPlayer.columns[col];
+        if (column.isProtected(pos)) continue;
+      }
+
+      count++;
+    }
+  }
+
+  return count;
+}
+
+export function selectBestTarget(targets, priority = "most_health") {
+  if (!targets || targets.length === 0) return null;
+
+  switch (priority) {
+    case "most_health":
+      // Prefer undamaged over damaged
+      const undamaged = targets.filter((t) => !t.card.isDamaged);
+      return undamaged.length > 0 ? undamaged[0] : targets[0];
+
+    case "most_damaged":
+      // Prefer damaged over undamaged
+      const damaged = targets.filter((t) => t.card.isDamaged);
+      return damaged.length > 0 ? damaged[0] : targets[0];
+
+    case "camps_first":
+      // Prefer camps over people
+      const camps = targets.filter((t) => t.card.type === "camp");
+      return camps.length > 0 ? camps[0] : targets[0];
+
+    case "people_first":
+      // Prefer people over camps
+      const people = targets.filter((t) => t.card.type === "person");
+      return people.length > 0 ? people[0] : targets[0];
+
+    default:
+      return targets[0];
+  }
+}

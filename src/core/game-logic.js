@@ -433,3 +433,78 @@ export function findAvailableWaterSilo(player) {
 
   return { available: false };
 }
+
+export function checkForSpecialTraits(player, traitName) {
+  // Check all cards in player's tableau for a specific trait
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 0; pos < 3; pos++) {
+      const card = player.columns[col].getCard(pos);
+      if (card && !card.isDamaged && !card.isDestroyed) {
+        switch (traitName) {
+          case "vera_vosh":
+            if (card.name === "Vera Vosh") return card;
+            break;
+          case "karli_blaze":
+            if (card.name === "Karli Blaze") return card;
+            break;
+          case "argo_yesky":
+            if (card.name === "Argo Yesky") return card;
+            break;
+          case "zeto_kahn":
+            if (card.name === "Zeto Kahn") return card;
+            break;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+export function countPlayerPeople(player, includeDestroyed = false) {
+  let count = 0;
+
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 1; pos <= 2; pos++) {
+      // Only positions 1 and 2 for people
+      const card = player.columns[col].getCard(pos);
+      if (card && card.type === "person") {
+        if (!includeDestroyed && !card.isDestroyed) {
+          count++;
+        } else if (includeDestroyed) {
+          count++;
+        }
+      }
+    }
+  }
+
+  return count;
+}
+
+export function countDestroyedCamps(player) {
+  let count = 0;
+
+  for (let col = 0; col < 3; col++) {
+    const camp = player.columns[col].getCard(0);
+    if (camp && camp.isDestroyed) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+export function isGameEndingState(leftPlayer, rightPlayer) {
+  // Check if either player has 3 destroyed camps
+  const leftDestroyed = countDestroyedCamps(leftPlayer);
+  const rightDestroyed = countDestroyedCamps(rightPlayer);
+
+  if (leftDestroyed >= 3) {
+    return { gameEnds: true, winner: "right", reason: "camps_destroyed" };
+  }
+
+  if (rightDestroyed >= 3) {
+    return { gameEnds: true, winner: "left", reason: "camps_destroyed" };
+  }
+
+  return { gameEnds: false };
+}

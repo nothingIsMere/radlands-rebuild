@@ -23,6 +23,10 @@ import {
   canUseCampAbility,
   calculateCampDrawCards,
   findAvailableWaterSilo,
+  checkForSpecialTraits,
+  countPlayerPeople,
+  countDestroyedCamps,
+  isGameEndingState,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -85,22 +89,7 @@ export class CommandSystem {
 
   checkForActiveVera(playerId) {
     const player = this.state.players[playerId];
-
-    for (let col = 0; col < 3; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (
-          card &&
-          card.name === "Vera Vosh" &&
-          !card.isDamaged &&
-          !card.isDestroyed
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return checkForSpecialTraits(player, "vera_vosh") !== null;
   }
 
   completeAbility(pending) {
@@ -138,22 +127,7 @@ export class CommandSystem {
 
   checkForActiveKarli(playerId) {
     const player = this.state.players[playerId];
-
-    for (let col = 0; col < 3; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (
-          card &&
-          card.name === "Karli Blaze" &&
-          !card.isDamaged &&
-          !card.isDestroyed
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return checkForSpecialTraits(player, "karli_blaze") !== null;
   }
 
   finishMutantAbility() {
@@ -251,22 +225,7 @@ export class CommandSystem {
 
   checkForActiveArgo(playerId) {
     const player = this.state.players[playerId];
-
-    for (let col = 0; col < 3; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (
-          card &&
-          card.name === "Argo Yesky" &&
-          !card.isDamaged &&
-          !card.isDestroyed
-        ) {
-          return card;
-        }
-      }
-    }
-
-    return null;
+    return checkForSpecialTraits(player, "argo_yesky");
   }
 
   handleUseCampAbility(payload) {
@@ -405,22 +364,7 @@ export class CommandSystem {
 
   checkForActiveZetoKahn(playerId) {
     const player = this.state.players[playerId];
-
-    for (let col = 0; col < 3; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (
-          card &&
-          card.name === "Zeto Kahn" &&
-          !card.isDamaged &&
-          !card.isDestroyed
-        ) {
-          return true;
-        }
-      }
-    }
-
-    return false;
+    return checkForSpecialTraits(player, "zeto_kahn") !== null;
   }
 
   resolveDamage(targetPlayer, targetColumn, targetPosition) {
@@ -3129,26 +3073,18 @@ export class CommandSystem {
   }
 
   checkGameEnd() {
-    // Check for 3 destroyed camps
-    for (const playerId of ["left", "right"]) {
-      const player = this.state.players[playerId];
-      let destroyedCamps = 0;
+    const gameEnd = isGameEndingState(
+      this.state.players.left,
+      this.state.players.right
+    );
 
-      for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
-        const camp = player.columns[col].getCard(0);
-        if (camp?.isDestroyed) destroyedCamps++;
-      }
-
-      if (destroyedCamps === 3) {
-        this.state.phase = "game_over";
-        this.state.winner = playerId === "left" ? "right" : "left";
-        this.state.winReason = "camps_destroyed";
-        console.log(
-          `${this.state.winner} wins - opponent has 3 destroyed camps!`
-        );
-        this.notifyUI("GAME_OVER", this.state.winner);
-        return true;
-      }
+    if (gameEnd.gameEnds) {
+      this.state.phase = "game_over";
+      this.state.winner = gameEnd.winner;
+      this.state.winReason = gameEnd.reason;
+      console.log(`${gameEnd.winner} wins - ${gameEnd.reason}!`);
+      this.notifyUI("GAME_OVER", gameEnd.winner);
+      return true;
     }
 
     return false;

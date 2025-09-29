@@ -31,6 +31,10 @@ import {
   calculateColumnShift,
   canPlaceInSlot,
   findEmptySlots,
+  createPunkFromCard,
+  revealPunk,
+  canPlacePunk,
+  calculatePunkPlacementCost,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -826,9 +830,10 @@ export class CommandSystem {
     const player = this.state.players[this.state.currentPlayer];
     const column = player.columns[targetColumn];
 
-    // Cannot place punk in camp slot
-    if (targetPosition === 0 && column.camp) {
-      console.log("Cannot place punk in camp slot");
+    // Validate placement
+    const validation = canPlacePunk(column, targetPosition);
+    if (!validation.valid) {
+      console.log(validation.reason);
       return false;
     }
 
@@ -854,22 +859,11 @@ export class CommandSystem {
     console.log(`Took ${topCard.name} from deck to make punk`);
     console.log(`Deck size after taking card: ${this.state.deck.length}`);
 
-    // Create punk from the actual card (face-down)
-    const punk = {
-      ...topCard,
-      isPunk: true,
-      isFaceDown: true,
-      isReady: false,
-      isDamaged: false,
-      originalName: topCard.name,
-      originalCard: { ...topCard },
-      name: "Punk",
-    };
+    // Create punk using pure function
+    const hasKarli = this.checkForActiveKarli(this.state.currentPlayer);
+    const punk = createPunkFromCard(topCard, hasKarli);
 
-    // Check for Karli Blaze's persistent trait
-    const hasActiveKarli = this.checkForActiveKarli(this.state.currentPlayer);
-    if (hasActiveKarli) {
-      punk.isReady = true;
+    if (hasKarli) {
       console.log("Punk enters play ready due to Karli Blaze's trait!");
     }
 
@@ -879,7 +873,7 @@ export class CommandSystem {
       this.state.deck.unshift(topCard);
       console.log("Couldn't place punk, returned card to deck");
 
-      // IMPORTANT: Check exhaustion again after putting card back
+      // Check exhaustion again after putting card back
       const exhaustion = this.state.checkDeckExhaustion();
       if (exhaustion.gameEnded) {
         this.notifyUI("GAME_OVER", this.state.winner);

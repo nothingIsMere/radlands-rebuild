@@ -597,3 +597,65 @@ export function findEmptySlots(player) {
 
   return emptySlots;
 }
+
+export function createPunkFromCard(card, hasKarliBlaze = false) {
+  if (!card) {
+    return null;
+  }
+
+  return {
+    ...card,
+    isPunk: true,
+    isFaceDown: true,
+    isReady: hasKarliBlaze, // Karli makes punks enter ready
+    isDamaged: false,
+    originalName: card.name,
+    originalCard: { ...card },
+    name: "Punk",
+  };
+}
+
+export function revealPunk(punk) {
+  if (!punk || !punk.isPunk) {
+    return null;
+  }
+
+  return {
+    id: punk.id,
+    name: punk.originalName || punk.name,
+    type: punk.originalCard?.type || "person",
+    cost: punk.originalCard?.cost || punk.cost,
+    abilities: punk.originalCard?.abilities || punk.abilities,
+    junkEffect: punk.originalCard?.junkEffect || punk.junkEffect,
+  };
+}
+
+export function canPlacePunk(column, position) {
+  // Punks can't go in camp slot
+  if (position === 0) {
+    return { valid: false, reason: "Cannot place punk in camp slot" };
+  }
+
+  const existingCard = column.getCard(position);
+
+  // Can't place on a camp (including Juggernaut)
+  if (existingCard && existingCard.type === "camp") {
+    return { valid: false, reason: "Cannot place punk on camp" };
+  }
+
+  return { valid: true };
+}
+
+export function calculatePunkPlacementCost(sourceType) {
+  // Different sources have different costs for placing punks
+  switch (sourceType) {
+    case "junk": // Junk effect = free
+      return 0;
+    case "ability": // Ability-based = cost is in the ability
+      return null; // Let ability handle it
+    case "event": // Event-based = free
+      return 0;
+    default:
+      return 0;
+  }
+}

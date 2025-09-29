@@ -2979,23 +2979,35 @@ export class UIRenderer {
   renderControls() {
     const controls = this.createElement("div", "controls");
 
+    // Check if we can interact
+    const isOurTurn =
+      !this.dispatcher.networkMode ||
+      this.state.currentPlayer === window.networkPlayerId;
+
     // Draw Card button (only during actions phase)
     if (this.state.phase === "actions" && !this.state.pending) {
       const drawCardBtn = this.createElement("button");
       drawCardBtn.textContent = `Draw Card (2💧)`;
 
       const currentPlayer = this.state.players[this.state.currentPlayer];
-      drawCardBtn.disabled = currentPlayer.water < CONSTANTS.DRAW_COST;
+      drawCardBtn.disabled =
+        !isOurTurn || currentPlayer.water < CONSTANTS.DRAW_COST;
 
       drawCardBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
+        if (!isOurTurn) {
+          console.log("Not your turn");
+          return;
+        }
         this.dispatcher.dispatch({
           type: ActionTypes.DRAW_CARD,
           playerId: this.state.currentPlayer,
         });
       });
 
-      if (currentPlayer.water < CONSTANTS.DRAW_COST) {
+      if (!isOurTurn) {
+        drawCardBtn.title = "Not your turn";
+      } else if (currentPlayer.water < CONSTANTS.DRAW_COST) {
         drawCardBtn.title = "Not enough water";
       }
 
@@ -3004,39 +3016,54 @@ export class UIRenderer {
 
     // Finish button for Bonfire multiple restoration
     if (this.state.pending?.type === "bonfire_restore_multiple") {
-      const finishBtn = this.createElement("button");
-      const restoredCount = this.state.pending.restoredCards?.length || 0;
+      const canFinish =
+        this.state.pending.sourcePlayerId === window.networkPlayerId;
 
-      if (restoredCount === 0) {
-        finishBtn.textContent = "Skip Restoration";
-      } else {
-        finishBtn.textContent = `Finish Restoring (${restoredCount} restored)`;
-      }
+      if (canFinish) {
+        const finishBtn = this.createElement("button");
+        const restoredCount = this.state.pending.restoredCards?.length || 0;
 
-      finishBtn.addEventListener("click", () => {
-        if (this.state.phase === "game_over") return;
-        this.dispatcher.dispatch({
-          type: ActionTypes.SELECT_TARGET,
-          finish: true,
+        if (restoredCount === 0) {
+          finishBtn.textContent = "Skip Restoration";
+        } else {
+          finishBtn.textContent = `Finish Restoring (${restoredCount} restored)`;
+        }
+
+        finishBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          this.dispatcher.dispatch({
+            type: ActionTypes.SELECT_TARGET,
+            finish: true,
+          });
         });
-      });
 
-      controls.appendChild(finishBtn);
+        controls.appendChild(finishBtn);
+      }
     }
 
     // End Turn button
     const endTurn = this.createElement("button");
     endTurn.textContent = "End Turn";
     endTurn.disabled =
-      this.state.phase !== "actions" || this.state.pending !== null;
+      !isOurTurn ||
+      this.state.phase !== "actions" ||
+      this.state.pending !== null;
 
     endTurn.addEventListener("click", () => {
       if (this.state.phase === "game_over") return;
+      if (!isOurTurn) {
+        console.log("Not your turn");
+        return;
+      }
       this.dispatcher.dispatch({
         type: ActionTypes.END_TURN,
         playerId: this.state.currentPlayer,
       });
     });
+
+    if (!isOurTurn) {
+      endTurn.title = "Not your turn";
+    }
 
     controls.appendChild(endTurn);
 
@@ -3045,30 +3072,38 @@ export class UIRenderer {
       this.state.pending &&
       this.state.pending.type !== "bonfire_restore_multiple"
     ) {
-      // Don't show Cancel for Bonfire
-      const cancel = this.createElement("button");
+      // Check if this player can cancel
+      const canCancel =
+        this.state.pending.sourcePlayerId === window.networkPlayerId ||
+        this.state.pending.targetPlayerId === window.networkPlayerId ||
+        this.state.currentPlayer === window.networkPlayerId;
 
-      // Check if this is an entry trait (currently only Repair Bot's entry restore)
-      if (this.state.pending?.isEntryTrait) {
-        cancel.textContent = "Skip";
-      } else {
-        cancel.textContent = "Cancel";
-      }
+      if (canCancel) {
+        const cancel = this.createElement("button");
 
-      cancel.addEventListener("click", () => {
-        if (this.state.phase === "game_over") return;
-        // Return junk card to hand if cancelling a junk effect
-        if (this.state.pending?.junkCard) {
-          const player = this.state.players[this.state.pending.sourcePlayerId];
-          player.hand.push(this.state.pending.junkCard);
-          console.log(`Returned ${this.state.pending.junkCard.name} to hand`);
+        // Check if this is an entry trait (currently only Repair Bot's entry restore)
+        if (this.state.pending?.isEntryTrait) {
+          cancel.textContent = "Skip";
+        } else {
+          cancel.textContent = "Cancel";
         }
 
-        this.state.pending = null;
-        this.render();
-      });
+        cancel.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          // Return junk card to hand if cancelling a junk effect
+          if (this.state.pending?.junkCard) {
+            const player =
+              this.state.players[this.state.pending.sourcePlayerId];
+            player.hand.push(this.state.pending.junkCard);
+            console.log(`Returned ${this.state.pending.junkCard.name} to hand`);
+          }
 
-      controls.appendChild(cancel);
+          this.state.pending = null;
+          this.render();
+        });
+
+        controls.appendChild(cancel);
+      }
     }
 
     return controls;
@@ -3091,11 +3126,25 @@ export class UIRenderer {
   }
 
   handleCardSlotClick(playerId, columnIndex, position) {
+    // Check if we can interact
+    if (this.dispatcher.networkMode && playerId !== window.networkPlayerId) {
+      console.log("Cannot place cards in opponent's tableau");
+      return;
+    }
+
+    if (
+      this.dispatcher.networkMode &&
+      this.state.currentPlayer !== window.networkPlayerId
+    ) {
+      console.log("Not your turn");
+      return;
+    }
+
     // Handle placing a selected card
     if (
       this.selectedCard &&
       this.selectedCard.playerId === this.state.currentPlayer &&
-      playerId === this.state.currentPlayer // Can only play to your own tableau
+      playerId === this.state.currentPlayer
     ) {
       const card = this.selectedCard.card;
 
@@ -3107,7 +3156,7 @@ export class UIRenderer {
             playerId: this.state.currentPlayer,
             cardId: card.id,
             targetColumn: columnIndex,
-            targetPosition: position, // Use the CLICKED position, not an empty one
+            targetPosition: position,
           },
         });
         this.selectedCard = null;

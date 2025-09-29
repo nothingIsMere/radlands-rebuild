@@ -50,7 +50,12 @@ export class ActionDispatcher {
     // Don't re-send to network, just execute locally
     this.logAction(action);
     this.notifyListeners(action);
-    return this.executeLocal(action);
+    const result = this.executeLocal(action);
+
+    // Force UI update after executing network action
+    window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+    return result;
   }
 
   validateAction(action) {

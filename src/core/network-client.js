@@ -60,14 +60,22 @@ export class NetworkClient {
     console.log("[NETWORK] Received message:", message);
 
     switch (message.type) {
+      // In network-client.js, update the handleMessage PLAYER_ASSIGNED case:
+
       case "PLAYER_ASSIGNED":
         this.playerId = message.playerId;
         console.log(`[NETWORK] You are player: ${this.playerId}`);
+
+        // Store in window for immediate UI access
+        window.networkPlayerId = this.playerId;
 
         // NOW enable network mode since we have a player ID
         this.dispatcher.setNetworkMode(true, (action) => {
           this.sendAction(action);
         });
+
+        // Force UI re-render to hide opponent's hand
+        window.dispatchEvent(new CustomEvent("gameStateChanged"));
         break;
 
       case "GAME_READY":

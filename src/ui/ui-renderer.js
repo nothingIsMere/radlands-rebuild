@@ -9,6 +9,52 @@ export class UIRenderer {
     this.container = null;
   }
 
+  // Add this method to UIRenderer class
+  canPlayerInteract(playerId) {
+    // Not in network mode - normal local play
+    if (!this.dispatcher.networkMode) {
+      return playerId === this.state.currentPlayer;
+    }
+
+    const ourPlayerId = window.debugGame?.network?.playerId;
+
+    // Not our player at all
+    if (playerId !== ourPlayerId) {
+      return false;
+    }
+
+    // Check for special pending states that need specific player input
+    if (this.state.pending) {
+      // Raiders camp selection - target player must choose
+      if (this.state.pending.type === "raiders_select_camp") {
+        return playerId === this.state.pending.targetPlayerId;
+      }
+
+      // Scud Launcher - target player must choose
+      if (this.state.pending.type === "scudlauncher_select_target") {
+        return playerId === this.state.pending.targetPlayerId;
+      }
+
+      // Octagon - specific player must act
+      if (this.state.pending.type === "octagon_opponent_destroy") {
+        return playerId === this.state.pending.targetPlayerId;
+      }
+
+      // Famine - current selecting player must choose
+      if (this.state.pending.type === "famine_select_keep") {
+        return playerId === this.state.pending.currentSelectingPlayer;
+      }
+
+      // Add other pending states that need specific player input as needed
+
+      // Default for pending: only current player can act
+      return playerId === this.state.currentPlayer;
+    }
+
+    // Normal turn - only current player can act
+    return playerId === this.state.currentPlayer;
+  }
+
   renderGameOver() {
     const overlay = document.createElement("div");
     overlay.className = "game-over-overlay";
@@ -623,6 +669,14 @@ export class UIRenderer {
     }
     const cardDiv = this.createElement("div", "card");
 
+    // Check if this player can interact with cards
+    const canInteract = this.canPlayerInteract(playerId);
+
+    // Add visual indicator if card belongs to inactive player
+    if (!canInteract && card) {
+      cardDiv.classList.add("inactive-player-card");
+    }
+
     if (this.state.pending?.type === "scudlauncher_select_target") {
       // Highlight cards that belong to the target player
       if (
@@ -645,18 +699,20 @@ export class UIRenderer {
       if (isValidTarget) {
         cardDiv.classList.add("adrenalinelab-target");
 
-        // Make it clickable
-        cardDiv.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          e.preventDefault();
-          this.dispatcher.dispatch({
-            type: ActionTypes.SELECT_TARGET,
-            targetPlayer: playerId,
-            targetColumn: columnIndex,
-            targetPosition: position,
+        // Make it clickable only if player can interact
+        if (canInteract) {
+          cardDiv.addEventListener("click", (e) => {
+            if (this.state.phase === "game_over") return;
+            e.stopPropagation();
+            e.preventDefault();
+            this.dispatcher.dispatch({
+              type: ActionTypes.SELECT_TARGET,
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
           });
-        });
+        }
       }
     }
 
@@ -671,17 +727,19 @@ export class UIRenderer {
       ) {
         cardDiv.classList.add("constructionyard-moveable");
 
-        // Make it clickable
-        cardDiv.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          this.dispatcher.dispatch({
-            type: ActionTypes.SELECT_TARGET,
-            targetPlayer: playerId,
-            targetColumn: columnIndex,
-            targetPosition: position,
+        // Make it clickable only if player can interact
+        if (canInteract) {
+          cardDiv.addEventListener("click", (e) => {
+            if (this.state.phase === "game_over") return;
+            e.stopPropagation();
+            this.dispatcher.dispatch({
+              type: ActionTypes.SELECT_TARGET,
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
           });
-        });
+        }
       }
     }
 
@@ -693,17 +751,19 @@ export class UIRenderer {
       ) {
         cardDiv.classList.add("constructionyard-destination");
 
-        // Make slots clickable
-        cardDiv.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          this.dispatcher.dispatch({
-            type: ActionTypes.SELECT_TARGET,
-            targetPlayer: playerId,
-            targetColumn: columnIndex,
-            targetPosition: position,
+        // Make slots clickable only if player can interact
+        if (canInteract) {
+          cardDiv.addEventListener("click", (e) => {
+            if (this.state.phase === "game_over") return;
+            e.stopPropagation();
+            this.dispatcher.dispatch({
+              type: ActionTypes.SELECT_TARGET,
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
           });
-        });
+        }
       }
     }
 
@@ -919,6 +979,12 @@ export class UIRenderer {
 
     cardDiv.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+
+      // Block junking if player can't interact
+      if (!canInteract) {
+        console.log("Not your turn");
+        return;
+      }
 
       // Block junking during pending actions
       if (this.state.pending) {
@@ -1209,9 +1275,16 @@ export class UIRenderer {
       label.textContent = "Empty";
       cardDiv.appendChild(label);
 
-      // Make empty slots clickable for placing cards
+      // Make empty slots clickable for placing cards only if player can interact
       cardDiv.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
+
+        // Check if player can interact
+        if (!canInteract) {
+          console.log("Not your turn or not your action");
+          return;
+        }
+
         console.log(
           "Empty slot clicked, pending type:",
           this.state.pending?.type
@@ -1375,12 +1448,10 @@ export class UIRenderer {
                 card.isReady && !card.isDamaged && !card.isDestroyed;
             }
 
-            // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION
-            if (
-              canUseAbility &&
-              playerId === this.state.currentPlayer &&
-              !this.state.pending
-            ) {
+            // Check turn control and pending actions
+            const isOurTurn = canInteract;
+
+            if (canUseAbility && isOurTurn && !this.state.pending) {
               const btn = this.createElement("button", "ability-btn");
 
               // Special text for Rabble Rouser's conditional ability
@@ -1468,19 +1539,14 @@ export class UIRenderer {
               // Add specific reason for blocking
               if (this.state.pending) {
                 text.textContent += " [Action in Progress]";
+              } else if (!isOurTurn) {
+                text.textContent += " [Not Your Turn]";
               } else if (card.type === "person") {
                 if (!card.isReady) text.textContent += " [Not Ready]";
                 if (card.isDamaged) text.textContent += " [Damaged]";
               } else if (card.type === "camp") {
                 if (!card.isReady) text.textContent += " [Used]";
                 if (card.isDestroyed) text.textContent += " [Destroyed]";
-              }
-
-              if (
-                playerId !== this.state.currentPlayer &&
-                !this.state.pending
-              ) {
-                text.textContent += " [Not Your Turn]";
               }
 
               abilities.appendChild(text);
@@ -1492,12 +1558,9 @@ export class UIRenderer {
         if (hasArgoBonus) {
           const canUseAbility =
             card.isReady && !card.isDamaged && !card.isDestroyed;
+          const isOurTurn = canInteract;
 
-          if (
-            canUseAbility &&
-            playerId === this.state.currentPlayer &&
-            !this.state.pending
-          ) {
+          if (canUseAbility && isOurTurn && !this.state.pending) {
             const btn = this.createElement(
               "button",
               "ability-btn argo-granted"
@@ -1536,6 +1599,8 @@ export class UIRenderer {
 
             if (this.state.pending) {
               text.textContent += " [Action in Progress]";
+            } else if (!canInteract) {
+              text.textContent += " [Not Your Turn]";
             } else if (!card.isReady) {
               text.textContent += " [Not Ready]";
             } else if (card.isDamaged) {
@@ -1555,6 +1620,12 @@ export class UIRenderer {
         e.stopPropagation();
 
         if (e.defaultPrevented) return;
+
+        // Check if player can interact
+        if (!canInteract && !this.state.pending) {
+          console.log("Not your turn or not your action");
+          return;
+        }
 
         if (
           this.state.pending?.type === "constructionyard_select_person" &&
@@ -2718,8 +2789,34 @@ export class UIRenderer {
   renderHand(player, playerId) {
     const hand = this.createElement("div", "hand");
 
+    // Check if we should show this hand
+    const isOurHand =
+      !this.dispatcher.networkMode ||
+      (this.dispatcher.networkMode &&
+        playerId ===
+          (window.networkPlayerId || window.debugGame?.network?.playerId));
+
+    if (!isOurHand) {
+      // Show opponent's hand as face-down cards
+      const cardCount = player.hand.length;
+      const hiddenHand = this.createElement("div", "hidden-hand");
+      hiddenHand.textContent = `${cardCount} cards`;
+      hand.appendChild(hiddenHand);
+      return hand;
+    }
+
+    // Show our own hand normally
     player.hand.forEach((card, index) => {
       const cardDiv = this.createElement("div", "hand-card");
+
+      // Check if player can interact with this card
+      const canInteract = this.canPlayerInteract(playerId);
+
+      if (!canInteract) {
+        cardDiv.classList.add("disabled");
+        cardDiv.style.pointerEvents = "none";
+        cardDiv.style.opacity = "0.6";
+      }
 
       cardDiv.setAttribute("data-card-type", card.type);
 
@@ -2737,6 +2834,8 @@ export class UIRenderer {
         playerId === this.state.pending.sourcePlayerId
       ) {
         cardDiv.classList.add("parachute-target");
+        cardDiv.style.pointerEvents = "auto"; // Override disabled state for valid targets
+        cardDiv.style.opacity = "1";
         cardDiv.onclick = () => {
           this.dispatcher.dispatch({
             type: ActionTypes.SELECT_TARGET,
@@ -2749,6 +2848,13 @@ export class UIRenderer {
         // Normal card click handling (only if not in Parachute Base mode)
         cardDiv.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
+
+          // Check if player can interact
+          if (!canInteract) {
+            console.log("Not your turn");
+            return;
+          }
+
           if (this.state.currentPlayer === playerId) {
             if (this.selectedCard?.card?.id === card.id) {
               console.log("Deselecting card:", card.name);
@@ -2795,6 +2901,13 @@ export class UIRenderer {
       cardDiv.addEventListener("contextmenu", (e) => {
         if (this.state.phase === "game_over") return;
         e.preventDefault();
+
+        // Check if player can interact
+        if (!canInteract) {
+          console.log("Not your turn");
+          return;
+        }
+
         if (
           this.state.currentPlayer === playerId &&
           this.state.phase === "actions"
@@ -2803,7 +2916,6 @@ export class UIRenderer {
             type: ActionTypes.JUNK_CARD,
             playerId: playerId,
             payload: {
-              // ADD THIS PAYLOAD WRAPPER
               playerId: playerId,
               cardIndex: index,
             },

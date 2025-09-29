@@ -2,6 +2,7 @@ import { CardRegistry } from "../cards/card-registry.js";
 import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
 import { getPendingHandler } from "./pending-handlers.js";
+import { ActionTypes } from "./action-types.js";
 import {
   calculateCardCost,
   canPlayPerson,
@@ -1317,6 +1318,11 @@ export class CommandSystem {
         state: this.state.clone(),
         timestamp: Date.now(),
       });
+    }
+
+    // Test: log if we're using the new constant
+    if (command.type === ActionTypes.PLAY_CARD) {
+      console.log("Using ActionTypes constant for PLAY_CARD");
     }
 
     // Execute

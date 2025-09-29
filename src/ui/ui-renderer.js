@@ -1,4 +1,5 @@
 import { CONSTANTS } from "../core/constants.js";
+import { ActionTypes } from "../core/action-types.js";
 
 export class UIRenderer {
   constructor(state, commands) {
@@ -186,7 +187,7 @@ export class UIRenderer {
 
     // Execute PLAY_CARD command for the event
     this.commands.execute({
-      type: "PLAY_CARD",
+      type: ActionTypes.PLAY_CARD,
       playerId: playerId,
       payload: {
         playerId: playerId,
@@ -579,7 +580,7 @@ export class UIRenderer {
           }
 
           this.commands.execute({
-            type: "TAKE_WATER_SILO",
+            type: ActionTypes.TAKE_WATER_SILO,
             playerId: playerId,
             payload: { playerId: playerId },
           });
@@ -650,7 +651,7 @@ export class UIRenderer {
           e.stopPropagation();
           e.preventDefault();
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -675,7 +676,7 @@ export class UIRenderer {
           if (this.state.phase === "game_over") return;
           e.stopPropagation();
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -697,7 +698,7 @@ export class UIRenderer {
           if (this.state.phase === "game_over") return;
           e.stopPropagation();
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -930,7 +931,7 @@ export class UIRenderer {
         this.state.phase === "actions"
       ) {
         this.commands.execute({
-          type: "JUNK_CARD",
+          type: ActionTypes.JUNK_CARD,
           playerId: playerId,
           payload: {
             playerId: playerId,
@@ -1224,7 +1225,7 @@ export class UIRenderer {
         ) {
           console.log("Construction Yard destination clicked");
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1239,7 +1240,7 @@ export class UIRenderer {
         ) {
           console.log("High Ground placement clicked");
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1252,7 +1253,7 @@ export class UIRenderer {
           playerId === this.state.pending.sourcePlayerId
         ) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1265,7 +1266,7 @@ export class UIRenderer {
           playerId === this.state.pending.sourcePlayerId
         ) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1286,7 +1287,7 @@ export class UIRenderer {
 
           console.log("Executing Parachute placement for empty slot");
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetType: "slot",
             playerId: playerId,
             columnIndex: columnIndex,
@@ -1409,7 +1410,7 @@ export class UIRenderer {
                 // Juggernaut is special - it's a camp that can move to any position
                 if (card.name === "Juggernaut") {
                   this.commands.execute({
-                    type: "USE_CAMP_ABILITY",
+                    type: ActionTypes.USE_CAMP_ABILITY,
                     playerId: playerId,
                     payload: {
                       playerId: playerId,
@@ -1427,7 +1428,7 @@ export class UIRenderer {
                     columnIndex
                   );
                   this.commands.execute({
-                    type: "USE_CAMP_ABILITY",
+                    type: ActionTypes.USE_CAMP_ABILITY,
                     playerId: playerId,
                     payload: {
                       playerId: playerId,
@@ -1439,7 +1440,7 @@ export class UIRenderer {
                 } else {
                   // Regular person ability
                   this.commands.execute({
-                    type: "USE_ABILITY",
+                    type: ActionTypes.USE_ABILITY,
                     playerId: playerId,
                     payload: {
                       playerId: playerId,
@@ -1514,7 +1515,7 @@ export class UIRenderer {
 
               // Create a virtual ability index for Argo's granted ability
               this.commands.execute({
-                type: "USE_ABILITY",
+                type: ActionTypes.USE_ABILITY,
                 playerId: playerId,
                 payload: {
                   playerId: playerId,
@@ -1561,7 +1562,7 @@ export class UIRenderer {
           !card.isDestroyed
         ) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1575,7 +1576,7 @@ export class UIRenderer {
           position > 0 // Not camp slot
         ) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1597,7 +1598,7 @@ export class UIRenderer {
             "High Ground placement clicked (occupied slot - will try push)"
           );
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1613,7 +1614,7 @@ export class UIRenderer {
             "Clicking occupied slot for Uprising punk placement (will push)"
           );
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: playerId,
             targetColumn: columnIndex,
             targetPosition: position,
@@ -1657,7 +1658,7 @@ export class UIRenderer {
               position
             );
             this.commands.execute({
-              type: "SELECT_TARGET",
+              type: ActionTypes.SELECT_TARGET,
               targetType: "slot",
               playerId: playerId,
               columnIndex: columnIndex,
@@ -1715,7 +1716,7 @@ export class UIRenderer {
       raidBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           effectFirst: "raid",
         });
       });
@@ -1726,7 +1727,7 @@ export class UIRenderer {
       punkBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           effectFirst: "punk",
         });
       });
@@ -1797,7 +1798,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             abilityIndex: index,
           });
         });
@@ -1863,7 +1864,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetPlayer: target.playerId, // Use target.playerId, not just playerId
             targetColumn: target.columnIndex, // Use target.columnIndex
             targetPosition: target.position, // Use target.position
@@ -1879,7 +1880,7 @@ export class UIRenderer {
       cancelBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           cancel: true,
         });
       });
@@ -1943,7 +1944,7 @@ export class UIRenderer {
         if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             cardToDiscard: selectedCard,
           });
         }
@@ -1997,7 +1998,7 @@ export class UIRenderer {
       waterBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           benefit: "water",
         });
       });
@@ -2012,7 +2013,7 @@ export class UIRenderer {
       punkBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           benefit: "punk",
         });
       });
@@ -2058,7 +2059,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             eventPlayerId: target.playerId,
             eventSlot: target.slotIndex,
           });
@@ -2150,7 +2151,7 @@ export class UIRenderer {
         if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             cardToDiscard: selectedCard,
           });
         }
@@ -2197,7 +2198,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             personId: person.id,
           });
         });
@@ -2273,7 +2274,7 @@ export class UIRenderer {
         if (this.state.phase === "game_over") return;
         if (selectedCard) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             cardToKeep: selectedCard,
           });
         }
@@ -2308,7 +2309,7 @@ export class UIRenderer {
         damageBtn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             mode: "damage",
           });
         });
@@ -2322,7 +2323,7 @@ export class UIRenderer {
         restoreBtn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             mode: "restore",
           });
         });
@@ -2339,7 +2340,7 @@ export class UIRenderer {
         bothBtn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             mode: "both",
           });
         });
@@ -2370,7 +2371,7 @@ export class UIRenderer {
       damageFirstBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           order: "damage_first",
         });
       });
@@ -2384,7 +2385,7 @@ export class UIRenderer {
       restoreFirstBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           order: "restore_first",
         });
       });
@@ -2455,7 +2456,7 @@ export class UIRenderer {
         if (this.state.phase === "game_over") return;
         if (selectedCards.size === 3) {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             cardsToDiscard: Array.from(selectedCards),
           });
         }
@@ -2498,7 +2499,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             junkIndex: index,
           });
         });
@@ -2515,7 +2516,7 @@ export class UIRenderer {
         if (this.state.phase === "game_over") return;
         // Signal no junk with index -1
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           junkIndex: -1,
         });
       });
@@ -2565,7 +2566,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             abilityIndex: index,
           });
         });
@@ -2641,7 +2642,7 @@ export class UIRenderer {
         btn.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             abilityIndex: index,
           });
         });
@@ -2738,7 +2739,7 @@ export class UIRenderer {
         cardDiv.classList.add("parachute-target");
         cardDiv.onclick = () => {
           this.commands.execute({
-            type: "SELECT_TARGET",
+            type: ActionTypes.SELECT_TARGET,
             targetType: "hand_card",
             cardId: card.id,
             playerId: playerId,
@@ -2799,7 +2800,7 @@ export class UIRenderer {
           this.state.phase === "actions"
         ) {
           this.commands.execute({
-            type: "JUNK_CARD",
+            type: ActionTypes.JUNK_CARD,
             playerId: playerId,
             payload: {
               // ADD THIS PAYLOAD WRAPPER
@@ -2831,7 +2832,7 @@ export class UIRenderer {
       if (this.state.phase === "game_over") return;
       if (this.state.phase === "actions") {
         this.commands.execute({
-          type: "DRAW_CARD",
+          type: ActionTypes.DRAW_CARD,
           playerId: this.state.currentPlayer,
         });
       }
@@ -2877,7 +2878,7 @@ export class UIRenderer {
       drawCardBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "DRAW_CARD",
+          type: ActionTypes.DRAW_CARD,
           playerId: this.state.currentPlayer,
         });
       });
@@ -2903,7 +2904,7 @@ export class UIRenderer {
       finishBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
         this.commands.execute({
-          type: "SELECT_TARGET",
+          type: ActionTypes.SELECT_TARGET,
           finish: true,
         });
       });
@@ -2920,7 +2921,7 @@ export class UIRenderer {
     endTurn.addEventListener("click", () => {
       if (this.state.phase === "game_over") return;
       this.commands.execute({
-        type: "END_TURN",
+        type: ActionTypes.END_TURN,
         playerId: this.state.currentPlayer,
       });
     });
@@ -2988,7 +2989,7 @@ export class UIRenderer {
 
       if (card.type === "person") {
         this.commands.execute({
-          type: "PLAY_CARD",
+          type: ActionTypes.PLAY_CARD,
           playerId: this.state.currentPlayer,
           payload: {
             playerId: this.state.currentPlayer,
@@ -3010,7 +3011,7 @@ export class UIRenderer {
     }
 
     this.commands.execute({
-      type: "SELECT_TARGET",
+      type: ActionTypes.SELECT_TARGET,
       targetPlayer: playerId,
       targetColumn: columnIndex,
       targetPosition: position,
@@ -3023,7 +3024,7 @@ export class UIRenderer {
       this.state.phase === "actions"
     ) {
       this.commands.execute({
-        type: "USE_ABILITY",
+        type: ActionTypes.USE_ABILITY,
         playerId: playerId,
         columnIndex: columnIndex,
         position: position,

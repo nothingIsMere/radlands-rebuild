@@ -659,3 +659,87 @@ export function calculatePunkPlacementCost(sourceType) {
       return 0;
   }
 }
+
+export function calculateWaterChange(action, baseAmount = 0) {
+  // Calculate water gained/lost for different actions
+  switch (action) {
+    case "draw_card":
+      return -2; // Drawing costs 2 water
+    case "water_silo_take":
+      return -1; // Taking silo costs 1
+    case "water_silo_junk":
+      return 1; // Junking silo gives 1
+    case "junk_water":
+      return 1; // Water junk effect gives 1
+    case "extra_water":
+      return 1; // Muse ability gives 1
+    default:
+      return baseAmount;
+  }
+}
+
+export function canAffordAction(player, cost) {
+  return player.water >= cost;
+}
+
+export function calculateTotalWaterIncome(player) {
+  // Calculate water income during replenish phase
+  let total = 3; // Base income
+
+  // Could add modifiers here for special camps or effects
+  // For example, if there were a "Water Plant" camp that gives +1 water
+
+  return total;
+}
+
+export function findWaterSources(player) {
+  // Find all potential water sources for a player
+  const sources = [];
+
+  // Check for water silo
+  if (player.waterSilo === "in_hand") {
+    sources.push({
+      type: "water_silo",
+      amount: 1,
+      source: "hand",
+    });
+  }
+
+  // Check hand for junk effects
+  player.hand.forEach((card, index) => {
+    if (card.junkEffect === "water") {
+      sources.push({
+        type: "junk",
+        amount: 1,
+        source: "hand",
+        cardIndex: index,
+        cardName: card.name,
+      });
+    }
+  });
+
+  // Check for people with extra_water ability
+  for (let col = 0; col < 3; col++) {
+    for (let pos = 1; pos <= 2; pos++) {
+      const card = player.columns[col].getCard(pos);
+      if (card && !card.isDestroyed && !card.isDamaged && card.isReady) {
+        const waterAbility = card.abilities?.find(
+          (a) => a.effect === "extra_water"
+        );
+        if (waterAbility) {
+          sources.push({
+            type: "ability",
+            amount: 1,
+            cost: waterAbility.cost,
+            source: "tableau",
+            column: col,
+            position: pos,
+            cardName: card.name,
+          });
+        }
+      }
+    }
+  }
+
+  return sources;
+}

@@ -35,6 +35,10 @@ import {
   revealPunk,
   canPlacePunk,
   calculatePunkPlacementCost,
+  calculateWaterChange,
+  canAffordAction,
+  calculateTotalWaterIncome,
+  findWaterSources,
 } from "./game-logic.js";
 
 export class CommandSystem {
@@ -945,14 +949,16 @@ export class CommandSystem {
   handleDrawCard() {
     const player = this.state.players[this.state.currentPlayer];
 
-    if (player.water < CONSTANTS.DRAW_COST) {
-      console.log("Not enough water");
+    const drawCost = Math.abs(calculateWaterChange("draw_card"));
+
+    if (!canAffordAction(player, drawCost)) {
+      console.log(`Not enough water (need ${drawCost}, have ${player.water})`);
       return false;
     }
 
-    player.water -= CONSTANTS.DRAW_COST;
+    player.water += calculateWaterChange("draw_card");
 
-    // Draw 1 card instead of 2
+    // Draw 1 card
     const result = this.state.drawCardWithReshuffle(
       true,
       this.state.currentPlayer
@@ -1060,7 +1066,7 @@ export class CommandSystem {
 
     switch (junkEffect) {
       case "water":
-        player.water += 1;
+        player.water += calculateWaterChange("junk_water");
         console.log("Gained 1 water from junk effect");
         break;
 

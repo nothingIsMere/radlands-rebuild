@@ -34,6 +34,39 @@ export class GameState {
     this.activeAbilityContext = null;
   }
 
+  resetToFreshGame() {
+    // Reset basic game state
+    this.currentPlayer = "left";
+    this.turnNumber = 1;
+    this.phase = "setup";
+    this.deckExhaustedCount = 0;
+    this.pending = null;
+    this.activeAbilityContext = null;
+
+    // Reset turn events
+    this.turnEvents = {
+      eventsPlayed: 0,
+      peoplePlayedThisTurn: 0,
+      eventResolvedThisTurn: false,
+      abilityUsedThisTurn: false,
+      veraFirstUseCards: [],
+      resonatorUsedThisTurn: false,
+    };
+
+    // Reset both players
+    this.players.left = this.createPlayerState();
+    this.players.right = this.createPlayerState();
+
+    // Clear deck and discard
+    this.deck = [];
+    this.discard = [];
+
+    console.log("[GAME] Reset to fresh state");
+
+    // Trigger UI update
+    window.dispatchEvent(new CustomEvent("gameStateChanged"));
+  }
+
   checkDeckExhaustion() {
     // Only check if deck is empty
     if (this.deck.length > 0) {

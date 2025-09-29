@@ -11,6 +11,9 @@ const actionDispatcher = new ActionDispatcher(commandSystem);
 const networkClient = new NetworkClient(actionDispatcher);
 const uiRenderer = new UIRenderer(gameState, actionDispatcher);
 
+// Make commandSystem globally accessible for phase processing
+window.commandSystem = commandSystem;
+
 function ensureJunkEffect(card) {
   if (!card.junkEffect) {
     const defaultJunkEffects = [
@@ -27,11 +30,10 @@ function ensureJunkEffect(card) {
   return card;
 }
 
-// Set up test scenario
 function setupTestGame() {
-  // Give players plenty of water for testing
-  gameState.players.left.water = 20;
-  gameState.players.right.water = 20;
+  // Randomly choose starting player
+  gameState.currentPlayer = Math.random() < 0.5 ? "left" : "right";
+  console.log(`Starting player: ${gameState.currentPlayer}`);
 
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
@@ -719,17 +721,24 @@ function setupTestGame() {
     { id: "deck_3", name: "Deck Fighter", type: "person", cost: 2 },
   ].map((card) => ensureJunkEffect(card));
 
-  // Start in actions phase
-  gameState.phase = "actions";
+  // Start in EVENTS phase (not replenish)
+  gameState.phase = "events";
 
   console.log("Test game ready:");
   console.log("- Both players have Parachute Base and Juggernaut");
   console.log("- Multiple person cards in hand for testing");
   console.log("- 20 water each for extensive testing");
   console.log(`- Deck has ${gameState.deck.length} cards`);
+
+  // TRIGGER UI UPDATE
+  window.dispatchEvent(new CustomEvent("gameStateChanged"));
 }
 
+// Make it globally accessible
+window.setupTestGame = setupTestGame;
+
 // Set up the test and render
+
 setupTestGame();
 uiRenderer.render();
 
@@ -737,6 +746,16 @@ uiRenderer.render();
 window.addEventListener("gameStateChanged", () => {
   uiRenderer.render();
 });
+
+// For single-player (non-networked) games, start phase progression immediately
+if (!actionDispatcher.networkMode) {
+  setTimeout(() => {
+    console.log("Single-player: Starting phase progression");
+    if (gameState.phase === "events") {
+      commandSystem.processEventsPhase();
+    }
+  }, 1000);
+}
 
 // Add debug tools for testing network features
 window.debugGame = {

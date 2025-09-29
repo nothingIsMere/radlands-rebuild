@@ -119,11 +119,17 @@ class GameServer {
       `[SERVER] Player joined as ${assignedPlayerId} in room ${roomId}`
     );
 
-    // If both players connected, notify them
+    // If both players connected, start the game
     if (room.players.left && room.players.right) {
+      console.log(`[SERVER] Both players connected - starting game`);
+
+      // Pick random starting player
+      const startingPlayer = Math.random() < 0.5 ? "left" : "right";
+
+      // Tell both players to start a fresh game
       this.broadcastToRoom(roomId, {
-        type: "GAME_READY",
-        message: "Both players connected!",
+        type: "START_GAME",
+        startingPlayer: startingPlayer,
       });
     }
   }

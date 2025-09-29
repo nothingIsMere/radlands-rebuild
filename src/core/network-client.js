@@ -60,8 +60,6 @@ export class NetworkClient {
     console.log("[NETWORK] Received message:", message);
 
     switch (message.type) {
-      // In network-client.js, update the handleMessage PLAYER_ASSIGNED case:
-
       case "PLAYER_ASSIGNED":
         this.playerId = message.playerId;
         console.log(`[NETWORK] You are player: ${this.playerId}`);
@@ -76,6 +74,38 @@ export class NetworkClient {
 
         // Force UI re-render to hide opponent's hand
         window.dispatchEvent(new CustomEvent("gameStateChanged"));
+        break;
+
+      case "START_GAME":
+        console.log(
+          `[NETWORK] Starting new game - first player: ${message.startingPlayer}`
+        );
+
+        // Reset to fresh state
+        window.debugGame.state.resetToFreshGame();
+
+        // Set the starting player
+        window.debugGame.state.currentPlayer = message.startingPlayer;
+
+        // Run the test setup
+        window.setupTestGame();
+
+        // Trigger phase progression after a short delay
+        // Only the starting player triggers it (it will sync to the other)
+        setTimeout(() => {
+          console.log("Checking if should start phase progression:", {
+            phase: window.debugGame.state.phase,
+            isStartingPlayer: message.startingPlayer === this.playerId,
+          });
+
+          if (
+            window.debugGame.state.phase === "events" &&
+            message.startingPlayer === this.playerId
+          ) {
+            console.log("Starting player triggering phase progression");
+            window.commandSystem.processEventsPhase();
+          }
+        }, 1000);
         break;
 
       case "GAME_READY":

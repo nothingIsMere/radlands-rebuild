@@ -3339,8 +3339,13 @@ export class CommandSystem {
       console.log(`${this.state.currentPlayer} drew: ${result.card.name}`);
     }
 
-    // Set water using pure function
-    player.water = calculateReplenishWater(this.state.turnNumber);
+    // Set water - 1 on first turn, 3 on all other turns
+    if (this.state.turnNumber === 1) {
+      player.water = 1;
+      console.log("First turn: Starting with 1 water");
+    } else {
+      player.water = calculateReplenishWater(this.state.turnNumber);
+    }
 
     // Ready all cards that should be ready
     for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {

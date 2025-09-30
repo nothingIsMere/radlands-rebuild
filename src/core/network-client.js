@@ -76,6 +76,11 @@ export class NetworkClient {
         window.dispatchEvent(new CustomEvent("gameStateChanged"));
         break;
 
+      case "STATE_SYNC":
+        console.log("[NETWORK] State sync from server:", message.gameState);
+        // We'll use this in the next step
+        break;
+
       case "START_GAME":
         console.log(
           `[NETWORK] Starting new game - starting player: ${message.startingPlayer}`
@@ -102,19 +107,11 @@ export class NetworkClient {
         break;
 
       case "GAME_ACTION":
-        // Only process actions from the OTHER player
-        // We already executed our own actions locally
-        if (message.fromPlayer !== this.playerId) {
-          console.log(
-            `[NETWORK] Executing opponent's action: ${message.action.type}`
-          );
-          this.dispatcher.receiveNetworkAction(message.action);
-        } else {
-          // This is our own action echoed back - just log it, don't execute
-          console.log(
-            `[NETWORK] Server confirmed our action: ${message.action.type}`
-          );
-        }
+        // Execute ALL actions, even our own (for consistency)
+        console.log(
+          `[NETWORK] Executing action from ${message.fromPlayer}: ${message.action.type}`
+        );
+        this.dispatcher.receiveNetworkAction(message.action);
         break;
 
       case "PLAYER_DISCONNECTED":
@@ -123,6 +120,63 @@ export class NetworkClient {
 
       case "GAME_STATE":
         console.log("[NETWORK] Received full game state");
+        break;
+
+      case "COMMAND_EXECUTED":
+        console.log(
+          `[NETWORK] Command executed: ${message.command.type} v${message.stateVersion}`
+        );
+
+        // For now, just execute the command locally
+        if (message.fromPlayer !== this.playerId) {
+          // Execute commands from other player
+          console.log(
+            `[NETWORK] Executing remote command: ${message.command.type}`
+          );
+          this.dispatcher.receiveNetworkAction(message.command);
+        } else {
+          // This is our own command echoed back - also execute it
+          console.log(
+            `[NETWORK] Executing own command: ${message.command.type}`
+          );
+          this.dispatcher.receiveNetworkAction(message.command);
+        }
+        break;
+
+      case "PLAYER_DREW_CARD_SYNC":
+        console.log(`[NETWORK] ${message.playerId} drew card - syncing`);
+
+        // Update the local game state
+        const gameState = window.debugGame.state;
+        const player = gameState.players[message.playerId];
+
+        // Only update if it's not us (we already have the real card)
+        if (message.playerId !== this.playerId) {
+          // Add placeholder card to opponent's hand
+          while (player.hand.length < message.handCount) {
+            player.hand.push({
+              id: `unknown_${Date.now()}_${player.hand.length}`,
+              name: "Unknown",
+              type: "unknown",
+              cost: 0,
+            });
+          }
+        }
+
+        // Update water and deck for both
+        player.water = message.water;
+
+        // Sync deck count
+        while (gameState.deck.length > message.deckCount) {
+          gameState.deck.shift();
+        }
+
+        console.log(
+          `[NETWORK] Synced: ${message.playerId} has ${player.hand.length} cards, ${player.water} water`
+        );
+
+        // Update UI
+        window.dispatchEvent(new CustomEvent("gameStateChanged"));
         break;
 
       default:

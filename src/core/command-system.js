@@ -5,6 +5,7 @@ import { getPendingHandler } from "./pending-handlers.js";
 import { ActionTypes } from "./action-types.js";
 import { CampSelectionHandler } from "./camp-selection.js";
 import { ALL_CAMPS } from "../cards/all_camp_definitions.js";
+import { registerAllHandlers } from "./command-handlers.js";
 import {
   calculateCardCost,
   canPlayPerson,
@@ -59,6 +60,51 @@ export class CommandSystem {
     this.handlers = new Map();
 
     this.registerHandlers();
+  }
+
+  sendStateToServer() {
+    if (!window.debugGame?.dispatcher?.networkMode) return;
+    if (!window.networkPlayerId) return;
+
+    const stateSnapshot = {
+      currentPlayer: this.state.currentPlayer,
+      turnNumber: this.state.turnNumber,
+      phase: this.state.phase,
+      deckCount: this.state.deck.length,
+      discardCount: this.state.discard.length,
+      players: {
+        left: {
+          handCount: this.state.players.left.hand.length,
+          water: this.state.players.left.water,
+          raiders: this.state.players.left.raiders,
+          waterSilo: this.state.players.left.waterSilo,
+        },
+        right: {
+          handCount: this.state.players.right.hand.length,
+          water: this.state.players.right.water,
+          raiders: this.state.players.right.raiders,
+          waterSilo: this.state.players.right.waterSilo,
+        },
+      },
+    };
+
+    console.log(
+      `[STATE] Sending state to server - Phase: ${stateSnapshot.phase}`
+    );
+
+    window.debugGame.dispatcher.dispatch({
+      type: "UPDATE_SERVER_STATE",
+      payload: stateSnapshot,
+    });
+  }
+
+  broadcastStateChange(actionType, details) {
+    if (!window.debugGame?.dispatcher?.networkMode) return;
+
+    window.debugGame.dispatcher.dispatch({
+      type: actionType,
+      payload: details,
+    });
   }
 
   createAbilityContext(
@@ -984,6 +1030,7 @@ export class CommandSystem {
       return false;
     }
 
+    const initialHandSize = player.hand.length;
     player.water += calculateWaterChange("draw_card");
 
     // Draw 1 card
@@ -991,9 +1038,23 @@ export class CommandSystem {
       true,
       this.state.currentPlayer
     );
+
     if (result.gameEnded) {
       this.notifyUI("GAME_OVER", this.state.winner);
       return true;
+    }
+
+    // Sync the draw action in network mode
+    if (window.debugGame?.dispatcher?.networkMode) {
+      window.debugGame.dispatcher.dispatch({
+        type: "SYNC_DRAW_ACTION",
+        payload: {
+          playerId: this.state.currentPlayer,
+          newHandCount: player.hand.length,
+          newWater: player.water,
+          deckCount: this.state.deck.length,
+        },
+      });
     }
 
     return true;
@@ -1255,201 +1316,12 @@ export class CommandSystem {
   }
 
   registerHandlers() {
-    // Register all command handlers
-    this.handlers.set("PLAY_CARD", this.handlePlayCard.bind(this));
-    this.handlers.set("USE_ABILITY", this.handleUseAbility.bind(this));
-    this.handlers.set("USE_CAMP_ABILITY", this.handleUseCampAbility.bind(this));
-    this.handlers.set("DAMAGE", this.handleDamage.bind(this));
-    this.handlers.set("JUNK_CARD", this.handleJunkCard.bind(this));
-    this.handlers.set("END_TURN", this.handleEndTurn.bind(this));
-    this.handlers.set("SELECT_TARGET", this.handleSelectTarget.bind(this));
-    this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
-    this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
+    // Store references for the handlers to use
+    window.campSelectionModule.CampSelectionHandler = CampSelectionHandler;
+    window.campsModule.ALL_CAMPS = ALL_CAMPS;
 
-    this.handlers.set("SYNC_PHASE_CHANGE", (payload) => {
-      this.state.phase = payload.phase;
-      this.state.currentPlayer = payload.currentPlayer;
-      this.state.turnNumber = payload.turnNumber;
-
-      window.dispatchEvent(new CustomEvent("gameStateChanged"));
-      return true;
-    });
-
-    // Camp selection handlers
-    this.handlers.set("START_CAMP_SELECTION", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-
-      // In network mode, only left player generates the distribution
-      if (
-        window.debugGame?.dispatcher?.networkMode &&
-        window.networkPlayerId === "right"
-      ) {
-        // Right player just sets up the state and waits
-        this.state.phase = "camp_selection";
-        this.state.campSelection.active = true;
-        console.log(
-          "[CAMP] Right player waiting for camp distribution from left player"
-        );
-        return true;
-      }
-
-      return this.campHandler.startCampSelection();
-    });
-
-    this.handlers.set("SELECT_CAMP", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-      return this.campHandler.selectCamp(payload.playerId, payload.campIndex);
-    });
-
-    this.handlers.set("DESELECT_CAMP", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-      return this.campHandler.deselectCamp(payload.playerId, payload.campIndex);
-    });
-
-    this.handlers.set("CONFIRM_CAMPS", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-      return this.campHandler.confirmSelection(payload.playerId);
-    });
-
-    this.handlers.set("SYNC_PHASE_CHANGE", (payload) => {
-      console.log("[SYNC] Received phase change:", payload);
-
-      this.state.phase = payload.phase;
-      this.state.currentPlayer = payload.currentPlayer;
-      this.state.turnNumber = payload.turnNumber;
-
-      // Update UI
-      window.dispatchEvent(new CustomEvent("gameStateChanged"));
-
-      return true;
-    });
-
-    this.handlers.set("SYNC_CAMP_SELECTION", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-
-      // Find and set the camps for the other player
-      const selection = this.state.campSelection[payload.playerId + "Player"];
-
-      if (!selection) {
-        console.error("[CAMP] No selection found for", payload.playerId);
-        return false;
-      }
-
-      selection.selectedCamps = payload.selectedCamps.map((campName) => {
-        const campDef = Object.values(ALL_CAMPS).find(
-          (c) => c.name === campName
-        );
-        return {
-          ...campDef,
-          isReady: true,
-          isDamaged: campDef?.isDamaged || false,
-          isDestroyed: false,
-        };
-      });
-
-      selection.confirmed = true;
-
-      console.log(
-        `[CAMP] Synced ${payload.playerId}'s camps:`,
-        payload.selectedCamps
-      );
-
-      // Check if both confirmed AND camp selection is still active (not already finalized)
-      if (
-        this.state.campSelection.leftPlayer.confirmed &&
-        this.state.campSelection.rightPlayer.confirmed &&
-        this.state.campSelection.active // This prevents multiple finalizations
-      ) {
-        // Only the left player finalizes to avoid duplication in network mode
-        if (
-          !window.debugGame?.dispatcher?.networkMode ||
-          window.networkPlayerId === "left"
-        ) {
-          this.campHandler.finalizeCampSelection();
-        }
-      }
-
-      return true;
-    });
-
-    this.handlers.set("SYNC_CAMP_DISTRIBUTION", (payload) => {
-      if (!this.campHandler) {
-        this.campHandler = new CampSelectionHandler(this.state, this);
-      }
-
-      this.state.campSelection.leftPlayer.drawnCamps = payload.leftCamps.map(
-        (campName) => Object.values(ALL_CAMPS).find((c) => c.name === campName)
-      );
-      this.state.campSelection.rightPlayer.drawnCamps = payload.rightCamps.map(
-        (campName) => Object.values(ALL_CAMPS).find((c) => c.name === campName)
-      );
-
-      this.state.campSelection.active = true;
-      this.state.phase = "camp_selection";
-
-      console.log("[CAMP] Received camp distribution");
-      window.dispatchEvent(new CustomEvent("gameStateChanged"));
-
-      return true;
-    });
-
-    this.handlers.set("FINALIZE_CAMPS", (payload) => {
-      console.log("[CAMP] Right player received finalized camps");
-
-      // Place the camps for both players
-      ["left", "right"].forEach((playerId) => {
-        const campNames =
-          playerId === "left" ? payload.leftCamps : payload.rightCamps;
-        const player = this.state.players[playerId];
-
-        campNames.forEach((campName, index) => {
-          const campDef = Object.values(ALL_CAMPS).find(
-            (c) => c.name === campName
-          );
-
-          const campCard = {
-            ...campDef,
-            id: `${playerId}_camp_${index}`,
-            type: "camp",
-            isReady: true,
-            isDamaged: campDef.isDamaged || false,
-            isDestroyed: false,
-          };
-
-          player.columns[index].setCard(0, campCard);
-          console.log(
-            `[CAMP] Placed ${campName} in ${playerId} column ${index}`
-          );
-        });
-
-        const handSize = campNames.reduce((sum, campName) => {
-          const camp = Object.values(ALL_CAMPS).find(
-            (c) => c.name === campName
-          );
-          return sum + (camp.campDraw || 0);
-        }, 0);
-
-        player.initialHandSize = handSize;
-      });
-
-      this.state.campSelection.active = false;
-
-      if (this.campHandler) {
-        this.campHandler.initializeMainGame();
-      }
-
-      return true;
-    });
+    // Register all handlers from the separate file
+    registerAllHandlers(this);
   }
 
   validateCommand(command) {
@@ -1468,6 +1340,8 @@ export class CommandSystem {
       "SYNC_CAMP_DISTRIBUTION",
       "FINALIZE_CAMPS",
       "SYNC_PHASE_CHANGE",
+      "PLAYER_DREW_CARD",
+      "SYNC_REPLENISH_COMPLETE",
     ];
 
     if (!noPlayerIdRequired.includes(command.type)) {
@@ -1630,6 +1504,16 @@ export class CommandSystem {
     this.state.turnEvents.peoplePlayedThisTurn++;
 
     console.log(`Played ${card.name} to position ${position}`);
+
+    // Broadcast the card play
+    this.broadcastStateChange("CARD_PLAYED", {
+      playerId: playerId,
+      cardName: card.name,
+      columnIndex: columnIndex,
+      position: position,
+      handCount: player.hand.length,
+      water: player.water,
+    });
 
     // Check for entry traits AFTER successful placement
     this.triggerEntryTraits(person, playerId, columnIndex, position);
@@ -3346,6 +3230,8 @@ export class CommandSystem {
   }
 
   handleEndTurn() {
+    console.log(`[END TURN] ${this.state.currentPlayer} ending turn`);
+
     // Clear pending states
     this.state.pending = null;
 
@@ -3361,21 +3247,21 @@ export class CommandSystem {
       resonatorUsedThisTurn: false,
     };
 
-    // Switch player using pure function
+    // Switch player
     this.state.currentPlayer = calculateNextPlayer(this.state.currentPlayer);
     this.state.turnNumber++;
 
-    // Determine next phase
-    // Move to actions phase
-    const transition = calculatePhaseTransition("actions", false);
-    this.state.phase = transition.nextPhase;
+    // Move to events phase
+    this.state.phase = "events";
 
-    // Broadcast phase change in network mode
+    this.sendStateToServer();
+
+    // Broadcast the turn change
     if (window.debugGame?.dispatcher?.networkMode) {
       window.debugGame.dispatcher.dispatch({
         type: "SYNC_PHASE_CHANGE",
         payload: {
-          phase: transition.nextPhase,
+          phase: "events",
           currentPlayer: this.state.currentPlayer,
           turnNumber: this.state.turnNumber,
         },
@@ -3384,11 +3270,18 @@ export class CommandSystem {
 
     this.notifyUI("PHASE_CHANGE", this.state.phase);
 
-    // Process events phase after a short delay so it's visible
+    // Process events phase after a short delay
     setTimeout(() => {
-      // Don't process on turn 1 - that's handled by initializeMainGame
-      if (this.state.turnNumber > 1) {
+      // Only process if we're the new current player
+      const isOurTurn =
+        !window.debugGame?.dispatcher?.networkMode ||
+        this.state.currentPlayer === window.networkPlayerId;
+
+      if (this.state.turnNumber > 1 && isOurTurn) {
         this.processEventsPhase();
+      } else if (this.state.turnNumber === 1) {
+        // First turn - skip events and go to replenish
+        this.continueToReplenishPhase();
       }
     }, 1000);
 
@@ -3399,7 +3292,24 @@ export class CommandSystem {
     console.log(
       `[EVENTS] Processing events phase for ${this.state.currentPlayer}`
     );
-    console.trace();
+
+    // CRITICAL: Both players need to be in events phase
+    this.state.phase = "events";
+
+    // Only the current player processes the actual events
+    const isCurrentPlayer =
+      !window.debugGame?.dispatcher?.networkMode ||
+      this.state.currentPlayer === window.networkPlayerId;
+
+    if (!isCurrentPlayer) {
+      console.log(
+        `[EVENTS] Not current player, waiting for ${this.state.currentPlayer} to process`
+      );
+      return;
+    }
+
+    console.log(`[EVENTS] Current player processing events`);
+
     const player = this.state.players[this.state.currentPlayer];
 
     // Resolve event in slot 1 (index 0)
@@ -3432,6 +3342,24 @@ export class CommandSystem {
         console.log(
           `Raiders: ${opponentId} player must choose a camp to damage`
         );
+
+        // Broadcast the pending state for Raiders
+        if (window.debugGame?.dispatcher?.networkMode) {
+          window.debugGame.dispatcher.dispatch({
+            type: "SYNC_PENDING_STATE",
+            payload: {
+              pending: this.state.pending,
+              eventQueue: {
+                left: this.state.players.left.eventQueue.map((e) =>
+                  e ? e.name : null
+                ),
+                right: this.state.players.right.eventQueue.map((e) =>
+                  e ? e.name : null
+                ),
+              },
+            },
+          });
+        }
 
         // Update UI immediately to show the selection state
         this.notifyUI("RAIDERS_RESOLVING", null);
@@ -3471,6 +3399,25 @@ export class CommandSystem {
           if (this.state.pending) {
             // Event needs target selection, wait for it
             console.log(`${event.name} event waiting for target selection`);
+
+            // Broadcast the pending state
+            if (window.debugGame?.dispatcher?.networkMode) {
+              window.debugGame.dispatcher.dispatch({
+                type: "SYNC_PENDING_STATE",
+                payload: {
+                  pending: this.state.pending,
+                  eventQueue: {
+                    left: this.state.players.left.eventQueue.map((e) =>
+                      e ? e.name : null
+                    ),
+                    right: this.state.players.right.eventQueue.map((e) =>
+                      e ? e.name : null
+                    ),
+                  },
+                },
+              });
+            }
+
             this.notifyUI("EVENT_PENDING_TARGET", null);
             return; // Don't advance phase yet
           } else {
@@ -3501,6 +3448,17 @@ export class CommandSystem {
       }
       player.eventQueue[2] = null;
 
+      // Broadcast the updated event queue
+      if (window.debugGame?.dispatcher?.networkMode) {
+        window.debugGame.dispatcher.dispatch({
+          type: "SYNC_EVENT_QUEUE",
+          payload: {
+            playerId: this.state.currentPlayer,
+            eventQueue: player.eventQueue.map((e) => (e ? e.name : null)),
+          },
+        });
+      }
+
       // Continue to replenish phase
       this.continueToReplenishPhase();
     }
@@ -3513,6 +3471,19 @@ export class CommandSystem {
     // Move to replenish phase after a delay
     setTimeout(() => {
       this.state.phase = "replenish";
+
+      // Broadcast phase change to other player
+      if (window.debugGame?.dispatcher?.networkMode) {
+        window.debugGame.dispatcher.dispatch({
+          type: "SYNC_PHASE_CHANGE",
+          payload: {
+            phase: "replenish",
+            currentPlayer: this.state.currentPlayer,
+            turnNumber: this.state.turnNumber,
+          },
+        });
+      }
+
       this.notifyUI("PHASE_CHANGE", "replenish");
 
       // Process replenish after another short delay
@@ -3526,76 +3497,96 @@ export class CommandSystem {
     console.log(
       `[REPLENISH] Processing for ${this.state.currentPlayer}, turn ${this.state.turnNumber}`
     );
-    console.log(
-      `[REPLENISH] Starting for ${this.state.currentPlayer}, turn ${this.state.turnNumber}`
-    );
-    console.log(
-      `[REPLENISH] Hand size before draw: ${
-        this.state.players[this.state.currentPlayer].hand.length
-      }`
-    );
+
     const player = this.state.players[this.state.currentPlayer];
+    const isOurTurn =
+      !window.debugGame?.dispatcher?.networkMode ||
+      this.state.currentPlayer === window.networkPlayerId;
 
-    // Draw a card
-    const result = this.state.drawCardWithReshuffle(
-      true,
-      this.state.currentPlayer
-    );
-    if (result.gameEnded) {
-      this.notifyUI("GAME_OVER", this.state.winner);
-      return;
-    }
-    if (result.card) {
-      console.log(`${this.state.currentPlayer} drew: ${result.card.name}`);
-    }
+    if (isOurTurn) {
+      console.log("[REPLENISH] Our turn - drawing card and setting water");
 
-    // Set water - 1 on first turn, 3 on all other turns
-    if (this.state.turnNumber === 1) {
-      player.water = 1;
-      console.log("First turn: Starting with 1 water");
-    } else {
-      player.water = calculateReplenishWater(this.state.turnNumber);
-    }
+      const initialHandSize = player.hand.length;
 
-    // Ready all cards that should be ready
-    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (card && shouldCardBeReady(card)) {
-          card.isReady = true;
-        }
+      // Draw a card
+      const result = this.state.drawCardWithReshuffle(
+        true,
+        this.state.currentPlayer
+      );
+      if (result.gameEnded) {
+        this.notifyUI("GAME_OVER", this.state.winner);
+        return;
+      }
+
+      if (result.card) {
+        console.log(`[REPLENISH] Drew: ${result.card.name}`);
+      }
+
+      // Set water
+      if (this.state.turnNumber === 1) {
+        player.water = 1;
+      } else {
+        player.water = calculateReplenishWater(this.state.turnNumber);
+      }
+
+      // REPORT DRAW TO SERVER
+      if (window.debugGame?.dispatcher?.networkMode) {
+        window.debugGame.dispatcher.dispatch({
+          type: "PLAYER_DREW_CARD",
+          playerId: this.state.currentPlayer,
+          handCount: player.hand.length,
+          water: player.water,
+          deckCount: this.state.deck.length,
+        });
       }
     }
 
     // Move to actions phase
-    const transition = calculatePhaseTransition("replenish", false);
-    this.state.phase = transition.nextPhase;
+    this.state.phase = "actions";
 
-    // Sync entire game state in network mode
-    if (window.debugGame?.dispatcher?.networkMode) {
+    // Current player broadcasts the transition
+    if (isOurTurn && window.debugGame?.dispatcher?.networkMode) {
+      console.log("[REPLENISH] Broadcasting move to actions phase");
       window.debugGame.dispatcher.dispatch({
-        type: "SYNC_GAME_STATE",
+        type: "SYNC_PHASE_CHANGE",
         payload: {
-          players: {
-            left: {
-              handCount: this.state.players.left.hand.length,
-              water: this.state.players.left.water,
-            },
-            right: {
-              handCount: this.state.players.right.hand.length,
-              water: this.state.players.right.water,
-            },
-          },
-          phase: transition.nextPhase,
+          phase: "actions",
           currentPlayer: this.state.currentPlayer,
           turnNumber: this.state.turnNumber,
+        },
+      });
+
+      // Also sync the hand/water changes
+      window.debugGame.dispatcher.dispatch({
+        type: "SYNC_REPLENISH_COMPLETE",
+        payload: {
+          currentPlayer: this.state.currentPlayer,
+          activePlayerHandCount: player.hand.length,
+          activePlayerWater: player.water,
           deckCount: this.state.deck.length,
         },
       });
     }
 
     this.notifyUI("PHASE_CHANGE", this.state.phase);
+    console.log(`[REPLENISH] Complete - now in ${this.state.phase} phase`);
+  }
 
-    console.log(`[REPLENISH] Hand size after draw: ${player.hand.length}`);
+  // Add helper method to get ready states
+  getPlayerReadyStates(playerId) {
+    const readyStates = {};
+    const player = this.state.players[playerId];
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = player.columns[col].getCard(pos);
+        if (card) {
+          const key = `${col}-${pos}`;
+          readyStates[key] = card.isReady;
+        }
+      }
+    }
+
+    return readyStates;
   }
 }

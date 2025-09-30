@@ -1,8 +1,11 @@
 // server/game-server.js
 import { WebSocketServer } from "ws";
+import { ServerGameEngine } from "./server-game-engine.js";
 
 class GameServer {
   constructor(port = 3001) {
+    this.gameStates = new Map(); // roomId -> authoritative game state
+    this.gameEngines = new Map();
     this.port = port;
     this.rooms = new Map(); // roomId -> room data
     this.clients = new Map(); // ws -> client data
@@ -41,6 +44,31 @@ class GameServer {
     });
   }
 
+  handlePlayerDrewCard(ws, message) {
+    const client = this.clients.get(ws);
+    const room = this.rooms.get(client.roomId);
+    if (!room) return;
+
+    // Update server's game state
+    const playerState = room.gameState.players[message.playerId];
+    playerState.handCount = message.handCount;
+    playerState.water = message.water;
+    room.gameState.deckCount = message.deckCount;
+
+    console.log(
+      `[SERVER] ${message.playerId} drew card - hand: ${playerState.handCount}, water: ${playerState.water}`
+    );
+
+    // Broadcast to BOTH players
+    this.broadcastToRoom(client.roomId, {
+      type: "PLAYER_DREW_CARD_SYNC",
+      playerId: message.playerId,
+      handCount: playerState.handCount,
+      water: playerState.water,
+      deckCount: room.gameState.deckCount,
+    });
+  }
+
   handleMessage(ws, message) {
     const client = this.clients.get(ws);
     console.log(
@@ -57,6 +85,14 @@ class GameServer {
 
       case "GAME_ACTION":
         this.handleGameAction(ws, message);
+        break;
+
+      case "UPDATE_SERVER_STATE":
+        this.handleStateUpdate(ws, message);
+        break;
+
+      case "PLAYER_DREW_CARD":
+        this.handlePlayerDrewCard(ws, message);
         break;
 
       default:
@@ -76,11 +112,39 @@ class GameServer {
           left: null,
           right: null,
         },
-        gameState: null,
+        gameState: {
+          currentPlayer: "left",
+          turnNumber: 1,
+          phase: "setup",
+          deckCount: 0,
+          discardCount: 0,
+          players: {
+            left: {
+              handCount: 0,
+              water: 0,
+              raiders: "available",
+              waterSilo: "available",
+              camps: [],
+            },
+            right: {
+              handCount: 0,
+              water: 0,
+              raiders: "available",
+              waterSilo: "available",
+              camps: [],
+            },
+          },
+        },
         actionLog: [],
       };
       this.rooms.set(roomId, room);
-      console.log(`[SERVER] Created room: ${roomId}`);
+      console.log(`[SERVER] Created room: ${roomId} with initial state`);
+    }
+
+    // Create game engine for this room
+    if (!this.gameEngines.has(roomId)) {
+      this.gameEngines.set(roomId, new ServerGameEngine(roomId));
+      console.log(`[SERVER] Created game engine for room ${roomId}`);
     }
 
     // Assign player to first available slot
@@ -142,29 +206,60 @@ class GameServer {
       return;
     }
 
-    const room = this.rooms.get(client.roomId);
-    if (!room) {
-      console.error("[SERVER] Room not found");
+    const engine = this.gameEngines.get(client.roomId);
+    if (!engine) {
+      console.error("[SERVER] No game engine for room");
       return;
     }
 
-    // Log the action
-    room.actionLog.push({
-      timestamp: Date.now(),
-      playerId: client.playerId,
-      action: message.action,
-    });
+    // Execute command on server
+    const result = engine.executeCommand(message.action, client.playerId);
 
-    // Broadcast action to both players
+    if (result.success) {
+      // Broadcast to ALL players (including sender)
+      this.broadcastToRoom(client.roomId, {
+        type: "COMMAND_EXECUTED",
+        command: result.command,
+        stateVersion: result.stateVersion,
+        gameState: result.gameState,
+        fromPlayer: client.playerId,
+      });
+
+      console.log(
+        `[SERVER] Broadcasted ${message.action.type} v${result.stateVersion}`
+      );
+    } else {
+      // Tell player command failed
+      ws.send(
+        JSON.stringify({
+          type: "COMMAND_FAILED",
+          error: result.error,
+        })
+      );
+    }
+  }
+
+  handleStateUpdate(ws, message) {
+    const client = this.clients.get(ws);
+    if (!client.roomId) return;
+
+    const gameState = this.gameStates.get(client.roomId);
+    if (!gameState) return;
+
+    console.log(`[SERVER] State update from ${client.playerId}`);
+    console.log(
+      `[SERVER] Phase: ${message.payload.phase}, Turn: ${message.payload.turnNumber}`
+    );
+
+    // Update server state
+    Object.assign(gameState, message.payload);
+
+    // Broadcast to BOTH players
     this.broadcastToRoom(client.roomId, {
-      type: "GAME_ACTION",
-      action: message.action,
+      type: "STATE_SYNC",
+      gameState: gameState,
       fromPlayer: client.playerId,
     });
-
-    console.log(
-      `[SERVER] Broadcasted ${message.action.type} from ${client.playerId}`
-    );
   }
 
   handleDisconnect(ws) {

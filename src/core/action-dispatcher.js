@@ -15,7 +15,7 @@ export class ActionDispatcher {
   // Main dispatch method - all actions go through here
 
   dispatch(action) {
-    // Validate action structure
+    // Validate action
     const validation = this.validateAction(action);
     if (!validation.valid) {
       console.error("Invalid action:", validation.error, action);
@@ -25,16 +25,31 @@ export class ActionDispatcher {
     // Log the action
     this.logAction(action);
 
-    // In network mode, send to server AND execute locally
+    // Special handling for sync actions in network mode
     if (this.networkMode && this.networkHandler) {
-      console.log("[NETWORK] Sending to server:", action.type);
+      // These actions should go to server
+      const serverActions = [
+        "SYNC_PHASE_CHANGE",
+        "SYNC_REPLENISH_COMPLETE",
+        "PLAYER_DREW_CARD",
+        "UPDATE_SERVER_STATE",
+      ];
+
+      if (serverActions.includes(action.type)) {
+        console.log("[DISPATCHER] Sending sync to server:", action.type);
+        this.networkHandler(action);
+        // Don't execute locally - wait for server
+        return true;
+      }
+
+      // Regular game actions
+      console.log("[DISPATCHER] Sending to server:", action.type);
       this.networkHandler(action);
-      // ALSO execute locally so we see immediate feedback
-      this.notifyListeners(action);
-      return this.executeLocal(action);
+      // Wait for server to echo back
+      return true;
     }
 
-    // Local only mode
+    // Local mode - execute immediately
     this.notifyListeners(action);
     return this.executeLocal(action);
   }
@@ -49,12 +64,13 @@ export class ActionDispatcher {
   // For when server sends an action to execute
   receiveNetworkAction(action) {
     console.log("[NETWORK] Received:", action.type);
-    // Don't re-send to network, just execute locally
+
+    // Execute ALL actions from server, including our own
     this.logAction(action);
     this.notifyListeners(action);
     const result = this.executeLocal(action);
 
-    // Force UI update after executing network action
+    // Force UI update
     window.dispatchEvent(new CustomEvent("gameStateChanged"));
 
     return result;

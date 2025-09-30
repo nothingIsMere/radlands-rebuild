@@ -209,6 +209,26 @@ export class CampSelectionHandler {
     this.state.deck = drawDeck;
     this.state.discard = [];
 
+    // If we're left player in network mode, broadcast the deck order
+    if (
+      window.debugGame?.dispatcher?.networkMode &&
+      window.networkPlayerId === "left"
+    ) {
+      window.debugGame.dispatcher.dispatch({
+        type: "SYNC_DECK_ORDER",
+        payload: {
+          deckOrder: drawDeck.map((card) => ({
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            cost: card.cost,
+            abilities: card.abilities,
+            junkEffect: card.junkEffect,
+          })),
+        },
+      });
+    }
+
     console.log(`[CAMP] Draw deck created with ${drawDeck.length} cards`);
 
     // Draw initial hands
@@ -264,16 +284,21 @@ export class CampSelectionHandler {
 
     // Start phase progression after a short delay
     setTimeout(() => {
-      // Only trigger once and only by the current player
-      if (
-        window.networkPlayerId === this.state.currentPlayer &&
+      // Check if we should process events phase
+      const shouldProcess =
+        (!window.networkPlayerId ||
+          window.networkPlayerId === this.state.currentPlayer) &&
         this.state.phase === "events" &&
-        !this.phaseProgressionStarted
-      ) {
-        // Add a flag to prevent double-trigger
+        !this.phaseProgressionStarted;
+
+      if (shouldProcess) {
         this.phaseProgressionStarted = true;
-        console.log("[CAMP] Starting events phase (only once!)");
+        console.log("[CAMP] Starting events phase");
         window.commandSystem.processEventsPhase();
+      } else {
+        console.log(
+          `[CAMP] Not processing events - Player: ${window.networkPlayerId}, Current: ${this.state.currentPlayer}, Phase: ${this.state.phase}`
+        );
       }
     }, 500);
   }

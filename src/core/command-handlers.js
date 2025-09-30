@@ -386,6 +386,32 @@ function handleCardJunked(payload) {
     player.waterSilo = "available";
   }
 
+  // Handle raid effect
+  if (payload.junkEffect === "raid") {
+    // Check if Raiders already in queue (to prevent double placement)
+    const hasRaiders = player.eventQueue.some((e) => e && e.isRaiders);
+
+    if (!hasRaiders && player.raiders === "available") {
+      // Find first available slot for Raiders
+      for (let i = 1; i < 3; i++) {
+        // Raiders wants slot 2 (index 1)
+        if (!player.eventQueue[i]) {
+          player.eventQueue[i] = {
+            id: `${payload.playerId}_raiders`,
+            name: "Raiders",
+            isRaiders: true,
+            queueNumber: 2,
+          };
+          player.raiders = "in_queue";
+          console.log(`[SYNC] Placed Raiders in slot ${i + 1}`);
+          break;
+        }
+      }
+    } else {
+      console.log(`[SYNC] Raiders already in queue or unavailable`);
+    }
+  }
+
   // Update hand count
   while (player.hand.length > payload.handCount) {
     player.hand.pop();

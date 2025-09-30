@@ -9,6 +9,152 @@ export class UIRenderer {
     this.container = null;
   }
 
+  renderCampSelection() {
+    const container = this.createElement("div", "camp-selection-container");
+
+    // Get the current player's ID in network mode
+    const ourPlayerId = this.dispatcher.networkMode
+      ? window.networkPlayerId
+      : this.state.currentPlayer;
+
+    // Title
+    const title = this.createElement("h2", "camp-selection-title");
+    title.textContent = "Select 3 Camps";
+    container.appendChild(title);
+
+    // Render camp selection for current player
+    const selection = this.state.campSelection[ourPlayerId + "Player"];
+
+    // Available camps grid
+    const availableSection = this.createElement(
+      "div",
+      "available-camps-section"
+    );
+    const availableTitle = this.createElement("h3");
+    availableTitle.textContent = "Available Camps:";
+    availableSection.appendChild(availableTitle);
+
+    const campsGrid = this.createElement("div", "camps-grid");
+
+    selection.drawnCamps.forEach((camp, index) => {
+      const campCard = this.createElement("div", "camp-card");
+
+      // Check if already selected
+      const isSelected = selection.selectedCamps.some(
+        (c) => c.name === camp.name
+      );
+      if (isSelected) {
+        campCard.classList.add("selected");
+      }
+
+      // Camp name
+      const name = this.createElement("div", "camp-name");
+      name.textContent = camp.name;
+      campCard.appendChild(name);
+
+      // Camp draw value
+      const drawValue = this.createElement("div", "camp-draw");
+      drawValue.textContent = `Draw: ${camp.campDraw}`;
+      campCard.appendChild(drawValue);
+
+      // Camp abilities
+      if (camp.abilities && camp.abilities.length > 0) {
+        const abilities = this.createElement("div", "camp-abilities");
+        camp.abilities.forEach((ability) => {
+          const abilityText = this.createElement("div", "camp-ability");
+          abilityText.textContent = `${ability.effect} (${ability.cost}💧)`;
+          abilities.appendChild(abilityText);
+        });
+        campCard.appendChild(abilities);
+      }
+
+      // Special indicators
+      if (camp.isDamaged) {
+        const damaged = this.createElement("div", "camp-damaged-indicator");
+        damaged.textContent = "Starts Damaged";
+        campCard.appendChild(damaged);
+      }
+
+      // Click handler
+      campCard.addEventListener("click", () => {
+        if (isSelected) {
+          // Find index in selected camps to deselect
+          const selectedIndex = selection.selectedCamps.findIndex(
+            (c) => c.name === camp.name
+          );
+          this.dispatcher.dispatch({
+            type: ActionTypes.DESELECT_CAMP,
+            playerId: ourPlayerId,
+            payload: {
+              playerId: ourPlayerId,
+              campIndex: selectedIndex,
+            },
+          });
+        } else if (selection.selectedCamps.length < 3) {
+          this.dispatcher.dispatch({
+            type: ActionTypes.SELECT_CAMP,
+            playerId: ourPlayerId,
+            payload: {
+              playerId: ourPlayerId,
+              campIndex: index,
+            },
+          });
+        }
+      });
+
+      campsGrid.appendChild(campCard);
+    });
+
+    availableSection.appendChild(campsGrid);
+    container.appendChild(availableSection);
+
+    // Selected camps display
+    const selectedSection = this.createElement("div", "selected-camps-section");
+    const selectedTitle = this.createElement("h3");
+    const totalDraw = selection.selectedCamps.reduce(
+      (sum, camp) => sum + camp.campDraw,
+      0
+    );
+    selectedTitle.textContent = `Selected (${selection.selectedCamps.length}/3) - Total Draw: ${totalDraw}`;
+    selectedSection.appendChild(selectedTitle);
+
+    const selectedList = this.createElement("div", "selected-camps-list");
+    selection.selectedCamps.forEach((camp, idx) => {
+      const campItem = this.createElement("div", "selected-camp-item");
+      campItem.textContent = `${idx + 1}. ${camp.name} (Draw: ${
+        camp.campDraw
+      })`;
+      selectedList.appendChild(campItem);
+    });
+    selectedSection.appendChild(selectedList);
+    container.appendChild(selectedSection);
+
+    // Confirm button
+    if (selection.selectedCamps.length === 3 && !selection.confirmed) {
+      const confirmBtn = this.createElement("button", "confirm-camps-btn");
+      confirmBtn.textContent = "Confirm Selection";
+      confirmBtn.addEventListener("click", () => {
+        this.dispatcher.dispatch({
+          type: ActionTypes.CONFIRM_CAMPS,
+          playerId: ourPlayerId,
+          payload: {
+            playerId: ourPlayerId,
+          },
+        });
+      });
+      container.appendChild(confirmBtn);
+    }
+
+    // Status message
+    if (selection.confirmed) {
+      const status = this.createElement("div", "camp-status");
+      status.textContent = "Waiting for opponent to confirm...";
+      container.appendChild(status);
+    }
+
+    return container;
+  }
+
   // Add this method to UIRenderer class
   canPlayerInteract(playerId) {
     // Not in network mode - normal local play
@@ -148,7 +294,13 @@ export class UIRenderer {
     // Clear container
     this.container.innerHTML = "";
 
-    // Check for game over FIRST
+    // Check for camp selection phase FIRST
+    if (this.state.phase === "camp_selection") {
+      this.container.appendChild(this.renderCampSelection());
+      return; // Don't render the normal game UI
+    }
+
+    // Check for game over
     if (this.state.phase === "game_over") {
       // Remove pending class since game is over
       document.body.classList.remove("has-pending");

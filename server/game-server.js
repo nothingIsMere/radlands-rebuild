@@ -131,6 +131,7 @@ class GameServer {
         type: "START_GAME",
         startingPlayer: startingPlayer,
       });
+      console.log("[SERVER] DEFINITELY SENT START_GAME, NOT GAME_READY!");
     }
   }
 
@@ -207,6 +208,8 @@ class GameServer {
   broadcastToRoom(roomId, message, excludeWs = null) {
     const room = this.rooms.get(roomId);
     if (!room) return;
+
+    console.log(`[SERVER] Broadcasting to room ${roomId}:`, message);
 
     const messageStr = JSON.stringify(message);
 

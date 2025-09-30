@@ -3,6 +3,8 @@ import { CONSTANTS } from "./constants.js";
 import { TargetValidator } from "../core/target-validator.js";
 import { getPendingHandler } from "./pending-handlers.js";
 import { ActionTypes } from "./action-types.js";
+import { CampSelectionHandler } from "./camp-selection.js";
+import { ALL_CAMPS } from "../cards/all_camp_definitions.js";
 import {
   calculateCardCost,
   canPlayPerson,
@@ -1263,42 +1265,188 @@ export class CommandSystem {
     this.handlers.set("SELECT_TARGET", this.handleSelectTarget.bind(this));
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
     this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
+
+    // Camp selection handlers
+    this.handlers.set("START_CAMP_SELECTION", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+
+      // In network mode, only left player generates the distribution
+      if (
+        window.debugGame?.dispatcher?.networkMode &&
+        window.networkPlayerId === "right"
+      ) {
+        // Right player just sets up the state and waits
+        this.state.phase = "camp_selection";
+        this.state.campSelection.active = true;
+        console.log(
+          "[CAMP] Right player waiting for camp distribution from left player"
+        );
+        return true;
+      }
+
+      return this.campHandler.startCampSelection();
+    });
+
+    this.handlers.set("SELECT_CAMP", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+      return this.campHandler.selectCamp(payload.playerId, payload.campIndex);
+    });
+
+    this.handlers.set("DESELECT_CAMP", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+      return this.campHandler.deselectCamp(payload.playerId, payload.campIndex);
+    });
+
+    this.handlers.set("CONFIRM_CAMPS", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+      return this.campHandler.confirmSelection(payload.playerId);
+    });
+
+    this.handlers.set("SYNC_CAMP_SELECTION", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+
+      // Find and set the camps for the other player
+      const selection = this.state.campSelection[payload.playerId + "Player"];
+
+      if (!selection) {
+        console.error("[CAMP] No selection found for", payload.playerId);
+        return false;
+      }
+
+      selection.selectedCamps = payload.selectedCamps.map((campName) => {
+        const campDef = Object.values(ALL_CAMPS).find(
+          (c) => c.name === campName
+        );
+        return {
+          ...campDef,
+          isReady: true,
+          isDamaged: campDef?.isDamaged || false,
+          isDestroyed: false,
+        };
+      });
+
+      selection.confirmed = true;
+      console.log(
+        `[CAMP] Synced ${payload.playerId}'s camps:`,
+        payload.selectedCamps
+      );
+
+      // Check if both confirmed
+      if (
+        this.state.campSelection.leftPlayer.confirmed &&
+        this.state.campSelection.rightPlayer.confirmed
+      ) {
+        this.campHandler.finalizeCampSelection();
+      }
+
+      return true;
+    });
+
+    this.handlers.set("SYNC_CAMP_DISTRIBUTION", (payload) => {
+      if (!this.campHandler) {
+        this.campHandler = new CampSelectionHandler(this.state, this);
+      }
+
+      this.state.campSelection.leftPlayer.drawnCamps = payload.leftCamps.map(
+        (campName) => Object.values(ALL_CAMPS).find((c) => c.name === campName)
+      );
+      this.state.campSelection.rightPlayer.drawnCamps = payload.rightCamps.map(
+        (campName) => Object.values(ALL_CAMPS).find((c) => c.name === campName)
+      );
+
+      this.state.campSelection.active = true;
+      this.state.phase = "camp_selection";
+
+      console.log("[CAMP] Received camp distribution");
+      window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+      return true;
+    });
+
+    this.handlers.set("FINALIZE_CAMPS", (payload) => {
+      console.log("[CAMP] Right player received finalized camps");
+
+      // Place the camps for both players
+      ["left", "right"].forEach((playerId) => {
+        const campNames =
+          playerId === "left" ? payload.leftCamps : payload.rightCamps;
+        const player = this.state.players[playerId];
+
+        campNames.forEach((campName, index) => {
+          const campDef = Object.values(ALL_CAMPS).find(
+            (c) => c.name === campName
+          );
+
+          const campCard = {
+            ...campDef,
+            id: `${playerId}_camp_${index}`,
+            type: "camp",
+            isReady: true,
+            isDamaged: campDef.isDamaged || false,
+            isDestroyed: false,
+          };
+
+          player.columns[index].setCard(0, campCard);
+          console.log(
+            `[CAMP] Placed ${campName} in ${playerId} column ${index}`
+          );
+        });
+
+        const handSize = campNames.reduce((sum, campName) => {
+          const camp = Object.values(ALL_CAMPS).find(
+            (c) => c.name === campName
+          );
+          return sum + (camp.campDraw || 0);
+        }, 0);
+
+        player.initialHandSize = handSize;
+      });
+
+      this.state.campSelection.active = false;
+
+      if (this.campHandler) {
+        this.campHandler.initializeMainGame();
+      }
+
+      return true;
+    });
   }
 
   validateCommand(command) {
     console.log("Validating command:", command.type);
 
-    // Basic validation
-    if (!command.type) return false;
-
-    // SELECT_TARGET is a special case - it doesn't need playerId check
-    if (command.type === "SELECT_TARGET") {
-      return this.state.pending !== null;
-    }
-
-    // All other commands need playerId
-    if (!command.playerId) {
-      console.log("Command missing playerId");
+    if (!command || !command.type) {
+      console.error("Command missing type");
       return false;
     }
 
-    // Check if it's player's turn
-    if (command.playerId !== this.state.currentPlayer && !command.isForced) {
-      console.log("Not player's turn");
-      return false;
+    // Special commands that don't need playerId
+    const noPlayerIdRequired = [
+      "SELECT_TARGET",
+      "START_CAMP_SELECTION",
+      "SYNC_CAMP_SELECTION",
+      "SYNC_CAMP_DISTRIBUTION",
+      "FINALIZE_CAMPS",
+    ];
+
+    if (!noPlayerIdRequired.includes(command.type)) {
+      if (!command.playerId && !command.payload?.playerId) {
+        console.error("Command missing playerId");
+        return false;
+      }
     }
 
-    // Phase-specific validation
-    switch (command.type) {
-      case "PLAY_CARD":
-      case "JUNK_CARD": // ADD THIS
-      case "USE_ABILITY":
-        return this.state.phase === "actions";
-      case "END_TURN":
-        return this.state.phase === "actions" && !this.state.pending;
-      default:
-        return true;
-    }
+    return true;
   }
 
   execute(command) {

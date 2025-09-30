@@ -1,5 +1,6 @@
 // core/action-dispatcher.js
 import { ActionTypes } from "./action-types.js";
+import { CampSelectionHandler } from "./camp-selection.js";
 
 export class ActionDispatcher {
   constructor(commandSystem) {
@@ -8,6 +9,7 @@ export class ActionDispatcher {
     this.actionLog = [];
     this.networkMode = false;
     this.networkHandler = null;
+    this.campHandler = new CampSelectionHandler(this.state, this);
   }
 
   // Main dispatch method - all actions go through here

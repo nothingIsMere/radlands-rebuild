@@ -32,6 +32,20 @@ export class GameState {
     };
 
     this.activeAbilityContext = null;
+
+    this.campSelection = {
+      active: false,
+      leftPlayer: {
+        drawnCamps: [],
+        selectedCamps: [],
+        confirmed: false,
+      },
+      rightPlayer: {
+        drawnCamps: [],
+        selectedCamps: [],
+        confirmed: false,
+      },
+    };
   }
 
   resetToFreshGame() {

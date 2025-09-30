@@ -77,35 +77,22 @@ export class NetworkClient {
         break;
 
       case "START_GAME":
-        console.log(
-          `[NETWORK] Starting new game - first player: ${message.startingPlayer}`
-        );
+        console.log(`[NETWORK] Starting new game - camp selection phase`);
 
         // Reset to fresh state
         window.debugGame.state.resetToFreshGame();
 
-        // Set the starting player
-        window.debugGame.state.currentPlayer = message.startingPlayer;
-
-        // Run the test setup
-        window.setupTestGame();
-
-        // Trigger phase progression after a short delay
-        // Only the starting player triggers it (it will sync to the other)
-        setTimeout(() => {
-          console.log("Checking if should start phase progression:", {
-            phase: window.debugGame.state.phase,
-            isStartingPlayer: message.startingPlayer === this.playerId,
+        // Only the starting player initiates camp selection
+        // The other player will receive the distribution via SYNC_CAMP_DISTRIBUTION
+        if (message.startingPlayer === this.playerId) {
+          window.debugGame.dispatcher.dispatch({
+            type: "START_CAMP_SELECTION",
           });
-
-          if (
-            window.debugGame.state.phase === "events" &&
-            message.startingPlayer === this.playerId
-          ) {
-            console.log("Starting player triggering phase progression");
-            window.commandSystem.processEventsPhase();
-          }
-        }, 1000);
+        } else {
+          // Just set the phase for the other player
+          window.debugGame.state.phase = "camp_selection";
+          window.debugGame.state.campSelection.active = true;
+        }
         break;
 
       case "GAME_READY":

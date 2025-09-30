@@ -294,6 +294,46 @@ export class UIRenderer {
     // Clear container
     this.container.innerHTML = "";
 
+    // Check if game hasn't started yet - ADD THIS SECTION HERE
+    if (!this.state.phase || this.state.phase === "setup") {
+      const waiting = this.createElement("div", "waiting-screen");
+      waiting.innerHTML = `
+      <h1>Radlands</h1>
+      <p>Waiting for game to start...</p>
+    `;
+
+      const connectBtn = this.createElement("button", "connect-btn");
+      connectBtn.textContent = "Connect to Server";
+      connectBtn.style.cssText = `
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 20px;
+    `;
+
+      connectBtn.addEventListener("click", () => {
+        window.debugGame.connect();
+        connectBtn.textContent = "Connecting...";
+        connectBtn.disabled = true;
+      });
+
+      waiting.appendChild(connectBtn);
+
+      if (window.networkPlayerId) {
+        const status = this.createElement("div", "connection-status");
+        status.textContent = `Connected as: ${window.networkPlayerId}`;
+        status.style.marginTop = "10px";
+        waiting.appendChild(status);
+      }
+
+      this.container.appendChild(waiting);
+      return;
+    }
+
     // Check for camp selection phase FIRST
     if (this.state.phase === "camp_selection") {
       this.container.appendChild(this.renderCampSelection());

@@ -775,6 +775,16 @@ export class CommandSystem {
       // Place the event
       player.eventQueue[placement.slot] = card;
 
+      // Broadcast event play
+      this.broadcastStateChange("EVENT_PLAYED", {
+        playerId: playerId,
+        eventName: card.name,
+        queueSlot: placement.slot,
+        handCount: player.hand.length,
+        water: player.water,
+        eventQueue: player.eventQueue.map((e) => (e ? e.name : null)),
+      });
+
       // Pay cost and remove from hand
       player.water -= cost;
       player.hand.splice(cardIndex, 1);
@@ -1016,6 +1026,14 @@ export class CommandSystem {
       cost: 0,
     });
 
+    // Broadcast water silo take
+    this.broadcastStateChange("WATER_SILO_TAKEN", {
+      playerId: playerId,
+      handCount: player.hand.length,
+      water: player.water,
+      waterSiloStatus: player.waterSilo,
+    });
+
     console.log("Water Silo taken to hand");
     return true;
   }
@@ -1135,6 +1153,15 @@ export class CommandSystem {
       console.log("Water Silo returned to play area, gained 1 water");
       return true;
     }
+
+    // Broadcast the junk action
+    this.broadcastStateChange("CARD_JUNKED", {
+      playerId: playerId,
+      cardName: card.name,
+      junkEffect: card.junkEffect,
+      handCount: player.hand.length,
+      water: player.water,
+    });
 
     // DISCARD THE CARD FIRST (except for effects that need targeting)
     const junkEffect = card.junkEffect?.toLowerCase();
@@ -1681,6 +1708,16 @@ export class CommandSystem {
     console.log(
       `Paid ${ability.cost} water for ${card.name}'s ${ability.effect} ability`
     );
+
+    // Broadcast ability use
+    this.broadcastStateChange("ABILITY_USED", {
+      playerId: playerId,
+      cardName: card.name,
+      columnIndex: columnIndex,
+      position: position,
+      abilityEffect: ability.effect,
+      water: player.water,
+    });
 
     // Execute ability
     const result = this.executeAbility(ability, {

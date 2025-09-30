@@ -9,6 +9,16 @@ export class UIRenderer {
     this.container = null;
   }
 
+  isOurCard(playerId, isNetworkMode = this.dispatcher.networkMode) {
+    if (!isNetworkMode) {
+      // Local mode - can interact if it's current player's turn
+      return playerId === this.state.currentPlayer;
+    }
+
+    // Network mode - can only interact with our own cards
+    return playerId === window.networkPlayerId;
+  }
+
   renderCampSelection() {
     const container = this.createElement("div", "camp-selection-container");
 
@@ -801,8 +811,13 @@ export class UIRenderer {
     if (player.waterSilo === "available") {
       waterSilo.classList.add("available");
 
-      // Make it clickable if it's the player's turn
+      // CRITICAL: Check ownership before allowing interaction
+      const isOurSilo =
+        !this.dispatcher.networkMode || playerId === window.networkPlayerId;
+
+      // Make it clickable ONLY if it's OUR silo AND our turn
       if (
+        isOurSilo &&
         this.state.currentPlayer === playerId &&
         this.state.phase === "actions" &&
         !this.state.pending

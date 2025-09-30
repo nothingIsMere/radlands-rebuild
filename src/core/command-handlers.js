@@ -12,6 +12,10 @@ export function registerAllHandlers(commandSystem) {
     SELECT_TARGET: handleSelectTarget,
     DRAW_CARD: handleDrawCard,
     TAKE_WATER_SILO: handleTakeWaterSilo,
+    CARD_JUNKED: handleCardJunked,
+    ABILITY_USED: handleAbilityUsed,
+    EVENT_PLAYED: handleEventPlayed,
+    WATER_SILO_TAKEN: handleWaterSiloTaken,
 
     // Phase and turn handlers
     SYNC_PHASE_CHANGE: handleSyncPhaseChange,
@@ -367,6 +371,117 @@ function handleSyncEventQueue(payload) {
   });
 
   window.dispatchEvent(new CustomEvent("gameStateChanged"));
+  return true;
+}
+
+function handleCardJunked(payload) {
+  console.log(
+    `[SYNC] ${payload.playerId} junked ${payload.cardName} for ${payload.junkEffect}`
+  );
+
+  const player = this.state.players[payload.playerId];
+
+  // Handle Water Silo specially
+  if (payload.isWaterSilo) {
+    player.waterSilo = "available";
+  }
+
+  // Update hand count
+  while (player.hand.length > payload.handCount) {
+    player.hand.pop();
+  }
+
+  // Update water
+  player.water = payload.water;
+
+  console.log(
+    `[SYNC] ${payload.playerId} now has ${player.hand.length} cards, ${player.water} water`
+  );
+  window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+  return true;
+}
+
+function handleAbilityUsed(payload) {
+  console.log(
+    `[SYNC] ${payload.playerId} used ${payload.cardName}'s ${payload.abilityEffect} ability`
+  );
+
+  const player = this.state.players[payload.playerId];
+  const card = this.state.getCard(
+    payload.playerId,
+    payload.columnIndex,
+    payload.position
+  );
+
+  // Mark card as used
+  if (card) {
+    card.isReady = false;
+  }
+
+  // Update water
+  player.water = payload.water;
+
+  console.log(
+    `[SYNC] ${payload.cardName} marked as not ready, water: ${player.water}`
+  );
+  window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+  return true;
+}
+
+function handleEventPlayed(payload) {
+  console.log(`[SYNC] ${payload.playerId} played event ${payload.eventName}`);
+
+  const player = this.state.players[payload.playerId];
+
+  // Update event queue
+  if (payload.eventQueue) {
+    player.eventQueue = payload.eventQueue.map((name) =>
+      name ? { name: name, id: `event_${Date.now()}` } : null
+    );
+  }
+
+  // Update hand count
+  while (player.hand.length > payload.handCount) {
+    player.hand.pop();
+  }
+
+  // Update water
+  player.water = payload.water;
+
+  console.log(
+    `[SYNC] Event ${payload.eventName} placed in slot ${payload.queueSlot}`
+  );
+  window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+  return true;
+}
+
+function handleWaterSiloTaken(payload) {
+  console.log(`[SYNC] ${payload.playerId} took Water Silo`);
+
+  const player = this.state.players[payload.playerId];
+
+  // Update water silo status
+  player.waterSilo = payload.waterSiloStatus;
+
+  // Add placeholder card to hand
+  while (player.hand.length < payload.handCount) {
+    player.hand.push({
+      id: `water_silo_${Date.now()}`,
+      name: "Water Silo",
+      type: "special",
+      isWaterSilo: true,
+    });
+  }
+
+  // Update water
+  player.water = payload.water;
+
+  console.log(`[SYNC] Water Silo taken, water: ${player.water}`);
+  window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
   return true;
 }
 

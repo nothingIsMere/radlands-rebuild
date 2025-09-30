@@ -50,16 +50,6 @@ window.addEventListener("gameStateChanged", () => {
   uiRenderer.render();
 });
 
-// For single-player (non-networked) games, start phase progression immediately
-if (!actionDispatcher.networkMode) {
-  setTimeout(() => {
-    console.log("Single-player: Starting phase progression");
-    if (gameState.phase === "events") {
-      commandSystem.processEventsPhase();
-    }
-  }, 1000);
-}
-
 // Add debug tools for testing network features
 window.debugGame = {
   dispatcher: actionDispatcher,

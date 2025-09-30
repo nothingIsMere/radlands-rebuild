@@ -1266,6 +1266,15 @@ export class CommandSystem {
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
     this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
 
+    this.handlers.set("SYNC_PHASE_CHANGE", (payload) => {
+      this.state.phase = payload.phase;
+      this.state.currentPlayer = payload.currentPlayer;
+      this.state.turnNumber = payload.turnNumber;
+
+      window.dispatchEvent(new CustomEvent("gameStateChanged"));
+      return true;
+    });
+
     // Camp selection handlers
     this.handlers.set("START_CAMP_SELECTION", (payload) => {
       if (!this.campHandler) {
@@ -1310,6 +1319,19 @@ export class CommandSystem {
       return this.campHandler.confirmSelection(payload.playerId);
     });
 
+    this.handlers.set("SYNC_PHASE_CHANGE", (payload) => {
+      console.log("[SYNC] Received phase change:", payload);
+
+      this.state.phase = payload.phase;
+      this.state.currentPlayer = payload.currentPlayer;
+      this.state.turnNumber = payload.turnNumber;
+
+      // Update UI
+      window.dispatchEvent(new CustomEvent("gameStateChanged"));
+
+      return true;
+    });
+
     this.handlers.set("SYNC_CAMP_SELECTION", (payload) => {
       if (!this.campHandler) {
         this.campHandler = new CampSelectionHandler(this.state, this);
@@ -1336,17 +1358,25 @@ export class CommandSystem {
       });
 
       selection.confirmed = true;
+
       console.log(
         `[CAMP] Synced ${payload.playerId}'s camps:`,
         payload.selectedCamps
       );
 
-      // Check if both confirmed
+      // Check if both confirmed AND camp selection is still active (not already finalized)
       if (
         this.state.campSelection.leftPlayer.confirmed &&
-        this.state.campSelection.rightPlayer.confirmed
+        this.state.campSelection.rightPlayer.confirmed &&
+        this.state.campSelection.active // This prevents multiple finalizations
       ) {
-        this.campHandler.finalizeCampSelection();
+        // Only the left player finalizes to avoid duplication in network mode
+        if (
+          !window.debugGame?.dispatcher?.networkMode ||
+          window.networkPlayerId === "left"
+        ) {
+          this.campHandler.finalizeCampSelection();
+        }
       }
 
       return true;
@@ -1437,6 +1467,7 @@ export class CommandSystem {
       "SYNC_CAMP_SELECTION",
       "SYNC_CAMP_DISTRIBUTION",
       "FINALIZE_CAMPS",
+      "SYNC_PHASE_CHANGE",
     ];
 
     if (!noPlayerIdRequired.includes(command.type)) {
@@ -3335,20 +3366,40 @@ export class CommandSystem {
     this.state.turnNumber++;
 
     // Determine next phase
+    // Move to actions phase
     const transition = calculatePhaseTransition("actions", false);
     this.state.phase = transition.nextPhase;
+
+    // Broadcast phase change in network mode
+    if (window.debugGame?.dispatcher?.networkMode) {
+      window.debugGame.dispatcher.dispatch({
+        type: "SYNC_PHASE_CHANGE",
+        payload: {
+          phase: transition.nextPhase,
+          currentPlayer: this.state.currentPlayer,
+          turnNumber: this.state.turnNumber,
+        },
+      });
+    }
 
     this.notifyUI("PHASE_CHANGE", this.state.phase);
 
     // Process events phase after a short delay so it's visible
     setTimeout(() => {
-      this.processEventsPhase();
+      // Don't process on turn 1 - that's handled by initializeMainGame
+      if (this.state.turnNumber > 1) {
+        this.processEventsPhase();
+      }
     }, 1000);
 
     return true;
   }
 
   processEventsPhase() {
+    console.log(
+      `[EVENTS] Processing events phase for ${this.state.currentPlayer}`
+    );
+    console.trace();
     const player = this.state.players[this.state.currentPlayer];
 
     // Resolve event in slot 1 (index 0)
@@ -3472,6 +3523,17 @@ export class CommandSystem {
   }
 
   processReplenishPhase() {
+    console.log(
+      `[REPLENISH] Processing for ${this.state.currentPlayer}, turn ${this.state.turnNumber}`
+    );
+    console.log(
+      `[REPLENISH] Starting for ${this.state.currentPlayer}, turn ${this.state.turnNumber}`
+    );
+    console.log(
+      `[REPLENISH] Hand size before draw: ${
+        this.state.players[this.state.currentPlayer].hand.length
+      }`
+    );
     const player = this.state.players[this.state.currentPlayer];
 
     // Draw a card
@@ -3508,6 +3570,32 @@ export class CommandSystem {
     // Move to actions phase
     const transition = calculatePhaseTransition("replenish", false);
     this.state.phase = transition.nextPhase;
+
+    // Sync entire game state in network mode
+    if (window.debugGame?.dispatcher?.networkMode) {
+      window.debugGame.dispatcher.dispatch({
+        type: "SYNC_GAME_STATE",
+        payload: {
+          players: {
+            left: {
+              handCount: this.state.players.left.hand.length,
+              water: this.state.players.left.water,
+            },
+            right: {
+              handCount: this.state.players.right.hand.length,
+              water: this.state.players.right.water,
+            },
+          },
+          phase: transition.nextPhase,
+          currentPlayer: this.state.currentPlayer,
+          turnNumber: this.state.turnNumber,
+          deckCount: this.state.deck.length,
+        },
+      });
+    }
+
     this.notifyUI("PHASE_CHANGE", this.state.phase);
+
+    console.log(`[REPLENISH] Hand size after draw: ${player.hand.length}`);
   }
 }

@@ -77,21 +77,23 @@ export class NetworkClient {
         break;
 
       case "START_GAME":
-        console.log(`[NETWORK] Starting new game - camp selection phase`);
+        console.log(
+          `[NETWORK] Starting new game - starting player: ${message.startingPlayer}`
+        );
 
-        // Reset to fresh state
         window.debugGame.state.resetToFreshGame();
 
-        // Only the starting player initiates camp selection
-        // The other player will receive the distribution via SYNC_CAMP_DISTRIBUTION
-        if (message.startingPlayer === this.playerId) {
+        // Set the starting player from the server
+        window.debugGame.state.currentPlayer = message.startingPlayer;
+
+        if (this.playerId === "left") {
+          console.log("[NETWORK] Left player initiating camp distribution");
           window.debugGame.dispatcher.dispatch({
             type: "START_CAMP_SELECTION",
           });
         } else {
-          // Just set the phase for the other player
+          console.log("[NETWORK] Right player waiting for camp distribution");
           window.debugGame.state.phase = "camp_selection";
-          window.debugGame.state.campSelection.active = true;
         }
         break;
 

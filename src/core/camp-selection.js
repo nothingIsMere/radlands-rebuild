@@ -173,6 +173,10 @@ export class CampSelectionHandler {
         (sum, camp) => sum + camp.campDraw,
         0
       );
+      console.log(
+        `[CAMP] ${playerId} camp draw total: ${handSize} from camps:`,
+        selection.selectedCamps.map((c) => `${c.name}(${c.campDraw})`)
+      );
       player.initialHandSize = handSize;
     });
 
@@ -212,14 +216,26 @@ export class CampSelectionHandler {
       const player = this.state.players[playerId];
       const handSize = player.initialHandSize || 3; // Default to 3 if not set
 
+      console.log(`[INIT] ${playerId} starting with empty hand`);
+      console.log(
+        `[INIT] ${playerId} will draw ${handSize} cards (from camps)`
+      );
+
       player.hand = []; // Clear any existing cards
 
       for (let i = 0; i < handSize; i++) {
         const card = this.state.deck.shift();
         if (card) {
           player.hand.push(card);
+          console.log(
+            `[INIT] ${playerId} drew card ${i + 1}/${handSize}: ${card.name}`
+          );
         }
       }
+
+      console.log(
+        `[INIT] ${playerId} hand size after initial draw: ${player.hand.length}`
+      );
 
       console.log(`[CAMP] ${playerId} drew ${handSize} cards`);
 
@@ -231,8 +247,8 @@ export class CampSelectionHandler {
       player.waterSilo = "available";
     });
 
-    // Randomly select starting player
-    this.state.currentPlayer = Math.random() < 0.5 ? "left" : "right";
+    // The currentPlayer should already be set from the server's START_GAME message
+    console.log(`[CAMP] Current player is: ${this.state.currentPlayer}`);
 
     // Start in events phase
     this.state.phase = "events";
@@ -248,8 +264,15 @@ export class CampSelectionHandler {
 
     // Start phase progression after a short delay
     setTimeout(() => {
-      if (window.commandSystem && this.state.phase === "events") {
-        console.log("[CAMP] Starting events phase");
+      // Only trigger once and only by the current player
+      if (
+        window.networkPlayerId === this.state.currentPlayer &&
+        this.state.phase === "events" &&
+        !this.phaseProgressionStarted
+      ) {
+        // Add a flag to prevent double-trigger
+        this.phaseProgressionStarted = true;
+        console.log("[CAMP] Starting events phase (only once!)");
         window.commandSystem.processEventsPhase();
       }
     }, 500);

@@ -6,6 +6,22 @@ export class NetworkClient {
     this.myPlayerId = null;
   }
 
+  sendCommand(command) {
+    if (!this.connected) {
+      console.error("Cannot send command - not connected");
+      return false;
+    }
+
+    console.log("Sending command to server:", command.type);
+    this.ws.send(
+      JSON.stringify({
+        type: "COMMAND",
+        command: command,
+      })
+    );
+    return true;
+  }
+
   connect() {
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket("ws://localhost:8080");

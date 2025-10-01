@@ -3108,12 +3108,14 @@ export class CommandSystem {
   }
 
   notifyUI(commandType, result) {
-    // Emit event for UI update
-    window.dispatchEvent(
-      new CustomEvent("gameStateChanged", {
-        detail: { commandType, result, state: this.state },
-      })
-    );
+    // Only dispatch events in browser environment
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("gameStateChanged", {
+          detail: { commandType, result, state: this.state },
+        })
+      );
+    }
   }
 
   // Import your existing ability handlers here
@@ -3186,10 +3188,8 @@ export class CommandSystem {
 
     this.notifyUI("PHASE_CHANGE", this.state.phase);
 
-    // Process events phase after a short delay so it's visible
-    setTimeout(() => {
-      this.processEventsPhase();
-    }, 1000);
+    // Server doesn't need UI delays
+    this.processEventsPhase();
 
     return true;
   }
@@ -3305,16 +3305,12 @@ export class CommandSystem {
     // Update UI to show event changes
     this.notifyUI("EVENTS_PROCESSED", null);
 
-    // Move to replenish phase after a delay
-    setTimeout(() => {
-      this.state.phase = "replenish";
-      this.notifyUI("PHASE_CHANGE", "replenish");
+    // Move to replenish phase immediately
+    this.state.phase = "replenish";
+    this.notifyUI("PHASE_CHANGE", "replenish");
 
-      // Process replenish after another short delay
-      setTimeout(() => {
-        this.processReplenishPhase();
-      }, 1000);
-    }, 1000);
+    // Process replenish immediately
+    this.processReplenishPhase();
   }
 
   processReplenishPhase() {
@@ -3346,7 +3342,7 @@ export class CommandSystem {
       }
     }
 
-    // Move to actions phase
+    // Move to actions phase immediately
     const transition = calculatePhaseTransition("replenish", false);
     this.state.phase = transition.nextPhase;
     this.notifyUI("PHASE_CHANGE", this.state.phase);

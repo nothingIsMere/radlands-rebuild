@@ -66,5 +66,12 @@ export class CardRegistry {
   }
 }
 
-// Make globally available
-window.cardRegistry = new CardRegistry();
+const cardRegistryInstance = new CardRegistry();
+
+// Make available in browser
+if (typeof window !== "undefined") {
+  window.cardRegistry = cardRegistryInstance;
+}
+
+// Export for Node.js
+export { cardRegistryInstance as cardRegistry };

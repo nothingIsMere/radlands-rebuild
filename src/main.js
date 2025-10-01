@@ -8,7 +8,17 @@ const gameState = new GameState();
 const commandSystem = new CommandSystem(gameState);
 const uiRenderer = new UIRenderer(gameState, commandSystem);
 
-// Connect to multiplayer server
+// Intercept all commands and send to server instead of executing locally
+const originalExecute = commandSystem.execute.bind(commandSystem);
+commandSystem.execute = function (command) {
+  if (networkClient.connected) {
+    // Send to server, don't execute locally
+    return networkClient.sendCommand(command);
+  }
+  // Fallback to local execution if not connected (shouldn't happen)
+  return originalExecute(command);
+};
+
 // Connect to multiplayer server
 const networkClient = new NetworkClient((serverState) => {
   console.log("Updating local state from server");

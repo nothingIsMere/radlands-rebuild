@@ -82,6 +82,9 @@ networkClient
     console.error("Failed to connect:", error);
   });
 
+// Make it globally accessible so UIRenderer can check whose turn it is
+window.networkClient = networkClient;
+
 // Listen for state changes
 window.addEventListener("gameStateChanged", () => {
   uiRenderer.render();

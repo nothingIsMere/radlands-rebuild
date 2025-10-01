@@ -8,6 +8,14 @@ export class UIRenderer {
     this.container = null;
   }
 
+  isMyTurn() {
+    // Check if we know our player ID and if it's our turn
+    if (!window.networkClient || !window.networkClient.myPlayerId) {
+      return true; // Default to allowing interaction if not connected
+    }
+    return this.state.currentPlayer === window.networkClient.myPlayerId;
+  }
+
   renderGameOver() {
     const overlay = document.createElement("div");
     overlay.className = "game-over-overlay";
@@ -2927,7 +2935,9 @@ export class UIRenderer {
     const endTurn = this.createElement("button");
     endTurn.textContent = "End Turn";
     endTurn.disabled =
-      this.state.phase !== "actions" || this.state.pending !== null;
+      this.state.phase !== "actions" ||
+      this.state.pending !== null ||
+      !this.isMyTurn();
 
     endTurn.addEventListener("click", () => {
       if (this.state.phase === "game_over") return;

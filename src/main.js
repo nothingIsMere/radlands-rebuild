@@ -35,12 +35,20 @@ const networkClient = new NetworkClient(
     gameState.turnEvents = serverState.turnEvents;
     gameState.activeAbilityContext = serverState.activeAbilityContext;
 
-    // Copy player data
+    // Copy player data, but hide opponent's hand
     ["left", "right"].forEach((playerId) => {
       const player = gameState.players[playerId];
       const serverPlayer = serverState.players[playerId];
 
-      player.hand = serverPlayer.hand;
+      // If this is the opponent, hide their hand cards
+      if (playerId !== networkClient.myPlayerId) {
+        // Show the correct number of cards, but hide their content
+        player.hand = serverPlayer.hand.map(() => ({ hidden: true }));
+      } else {
+        // Show your own hand normally
+        player.hand = serverPlayer.hand;
+      }
+
       player.water = serverPlayer.water;
       player.raiders = serverPlayer.raiders;
       player.waterSilo = serverPlayer.waterSilo;

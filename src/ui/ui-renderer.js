@@ -2720,6 +2720,18 @@ export class UIRenderer {
     player.hand.forEach((card, index) => {
       const cardDiv = this.createElement("div", "hand-card");
 
+      // Handle hidden opponent cards
+      if (card.hidden) {
+        cardDiv.classList.add("hidden-card");
+        const cardText = document.createElement("div");
+        cardText.className = "card-text";
+        cardText.textContent = "Hidden Card";
+        cardDiv.appendChild(cardText);
+        hand.appendChild(cardDiv);
+        return; // Skip rest of rendering for hidden cards
+      }
+
+      // Only set attributes ONCE, after the hidden check
       cardDiv.setAttribute("data-card-type", card.type);
 
       if (

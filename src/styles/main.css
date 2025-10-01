@@ -1674,3 +1674,15 @@ body.has-pending .card.adrenalinelab-target {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+.hidden-card {
+  background: #333;
+  border: 2px solid #666;
+  cursor: default;
+  opacity: 0.7;
+}
+
+.hidden-card .card-text {
+  color: #999;
+  font-style: italic;
+}

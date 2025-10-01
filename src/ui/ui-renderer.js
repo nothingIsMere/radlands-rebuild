@@ -570,8 +570,9 @@ export class UIRenderer {
     if (player.waterSilo === "available") {
       waterSilo.classList.add("available");
 
-      // Make it clickable if it's the player's turn
+      // Make it clickable if it's this player's Water Silo AND it's their turn
       if (
+        playerId === window.networkClient?.myPlayerId &&
         this.state.currentPlayer === playerId &&
         this.state.phase === "actions" &&
         !this.state.pending
@@ -2892,7 +2893,8 @@ export class UIRenderer {
       drawCardBtn.textContent = `Draw Card (2💧)`;
 
       const currentPlayer = this.state.players[this.state.currentPlayer];
-      drawCardBtn.disabled = currentPlayer.water < CONSTANTS.DRAW_COST;
+      drawCardBtn.disabled =
+        currentPlayer.water < CONSTANTS.DRAW_COST || !this.isMyTurn();
 
       drawCardBtn.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;

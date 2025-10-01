@@ -1,25 +1,10 @@
 export class NetworkClient {
-  constructor(onStateUpdate) {
+  constructor(onStateUpdate, onPlayerAssigned) {
     this.ws = null;
     this.connected = false;
     this.onStateUpdate = onStateUpdate;
+    this.onPlayerAssigned = onPlayerAssigned;
     this.myPlayerId = null;
-  }
-
-  sendCommand(command) {
-    if (!this.connected) {
-      console.error("Cannot send command - not connected");
-      return false;
-    }
-
-    console.log("Sending command to server:", command.type);
-    this.ws.send(
-      JSON.stringify({
-        type: "COMMAND",
-        command: command,
-      })
-    );
-    return true;
   }
 
   connect() {
@@ -34,6 +19,12 @@ export class NetworkClient {
 
       this.ws.onmessage = (event) => {
         const message = JSON.parse(event.data);
+
+        if (message.type === "PLAYER_ASSIGNED") {
+          this.myPlayerId = message.playerId;
+          console.log("Assigned as player:", this.myPlayerId);
+          this.onPlayerAssigned(message.playerId);
+        }
 
         if (message.type === "STATE_SYNC") {
           console.log("Received state from server");
@@ -51,5 +42,21 @@ export class NetworkClient {
         console.log("Disconnected from server");
       };
     });
+  }
+
+  sendCommand(command) {
+    if (!this.connected) {
+      console.error("Cannot send command - not connected");
+      return false;
+    }
+
+    console.log("Sending command to server:", command.type);
+    this.ws.send(
+      JSON.stringify({
+        type: "COMMAND",
+        command: command,
+      })
+    );
+    return true;
   }
 }

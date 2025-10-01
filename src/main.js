@@ -20,44 +20,50 @@ commandSystem.execute = function (command) {
 };
 
 // Connect to multiplayer server
-const networkClient = new NetworkClient((serverState) => {
-  console.log("Updating local state from server");
+const networkClient = new NetworkClient(
+  (serverState) => {
+    console.log("Updating local state from server");
 
-  // Copy primitive properties
-  gameState.currentPlayer = serverState.currentPlayer;
-  gameState.turnNumber = serverState.turnNumber;
-  gameState.phase = serverState.phase;
-  gameState.deck = serverState.deck;
-  gameState.discard = serverState.discard;
-  gameState.deckExhaustedCount = serverState.deckExhaustedCount;
-  gameState.pending = serverState.pending;
-  gameState.turnEvents = serverState.turnEvents;
-  gameState.activeAbilityContext = serverState.activeAbilityContext;
+    // Copy primitive properties
+    gameState.currentPlayer = serverState.currentPlayer;
+    gameState.turnNumber = serverState.turnNumber;
+    gameState.phase = serverState.phase;
+    gameState.deck = serverState.deck;
+    gameState.discard = serverState.discard;
+    gameState.deckExhaustedCount = serverState.deckExhaustedCount;
+    gameState.pending = serverState.pending;
+    gameState.turnEvents = serverState.turnEvents;
+    gameState.activeAbilityContext = serverState.activeAbilityContext;
 
-  // Copy player data but keep existing Column instances
-  ["left", "right"].forEach((playerId) => {
-    const player = gameState.players[playerId];
-    const serverPlayer = serverState.players[playerId];
+    // Copy player data
+    ["left", "right"].forEach((playerId) => {
+      const player = gameState.players[playerId];
+      const serverPlayer = serverState.players[playerId];
 
-    player.hand = serverPlayer.hand;
-    player.water = serverPlayer.water;
-    player.raiders = serverPlayer.raiders;
-    player.waterSilo = serverPlayer.waterSilo;
-    player.eventQueue = serverPlayer.eventQueue;
+      player.hand = serverPlayer.hand;
+      player.water = serverPlayer.water;
+      player.raiders = serverPlayer.raiders;
+      player.waterSilo = serverPlayer.waterSilo;
+      player.eventQueue = serverPlayer.eventQueue;
 
-    // Update each column's cards from the 'slots' array
-    for (let col = 0; col < 3; col++) {
-      const serverColumn = serverPlayer.columns[col];
-
-      for (let pos = 0; pos < 3; pos++) {
-        const card = serverColumn.slots ? serverColumn.slots[pos] : null;
-        player.columns[col].setCard(pos, card);
+      // Update columns
+      for (let col = 0; col < 3; col++) {
+        const serverColumn = serverPlayer.columns[col];
+        for (let pos = 0; pos < 3; pos++) {
+          const card = serverColumn.slots ? serverColumn.slots[pos] : null;
+          player.columns[col].setCard(pos, card);
+        }
       }
-    }
-  });
+    });
 
-  uiRenderer.render();
-});
+    uiRenderer.render();
+  },
+  (playerId) => {
+    console.log("You are player:", playerId);
+    // Show which player you are in the UI
+    document.title = `Radlands - ${playerId.toUpperCase()} Player`;
+  }
+);
 
 networkClient
   .connect()

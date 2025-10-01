@@ -3,7 +3,8 @@ import { GameState } from "../src/core/game-state.js";
 import { CommandSystem } from "../src/core/command-system.js";
 
 const wss = new WebSocketServer({ port: 8080 });
-const clients = new Set();
+const clients = new Map(); // Map of ws -> playerId
+const players = { left: null, right: null }; // Which websocket is which player
 
 // Create a single game state on the server
 const gameState = new GameState();
@@ -60,24 +61,48 @@ gameState.players.right.hand = [
 gameState.phase = "actions";
 gameState.currentPlayer = "left";
 
-// NOW create command system (after gameState exists)
 const commandSystem = new CommandSystem(gameState);
 
 function broadcast(message) {
   const data = JSON.stringify(message);
-  clients.forEach((client) => {
-    if (client.readyState === 1) {
+  clients.forEach((playerId, ws) => {
+    if (ws.readyState === 1) {
       // WebSocket.OPEN
-      client.send(data);
+      ws.send(data);
     }
   });
 }
 
 wss.on("connection", (ws) => {
-  console.log("Client connected. Total clients:", clients.size + 1);
-  clients.add(ws);
+  // Assign player ID
+  let playerId = null;
 
-  // Send current state to the new client immediately
+  if (!players.left) {
+    playerId = "left";
+    players.left = ws;
+  } else if (!players.right) {
+    playerId = "right";
+    players.right = ws;
+  } else {
+    console.log("Game full - rejecting connection");
+    ws.close();
+    return;
+  }
+
+  clients.set(ws, playerId);
+  console.log(
+    `Client connected as ${playerId} player. Total clients: ${clients.size}`
+  );
+
+  // Tell client which player they are
+  ws.send(
+    JSON.stringify({
+      type: "PLAYER_ASSIGNED",
+      playerId: playerId,
+    })
+  );
+
+  // Send current state to the new client
   ws.send(
     JSON.stringify({
       type: "STATE_SYNC",
@@ -90,7 +115,7 @@ wss.on("connection", (ws) => {
     const message = JSON.parse(data.toString());
 
     if (message.type === "COMMAND") {
-      console.log("Received command:", message.command.type);
+      console.log(`Received command from ${playerId}:`, message.command.type);
 
       // Execute command on server's game state
       const success = commandSystem.execute(message.command);
@@ -109,8 +134,10 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
-    console.log("Client disconnected. Total clients:", clients.size - 1);
+    console.log(`${playerId} player disconnected`);
     clients.delete(ws);
+    if (players.left === ws) players.left = null;
+    if (players.right === ws) players.right = null;
   });
 
   ws.on("error", (error) => {

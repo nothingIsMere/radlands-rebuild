@@ -666,13 +666,17 @@ export class CommandSystem {
     const eventName = card.name.toLowerCase().replace(/\s+/g, "");
     console.log("Looking for event:", eventName);
 
-    const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
-
+    const eventDef =
+      typeof window !== "undefined"
+        ? window.cardRegistry?.eventAbilities?.[eventName]
+        : null;
     if (!eventDef) {
       console.log(`Unknown event: ${card.name}`);
       console.log(
         "Available events:",
-        Object.keys(window.cardRegistry?.eventAbilities || {})
+        typeof window !== "undefined"
+          ? Object.keys(window.cardRegistry?.eventAbilities || {})
+          : []
       );
 
       // Fallback - use the card's own properties if no definition found
@@ -971,6 +975,35 @@ export class CommandSystem {
     return true;
   }
 
+  handleCancelAction(payload) {
+    console.log("Canceling pending action");
+
+    // Return junk card to hand if cancelling a junk effect
+    if (this.state.pending?.junkCard) {
+      const player = this.state.players[this.state.pending.sourcePlayerId];
+      player.hand.push(this.state.pending.junkCard);
+      console.log(`Returned ${this.state.pending.junkCard.name} to hand`);
+    }
+
+    // Refund water if an ability was started but not completed
+    if (this.state.pending?.sourceCard && this.state.pending?.abilityUsed) {
+      const player = this.state.players[this.state.pending.sourcePlayerId];
+      player.water += this.state.pending.abilityUsed.cost;
+
+      // Mark card as ready again
+      if (this.state.pending.sourceCard) {
+        this.state.pending.sourceCard.isReady = true;
+      }
+
+      console.log(
+        `Refunded ${this.state.pending.abilityUsed.cost} water and marked card as ready`
+      );
+    }
+
+    this.state.pending = null;
+    return true;
+  }
+
   handleDrawCard() {
     const player = this.state.players[this.state.currentPlayer];
 
@@ -999,18 +1032,20 @@ export class CommandSystem {
   triggerEntryTraits(person, playerId, columnIndex, position) {
     console.log(`${person.name} entered play`);
 
-    // Check if this card has an entry trait
     const cardName = person.name.toLowerCase().replace(/\s+/g, "");
-    const traitHandler = window.cardRegistry?.getTraitHandler(cardName);
 
-    if (traitHandler?.onEntry) {
-      console.log(`Triggering entry trait for ${person.name}`);
-      traitHandler.onEntry(this.state, {
-        card: person,
-        playerId,
-        columnIndex,
-        position,
-      });
+    if (typeof window !== "undefined") {
+      const traitHandler = window.cardRegistry?.getTraitHandler(cardName);
+
+      if (traitHandler?.onEntry) {
+        console.log(`Triggering entry trait for ${person.name}`);
+        traitHandler.onEntry(this.state, {
+          card: person,
+          playerId,
+          columnIndex,
+          position,
+        });
+      }
     }
   }
 
@@ -1262,6 +1297,7 @@ export class CommandSystem {
     this.handlers.set("SELECT_TARGET", this.handleSelectTarget.bind(this));
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
     this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
+    this.handlers.set("CANCEL_ACTION", this.handleCancelAction.bind(this));
   }
 
   validateCommand(command) {
@@ -1803,7 +1839,7 @@ export class CommandSystem {
     }
 
     // Check camp abilities first
-    if (context.source.type === "camp") {
+    if (context.source.type === "camp" && typeof window !== "undefined") {
       const campAbility =
         window.cardRegistry?.campAbilities?.[cardName]?.[
           ability.effect.toLowerCase().replace(/\s+/g, "")
@@ -1824,15 +1860,17 @@ export class CommandSystem {
     const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
 
     // First check the registry with the correct card name
-    let personAbility =
-      window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
+    let personAbility = null;
 
-    // If not found in registry and this is Mimic, also check the imported personAbilities
-    if (!personAbility && context.fromMimic) {
-      // Import personAbilities at the top of your file if not already done
-      // import { personAbilities } from "../cards/person-abilities.js";
-      const personAbilitiesImport = window.personAbilities || {};
-      personAbility = personAbilitiesImport[cardName]?.[effectName];
+    if (typeof window !== "undefined") {
+      personAbility =
+        window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
+
+      // If not found in registry and this is Mimic, also check the imported personAbilities
+      if (!personAbility && context.fromMimic) {
+        const personAbilitiesImport = window.personAbilities || {};
+        personAbility = personAbilitiesImport[cardName]?.[effectName];
+      }
     }
 
     if (personAbility?.handler) {
@@ -3121,8 +3159,11 @@ export class CommandSystem {
   // Import your existing ability handlers here
   getAbilityHandler(cardName, effect) {
     // This will connect to your card-specific handlers
-    const handlers = window.cardAbilityHandlers || {};
-    return handlers[cardName]?.[effect];
+    if (typeof window !== "undefined") {
+      const handlers = window.cardAbilityHandlers || {};
+      return handlers[cardName]?.[effect];
+    }
+    return null;
   }
 
   handleGenericAbility(ability, context) {
@@ -3236,7 +3277,10 @@ export class CommandSystem {
       } else {
         // Look up event definition for non-Raiders events
         const eventName = event.name.toLowerCase().replace(/\s+/g, "");
-        const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
+        const eventDef =
+          typeof window !== "undefined"
+            ? window.cardRegistry?.eventAbilities?.[eventName]
+            : null;
 
         if (eventDef?.effect?.handler) {
           console.log(`Resolving ${event.name} event effect`);

@@ -1383,10 +1383,14 @@ export class UIRenderer {
                 card.isReady && !card.isDamaged && !card.isDestroyed;
             }
 
-            // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION
+            // Check turn control
+            const isYourTurn = this.isMyTurn();
+
+            // BLOCK ALL ABILITIES IF THERE'S ANY PENDING ACTION OR NOT YOUR TURN
             if (
               canUseAbility &&
               playerId === this.state.currentPlayer &&
+              isYourTurn &&
               !this.state.pending
             ) {
               const btn = this.createElement("button", "ability-btn");
@@ -1424,7 +1428,7 @@ export class UIRenderer {
                       playerId: playerId,
                       columnIndex: columnIndex,
                       position: position, // Include actual position for Juggernaut
-                      abilityIndex: index, // <-- ADD THIS
+                      abilityIndex: index,
                     },
                   });
                 } else if (card.type === "camp") {
@@ -1442,7 +1446,7 @@ export class UIRenderer {
                       playerId: playerId,
                       columnIndex: columnIndex,
                       position: 0,
-                      abilityIndex: index, // <-- ADD THIS
+                      abilityIndex: index,
                     },
                   });
                 } else {
@@ -1473,8 +1477,12 @@ export class UIRenderer {
                 text.textContent = `${ability.effect} (${ability.cost}💧)`;
               }
 
-              // Add specific reason for blocking
-              if (this.state.pending) {
+              // Add specific reason for blocking - check turn FIRST
+              const isYourTurn = this.isMyTurn();
+
+              if (!isYourTurn) {
+                text.textContent += " [Not Your Turn]";
+              } else if (this.state.pending) {
                 text.textContent += " [Action in Progress]";
               } else if (card.type === "person") {
                 if (!card.isReady) text.textContent += " [Not Ready]";
@@ -1482,13 +1490,6 @@ export class UIRenderer {
               } else if (card.type === "camp") {
                 if (!card.isReady) text.textContent += " [Used]";
                 if (card.isDestroyed) text.textContent += " [Destroyed]";
-              }
-
-              if (
-                playerId !== this.state.currentPlayer &&
-                !this.state.pending
-              ) {
-                text.textContent += " [Not Your Turn]";
               }
 
               abilities.appendChild(text);
@@ -1501,9 +1502,12 @@ export class UIRenderer {
           const canUseAbility =
             card.isReady && !card.isDamaged && !card.isDestroyed;
 
+          const isYourTurn = this.isMyTurn();
+
           if (
             canUseAbility &&
             playerId === this.state.currentPlayer &&
+            isYourTurn &&
             !this.state.pending
           ) {
             const btn = this.createElement(
@@ -1542,7 +1546,11 @@ export class UIRenderer {
             );
             text.textContent = `[Argo] Damage (1💧)`;
 
-            if (this.state.pending) {
+            const isYourTurn = this.isMyTurn();
+
+            if (!isYourTurn) {
+              text.textContent += " [Not Your Turn]";
+            } else if (this.state.pending) {
               text.textContent += " [Action in Progress]";
             } else if (!card.isReady) {
               text.textContent += " [Not Ready]";
@@ -1563,6 +1571,18 @@ export class UIRenderer {
         e.stopPropagation();
 
         if (e.defaultPrevented) return;
+
+        // If there's a pending action, allow only targeting clicks
+        // Otherwise, block clicks on opponent's cards entirely
+        if (!this.state.pending) {
+          // No pending action - check if this is opponent's card
+          if (playerId !== window.networkClient?.myPlayerId) {
+            console.log(
+              "Cannot interact with opponent's board when not targeting"
+            );
+            return;
+          }
+        }
 
         if (
           this.state.pending?.type === "constructionyard_select_person" &&
@@ -2969,15 +2989,12 @@ export class UIRenderer {
 
       cancel.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
-        // Return junk card to hand if cancelling a junk effect
-        if (this.state.pending?.junkCard) {
-          const player = this.state.players[this.state.pending.sourcePlayerId];
-          player.hand.push(this.state.pending.junkCard);
-          console.log(`Returned ${this.state.pending.junkCard.name} to hand`);
-        }
 
-        this.state.pending = null;
-        this.render();
+        // Send CANCEL command to server
+        this.commands.execute({
+          type: "CANCEL_ACTION",
+          playerId: this.state.currentPlayer,
+        });
       });
 
       controls.appendChild(cancel);

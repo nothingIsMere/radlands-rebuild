@@ -21,10 +21,108 @@ function createTestCard(id, name, type, cost = 1) {
   };
 }
 
-// Create 30 test cards so we don't hit exhaustion
-gameState.deck = [];
-for (let i = 0; i < 30; i++) {
-  gameState.deck.push(createTestCard(`test_${i}`, `TestCard${i}`, "person", 1));
+// Create test deck with real Radlands cards
+gameState.deck = [
+  // Looter - Damage ability (cost 2)
+  {
+    id: "looter_1",
+    name: "Looter",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damage", cost: 2 }],
+    junkEffect: "water",
+  },
+  {
+    id: "looter_2",
+    name: "Looter",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damage", cost: 2 }],
+    junkEffect: "water",
+  },
+  // Vigilante - Injure ability (cost 1)
+  {
+    id: "vigilante_1",
+    name: "Vigilante",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "injure", cost: 1 }],
+    junkEffect: "raid",
+  },
+  {
+    id: "vigilante_2",
+    name: "Vigilante",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "injure", cost: 1 }],
+    junkEffect: "raid",
+  },
+  // Muse - Extra water (cost 0, non-targeting)
+  {
+    id: "muse_1",
+    name: "Muse",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "extra_water", cost: 0 }],
+    junkEffect: "injure",
+  },
+  {
+    id: "muse_2",
+    name: "Muse",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "extra_water", cost: 0 }],
+    junkEffect: "injure",
+  },
+  // Pyromaniac - Damage camp (cost 1)
+  {
+    id: "pyromaniac_1",
+    name: "Pyromaniac",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damagecamp", cost: 1 }],
+    junkEffect: "injure",
+  },
+  {
+    id: "pyromaniac_2",
+    name: "Pyromaniac",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damagecamp", cost: 1 }],
+    junkEffect: "injure",
+  },
+  // Scout - Raid ability (cost 1)
+  {
+    id: "scout_1",
+    name: "Scout",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "raid", cost: 1 }],
+    junkEffect: "water",
+  },
+  {
+    id: "scout_2",
+    name: "Scout",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "raid", cost: 1 }],
+    junkEffect: "water",
+  },
+];
+
+// Duplicate to reach 30 cards
+const baseDeck = [...gameState.deck];
+while (gameState.deck.length < 30) {
+  baseDeck.forEach((card) => {
+    if (gameState.deck.length < 30) {
+      gameState.deck.push({
+        ...card,
+        id: `${card.name.toLowerCase().replace(/\s+/g, "_")}_${
+          gameState.deck.length
+        }`,
+      });
+    }
+  });
 }
 
 // Set up camps

@@ -510,7 +510,7 @@ export function isGameEndingState(leftPlayer, rightPlayer) {
 }
 
 export function calculateCardDestruction(card) {
-  if (!card || card.isDestroyed) {
+  if (!card) {
     return { shouldDestroy: false };
   }
 

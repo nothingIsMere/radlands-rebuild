@@ -519,6 +519,12 @@ export class CommandSystem {
     // Calculate what happens to the destroyed card
     const destruction = calculateCardDestruction(card);
 
+    console.log("=== DESTROY PERSON DEBUG ===");
+    console.log("Card:", card.name);
+    console.log("Destruction result:", destruction);
+    console.log("Destination:", destruction.destination);
+    console.log("===========================");
+
     if (destruction.destination === "deck") {
       this.state.deck.unshift(destruction.returnCard);
       console.log(
@@ -527,6 +533,7 @@ export class CommandSystem {
     } else if (destruction.destination === "discard") {
       this.state.discard.push(destruction.returnCard);
       console.log(`${card.name} sent to discard`);
+      console.log(`DISCARD PILE NOW HAS ${this.state.discard.length} CARDS`);
     }
 
     // Remove from column
@@ -585,6 +592,7 @@ export class CommandSystem {
 
     if (damageResult.result === "destroy") {
       target.isDestroyed = true;
+      console.log(`ATTEMPTING TO DESTROY ${target.name}, type: ${target.type}`);
       if (target.type === "person") {
         this.destroyPerson(
           this.state.players[targetPlayer],

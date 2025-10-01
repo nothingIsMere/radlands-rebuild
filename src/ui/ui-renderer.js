@@ -2769,7 +2769,7 @@ export class UIRenderer {
         // Normal card click handling (only if not in Parachute Base mode)
         cardDiv.addEventListener("click", () => {
           if (this.state.phase === "game_over") return;
-          if (this.state.currentPlayer === playerId) {
+          if (this.state.currentPlayer === playerId && this.isMyTurn()) {
             if (this.selectedCard?.card?.id === card.id) {
               console.log("Deselecting card:", card.name);
               this.selectedCard = null;
@@ -2817,7 +2817,8 @@ export class UIRenderer {
         e.preventDefault();
         if (
           this.state.currentPlayer === playerId &&
-          this.state.phase === "actions"
+          this.state.phase === "actions" &&
+          this.isMyTurn()
         ) {
           this.commands.execute({
             type: "JUNK_CARD",

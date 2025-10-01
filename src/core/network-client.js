@@ -1,7 +1,9 @@
 export class NetworkClient {
-  constructor() {
+  constructor(onStateUpdate) {
     this.ws = null;
     this.connected = false;
+    this.onStateUpdate = onStateUpdate;
+    this.myPlayerId = null;
   }
 
   connect() {
@@ -12,6 +14,15 @@ export class NetworkClient {
         this.connected = true;
         console.log("Connected to server");
         resolve();
+      };
+
+      this.ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+
+        if (message.type === "STATE_SYNC") {
+          console.log("Received state from server");
+          this.onStateUpdate(message.state);
+        }
       };
 
       this.ws.onerror = (error) => {

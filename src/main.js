@@ -1,6 +1,17 @@
 import { GameState } from "./core/game-state.js";
 import { CommandSystem } from "./core/command-system.js";
 import { UIRenderer } from "./ui/ui-renderer.js";
+import { NetworkClient } from "./core/network-client.js";
+
+const networkClient = new NetworkClient();
+networkClient
+  .connect()
+  .then(() => {
+    console.log("Ready for multiplayer");
+  })
+  .catch((error) => {
+    console.error("Failed to connect:", error);
+  });
 
 // Initialize game
 const gameState = new GameState();
@@ -32,10 +43,10 @@ function setupTestGame() {
   // LEFT PLAYER SETUP
   // Camps: Parachute Base, Juggernaut, and a simple camp
   gameState.players.left.columns[0].setCard(0, {
-    name: "warehouse",
+    name: "parachutebase",
     type: "camp",
     campDraw: 1,
-    abilities: [{ effect: "restore", cost: 1 }], // Requires opponent unprotected camp
+    abilities: [{ effect: "paradrop", cost: 0 }], // Play person and use ability
     isReady: true,
     isDamaged: false,
   });

@@ -39,11 +39,27 @@ gameState.deck = [
     junkEffect: "water",
   },
   {
+    id: "vanguard_1",
+    name: "Vanguard",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damage", cost: 1 }],
+    junkEffect: "raid",
+  },
+  {
     id: "repair_bot_1",
     name: "Repair Bot",
     type: "person",
     cost: 1,
     abilities: [{ effect: "restore", cost: 2 }],
+    junkEffect: "injure",
+  },
+  {
+    id: "mutant_1",
+    name: "Mutant",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damageorrestore", cost: 0 }],
     junkEffect: "injure",
   },
   {

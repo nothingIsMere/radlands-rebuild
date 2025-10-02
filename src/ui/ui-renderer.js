@@ -1590,6 +1590,24 @@ export class UIRenderer {
           return;
         }
 
+        // SPECIAL CASE: Junk effects - only active player can select targets
+        if (
+          this.state.pending?.type === "junk_injure" ||
+          this.state.pending?.type === "junk_restore" ||
+          this.state.pending?.type === "place_punk"
+        ) {
+          // Only the active player can complete their junk effect
+          if (!this.isMyTurn()) {
+            console.log(
+              "Only the active player can complete their junk action"
+            );
+            return;
+          }
+          // Allow the click to proceed for active player
+          this.handleCardTargetClick(playerId, columnIndex, position);
+          return;
+        }
+
         // If there's a pending action, allow only targeting clicks
         // Otherwise, block clicks on opponent's cards entirely
         if (!this.state.pending) {
@@ -2996,20 +3014,20 @@ export class UIRenderer {
       this.state.pending &&
       this.state.pending.type !== "bonfire_restore_multiple"
     ) {
-      // Don't show Cancel for Bonfire
       const cancel = this.createElement("button");
 
-      // Check if this is an entry trait (currently only Repair Bot's entry restore)
       if (this.state.pending?.isEntryTrait) {
         cancel.textContent = "Skip";
       } else {
         cancel.textContent = "Cancel";
       }
 
+      // Disable if not your turn
+      cancel.disabled = !this.isMyTurn();
+
       cancel.addEventListener("click", () => {
         if (this.state.phase === "game_over") return;
 
-        // Send CANCEL command to server
         this.commands.execute({
           type: "CANCEL_ACTION",
           playerId: this.state.currentPlayer,

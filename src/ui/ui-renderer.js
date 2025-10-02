@@ -1112,6 +1112,22 @@ export class UIRenderer {
       }
     }
 
+    // Injure targeting (Vigilante, Vera Vosh, junk injure)
+    if (
+      this.state.pending?.type === "injure" ||
+      this.state.pending?.type === "junk_injure"
+    ) {
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("injure-target");
+      }
+    }
+
     // Vanguard damage targeting
     if (this.state.pending?.type === "vanguard_damage") {
       const isValidTarget = this.state.pending.validTargets?.some(

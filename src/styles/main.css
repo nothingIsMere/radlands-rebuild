@@ -472,7 +472,6 @@ button:disabled {
 
 /* Injure targeting */
 .card.injure-target {
-  animation: pulse-red 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 10px #f44336;
 }
@@ -1673,16 +1672,4 @@ body.has-pending .card.bonfire-restore-target {
 body.has-pending .card.adrenalinelab-target {
   opacity: 1 !important;
   pointer-events: auto !important;
-}
-
-.hidden-card {
-  background: #333;
-  border: 2px solid #666;
-  cursor: default;
-  opacity: 0.7;
-}
-
-.hidden-card .card-text {
-  color: #999;
-  font-style: italic;
 }

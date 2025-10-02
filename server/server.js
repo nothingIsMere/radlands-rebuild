@@ -25,9 +25,10 @@ function createTestCard(id, name, type, cost = 1) {
   };
 }
 
-// Create test deck with real Radlands cards
+// Test deck focused on Adrenaline Lab and complex multi-step abilities
 gameState.deck = [
-  // Person cards (for playing and as targets)
+  // === ADRENALINE LAB TEST TARGETS ===
+  // Simple damage dealers to use with Adrenaline Lab
   {
     id: "looter_1",
     name: "Looter",
@@ -44,6 +45,47 @@ gameState.deck = [
     abilities: [{ effect: "damage", cost: 2 }],
     junkEffect: "water",
   },
+  {
+    id: "karli_blaze_1",
+    name: "Karli Blaze",
+    type: "person",
+    cost: 2,
+    abilities: [{ effect: "damage", cost: 1 }],
+    junkEffect: "card",
+  },
+
+  // Multi-step ability (hardest test for Adrenaline Lab)
+  {
+    id: "cult_leader_1",
+    name: "Cult Leader",
+    type: "person",
+    cost: 2,
+    abilities: [{ effect: "destroyowndamage", cost: 0 }],
+    junkEffect: "restore",
+  },
+
+  // === OTHER COMPLEX CARDS TO TEST ===
+  {
+    id: "mimic_1",
+    name: "Mimic",
+    type: "person",
+    cost: 2,
+    abilities: [{ effect: "copyability", cost: 0 }],
+    junkEffect: "water",
+  },
+  {
+    id: "rabble_rouser_1",
+    name: "Rabble Rouser",
+    type: "person",
+    cost: 1,
+    abilities: [
+      { effect: "gainpunk", cost: 1 },
+      { effect: "punkdamage", cost: 1 },
+    ],
+    junkEffect: "punk",
+  },
+
+  // === BASIC UTILITY CARDS ===
   {
     id: "vigilante_1",
     name: "Vigilante",
@@ -77,17 +119,9 @@ gameState.deck = [
     junkEffect: "injure",
   },
 
-  // Event cards
+  // === BASIC EVENTS ===
   {
     id: "strafe_1",
-    name: "Strafe",
-    type: "event",
-    cost: 2,
-    queueNumber: 0,
-    junkEffect: "card",
-  },
-  {
-    id: "strafe_2",
     name: "Strafe",
     type: "event",
     cost: 2,
@@ -101,62 +135,6 @@ gameState.deck = [
     cost: 1,
     queueNumber: 0,
     junkEffect: "water",
-  },
-  {
-    id: "interrogate_2",
-    name: "Interrogate",
-    type: "event",
-    cost: 1,
-    queueNumber: 0,
-    junkEffect: "water",
-  },
-  {
-    id: "radiation_1",
-    name: "Radiation",
-    type: "event",
-    cost: 2,
-    queueNumber: 1,
-    junkEffect: "raid",
-  },
-  {
-    id: "radiation_2",
-    name: "Radiation",
-    type: "event",
-    cost: 2,
-    queueNumber: 1,
-    junkEffect: "raid",
-  },
-  {
-    id: "uprising_1",
-    name: "Uprising",
-    type: "event",
-    cost: 1,
-    queueNumber: 2,
-    junkEffect: "injure",
-  },
-  {
-    id: "uprising_2",
-    name: "Uprising",
-    type: "event",
-    cost: 1,
-    queueNumber: 2,
-    junkEffect: "injure",
-  },
-  {
-    id: "bombardment_1",
-    name: "Bombardment",
-    type: "event",
-    cost: 4,
-    queueNumber: 3,
-    junkEffect: "restore",
-  },
-  {
-    id: "bombardment_2",
-    name: "Bombardment",
-    type: "event",
-    cost: 4,
-    queueNumber: 3,
-    junkEffect: "restore",
   },
 ];
 
@@ -175,13 +153,33 @@ gameState.deck = [
 //   });
 // }
 
-// Set up camps
+// Set up camps - Adrenaline Lab for left player, basic camp for right
 gameState.players.left.columns[0].setCard(0, {
   id: "camp_left_1",
-  name: "Test Camp Left 1",
+  name: "Adrenaline Lab",
   type: "camp",
   campDraw: 1,
-  abilities: [],
+  abilities: [{ effect: "usedamagedability", cost: 0 }],
+  isReady: true,
+  isDamaged: false,
+});
+
+gameState.players.left.columns[1].setCard(0, {
+  id: "camp_left_2",
+  name: "Cache",
+  type: "camp",
+  campDraw: 1,
+  abilities: [{ effect: "raidpunk", cost: 2 }],
+  isReady: true,
+  isDamaged: false,
+});
+
+gameState.players.left.columns[2].setCard(0, {
+  id: "camp_left_3",
+  name: "Parachute Base",
+  type: "camp",
+  campDraw: 1,
+  abilities: [{ effect: "paradrop", cost: 0 }],
   isReady: true,
   isDamaged: false,
 });
@@ -189,6 +187,26 @@ gameState.players.left.columns[0].setCard(0, {
 gameState.players.right.columns[0].setCard(0, {
   id: "camp_right_1",
   name: "Test Camp Right 1",
+  type: "camp",
+  campDraw: 1,
+  abilities: [],
+  isReady: true,
+  isDamaged: false,
+});
+
+gameState.players.right.columns[1].setCard(0, {
+  id: "camp_right_2",
+  name: "Test Camp Right 2",
+  type: "camp",
+  campDraw: 1,
+  abilities: [],
+  isReady: true,
+  isDamaged: false,
+});
+
+gameState.players.right.columns[2].setCard(0, {
+  id: "camp_right_3",
+  name: "Test Camp Right 3",
   type: "camp",
   campDraw: 1,
   abilities: [],

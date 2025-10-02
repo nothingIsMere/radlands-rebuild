@@ -1865,11 +1865,17 @@ export class CommandSystem {
     }
 
     // Check camp abilities first
-    if (context.source.type === "camp" && typeof window !== "undefined") {
-      const campAbility =
-        window.cardRegistry?.campAbilities?.[cardName]?.[
-          ability.effect.toLowerCase().replace(/\s+/g, "")
-        ];
+    if (context.source.type === "camp") {
+      const cardRegistry =
+        typeof window !== "undefined"
+          ? window.cardRegistry
+          : typeof global !== "undefined"
+          ? global.cardRegistry
+          : null;
+
+      const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
+      const campAbility = cardRegistry?.campAbilities?.[cardName]?.[effectName];
+
       if (campAbility?.handler) {
         const result = campAbility.handler(this.state, context);
 

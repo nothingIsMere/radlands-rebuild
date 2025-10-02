@@ -1521,11 +1521,20 @@ export class CommandSystem {
       columnIndex,
     };
 
-    // Check for Karli Blaze's persistent trait BEFORE placement
-    const hasActiveKarli = this.checkForActiveKarli(playerId);
-    if (hasActiveKarli) {
+    // Check if this IS Karli Blaze (she enters play ready per her trait)
+    if (card.name === "Karli Blaze") {
       person.isReady = true;
-      console.log(`${card.name} enters play ready due to Karli Blaze's trait!`);
+      console.log("Karli Blaze enters play ready (her own trait)");
+    }
+    // OR check for an EXISTING Karli on the board
+    else {
+      const hasActiveKarli = this.checkForActiveKarli(playerId);
+      if (hasActiveKarli) {
+        person.isReady = true;
+        console.log(
+          `${card.name} enters play ready due to Karli Blaze's trait!`
+        );
+      }
     }
 
     // Try to place with push

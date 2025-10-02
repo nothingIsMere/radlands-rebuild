@@ -1573,6 +1573,23 @@ export class UIRenderer {
 
         if (e.defaultPrevented) return;
 
+        // SPECIAL CASE: Raiders camp selection - only target player can click
+        if (this.state.pending?.type === "raiders_select_camp") {
+          // Only the TARGET player (opponent) can select, not the active player
+          if (
+            window.networkClient?.myPlayerId !==
+            this.state.pending.targetPlayerId
+          ) {
+            console.log(
+              "Only the targeted player can select a camp for Raiders"
+            );
+            return;
+          }
+          // Allow the click to proceed for the target player
+          this.handleCardTargetClick(playerId, columnIndex, position);
+          return;
+        }
+
         // If there's a pending action, allow only targeting clicks
         // Otherwise, block clicks on opponent's cards entirely
         if (!this.state.pending) {

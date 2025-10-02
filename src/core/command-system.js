@@ -675,9 +675,27 @@ export class CommandSystem {
     console.log("Looking for event:", eventName);
 
     const eventDef =
-      typeof window !== "undefined"
+      (typeof window !== "undefined"
         ? window.cardRegistry?.eventAbilities?.[eventName]
-        : null;
+        : null) ||
+      (typeof global !== "undefined"
+        ? global.cardRegistry?.eventAbilities?.[eventName]
+        : null);
+
+    console.log(
+      "Event lookup result:",
+      eventName,
+      "->",
+      eventDef ? "FOUND" : "NOT FOUND"
+    );
+    if (eventDef) {
+      console.log(
+        "Event cost:",
+        eventDef.cost,
+        "Queue number:",
+        eventDef.queueNumber
+      );
+    }
     if (!eventDef) {
       console.log(`Unknown event: ${card.name}`);
       console.log(
@@ -3286,9 +3304,12 @@ export class CommandSystem {
         // Look up event definition for non-Raiders events
         const eventName = event.name.toLowerCase().replace(/\s+/g, "");
         const eventDef =
-          typeof window !== "undefined"
+          (typeof window !== "undefined"
             ? window.cardRegistry?.eventAbilities?.[eventName]
-            : null;
+            : null) ||
+          (typeof global !== "undefined"
+            ? global.cardRegistry?.eventAbilities?.[eventName]
+            : null);
 
         if (eventDef?.effect?.handler) {
           console.log(`Resolving ${event.name} event effect`);
@@ -3306,6 +3327,11 @@ export class CommandSystem {
           };
 
           const result = eventDef.effect.handler(this.state, context);
+
+          // Discard the event after it resolves (queue 1/2/3 events)
+          if (!this.state.discard.includes(event)) {
+            this.state.discard.push(event);
+          }
 
           // Check for game end conditions after event resolves
           this.checkGameEnd(); // Check for 3 destroyed camps

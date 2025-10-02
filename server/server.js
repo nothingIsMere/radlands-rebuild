@@ -1,6 +1,10 @@
 import { WebSocketServer } from "ws";
 import { GameState } from "../src/core/game-state.js";
 import { CommandSystem } from "../src/core/command-system.js";
+import { cardRegistry } from "../src/cards/card-registry.js"; // ADD THIS
+
+// Make cardRegistry available globally in Node.js context
+global.cardRegistry = cardRegistry; // ADD THIS
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map(); // Map of ws -> playerId
@@ -23,7 +27,7 @@ function createTestCard(id, name, type, cost = 1) {
 
 // Create test deck with real Radlands cards
 gameState.deck = [
-  // Looter - Damage ability (cost 2)
+  // Person cards (for playing and as targets)
   {
     id: "looter_1",
     name: "Looter",
@@ -40,7 +44,6 @@ gameState.deck = [
     abilities: [{ effect: "damage", cost: 2 }],
     junkEffect: "water",
   },
-  // Vigilante - Injure ability (cost 1)
   {
     id: "vigilante_1",
     name: "Vigilante",
@@ -57,7 +60,6 @@ gameState.deck = [
     abilities: [{ effect: "injure", cost: 1 }],
     junkEffect: "raid",
   },
-  // Muse - Extra water (cost 0, non-targeting)
   {
     id: "muse_1",
     name: "Muse",
@@ -74,39 +76,87 @@ gameState.deck = [
     abilities: [{ effect: "extra_water", cost: 0 }],
     junkEffect: "injure",
   },
-  // Pyromaniac - Damage camp (cost 1)
+
+  // Event cards
   {
-    id: "pyromaniac_1",
-    name: "Pyromaniac",
-    type: "person",
-    cost: 1,
-    abilities: [{ effect: "damagecamp", cost: 1 }],
-    junkEffect: "injure",
+    id: "strafe_1",
+    name: "Strafe",
+    type: "event",
+    cost: 2,
+    queueNumber: 0,
+    junkEffect: "card",
   },
   {
-    id: "pyromaniac_2",
-    name: "Pyromaniac",
-    type: "person",
-    cost: 1,
-    abilities: [{ effect: "damagecamp", cost: 1 }],
-    junkEffect: "injure",
+    id: "strafe_2",
+    name: "Strafe",
+    type: "event",
+    cost: 2,
+    queueNumber: 0,
+    junkEffect: "card",
   },
-  // Scout - Raid ability (cost 1)
   {
-    id: "scout_1",
-    name: "Scout",
-    type: "person",
+    id: "interrogate_1",
+    name: "Interrogate",
+    type: "event",
     cost: 1,
-    abilities: [{ effect: "raid", cost: 1 }],
+    queueNumber: 0,
     junkEffect: "water",
   },
   {
-    id: "scout_2",
-    name: "Scout",
-    type: "person",
+    id: "interrogate_2",
+    name: "Interrogate",
+    type: "event",
     cost: 1,
-    abilities: [{ effect: "raid", cost: 1 }],
+    queueNumber: 0,
     junkEffect: "water",
+  },
+  {
+    id: "radiation_1",
+    name: "Radiation",
+    type: "event",
+    cost: 2,
+    queueNumber: 1,
+    junkEffect: "raid",
+  },
+  {
+    id: "radiation_2",
+    name: "Radiation",
+    type: "event",
+    cost: 2,
+    queueNumber: 1,
+    junkEffect: "raid",
+  },
+  {
+    id: "uprising_1",
+    name: "Uprising",
+    type: "event",
+    cost: 1,
+    queueNumber: 2,
+    junkEffect: "injure",
+  },
+  {
+    id: "uprising_2",
+    name: "Uprising",
+    type: "event",
+    cost: 1,
+    queueNumber: 2,
+    junkEffect: "injure",
+  },
+  {
+    id: "bombardment_1",
+    name: "Bombardment",
+    type: "event",
+    cost: 4,
+    queueNumber: 3,
+    junkEffect: "restore",
+  },
+  {
+    id: "bombardment_2",
+    name: "Bombardment",
+    type: "event",
+    cost: 4,
+    queueNumber: 3,
+    junkEffect: "restore",
   },
 ];
 

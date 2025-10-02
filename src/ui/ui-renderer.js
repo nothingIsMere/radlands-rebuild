@@ -1258,7 +1258,8 @@ export class UIRenderer {
 
         if (
           this.state.pending?.type === "uprising_place_punks" &&
-          playerId === this.state.pending.sourcePlayerId
+          playerId === this.state.pending.sourcePlayerId &&
+          this.isMyTurn()
         ) {
           this.commands.execute({
             type: "SELECT_TARGET",
@@ -1636,7 +1637,8 @@ export class UIRenderer {
 
         if (
           this.state.pending?.type === "uprising_place_punks" &&
-          playerId === this.state.pending.sourcePlayerId
+          playerId === this.state.pending.sourcePlayerId &&
+          this.isMyTurn()
         ) {
           console.log(
             "Clicking occupied slot for Uprising punk placement (will push)"

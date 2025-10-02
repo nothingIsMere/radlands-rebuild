@@ -107,11 +107,6 @@ export const eventAbilities = {
           console.log(`Bombardment: Drew ${result.card.name}`);
         }
 
-        // Discard the event
-        if (context.eventCard) {
-          state.discard.push(context.eventCard);
-        }
-
         console.log(`Bombardment complete: ${destroyedCamps} camps destroyed`);
         return true;
       },
@@ -275,11 +270,6 @@ export const eventAbilities = {
         console.log(
           `Truce complete: ${returnedCount} people returned to hands`
         );
-
-        // Discard the event (instant events should discard themselves)
-        if (context.eventCard) {
-          state.discard.push(context.eventCard);
-        }
 
         return true;
       },
@@ -494,11 +484,6 @@ export const eventAbilities = {
           `Strafe complete: ${injuredCount} injured, ${destroyedCount} destroyed`
         );
 
-        // Discard the event (instant events should discard themselves)
-        if (context.eventCard) {
-          state.discard.push(context.eventCard);
-        }
-
         return true;
       },
     },
@@ -579,11 +564,6 @@ export const eventAbilities = {
           `Radiation complete: ${injuredCount} injured, ${destroyedCount} destroyed`
         );
 
-        // Discard the event
-        if (context.eventCard) {
-          state.discard.push(context.eventCard);
-        }
-
         return true;
       },
     },
@@ -608,10 +588,7 @@ export const eventAbilities = {
 
         if (validTargets.length === 0) {
           console.log("Banish: No enemy people to destroy");
-          // Still discard the event
-          if (context.eventCard) {
-            state.discard.push(context.eventCard);
-          }
+
           return true;
         }
 

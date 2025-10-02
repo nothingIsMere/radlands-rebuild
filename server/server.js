@@ -54,14 +54,7 @@ gameState.deck = [
     abilities: [{ effect: "restore", cost: 2 }],
     junkEffect: "injure",
   },
-  {
-    id: "mutant_1",
-    name: "Mutant",
-    type: "person",
-    cost: 1,
-    abilities: [{ effect: "damageorrestore", cost: 0 }],
-    junkEffect: "injure",
-  },
+
   {
     id: "looter_2",
     name: "Looter",
@@ -69,6 +62,14 @@ gameState.deck = [
     cost: 1,
     abilities: [{ effect: "damage", cost: 2 }],
     junkEffect: "water",
+  },
+  {
+    id: "mutant_1",
+    name: "Mutant",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "damagerestore", cost: 0 }],
+    junkEffect: "injure",
   },
   {
     id: "karli_blaze_1",

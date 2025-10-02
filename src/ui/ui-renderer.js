@@ -17,6 +17,11 @@ export class UIRenderer {
   }
 
   renderGameOver() {
+    console.log("=== RENDER GAME OVER ===");
+    console.log("this.state.winner:", this.state.winner);
+    console.log("this.state.winReason:", this.state.winReason);
+    console.log("Type of winner:", typeof this.state.winner);
+
     const overlay = document.createElement("div");
     overlay.className = "game-over-overlay";
     overlay.style.cssText = `

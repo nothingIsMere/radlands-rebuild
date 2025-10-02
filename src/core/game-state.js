@@ -74,9 +74,11 @@ export class GameState {
 
     if (exhaustion.gameEnds) {
       console.log(`[EXHAUSTION] Game ends - ${exhaustion.reason}`);
+      console.log(`[EXHAUSTION] exhaustion.result = "${exhaustion.result}"`);
       this.phase = "game_over";
       this.winner = exhaustion.result;
       this.winReason = exhaustion.reason;
+      console.log(`[EXHAUSTION] this.winner = "${this.winner}"`);
       return { gameEnded: true };
     }
 

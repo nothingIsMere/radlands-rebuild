@@ -160,20 +160,20 @@ gameState.deck = [
   },
 ];
 
-// Duplicate to reach 30 cards
-const baseDeck = [...gameState.deck];
-while (gameState.deck.length < 30) {
-  baseDeck.forEach((card) => {
-    if (gameState.deck.length < 30) {
-      gameState.deck.push({
-        ...card,
-        id: `${card.name.toLowerCase().replace(/\s+/g, "_")}_${
-          gameState.deck.length
-        }`,
-      });
-    }
-  });
-}
+// // Duplicate to reach 30 cards
+// const baseDeck = [...gameState.deck];
+// while (gameState.deck.length < 30) {
+//   baseDeck.forEach((card) => {
+//     if (gameState.deck.length < 30) {
+//       gameState.deck.push({
+//         ...card,
+//         id: `${card.name.toLowerCase().replace(/\s+/g, "_")}_${
+//           gameState.deck.length
+//         }`,
+//       });
+//     }
+//   });
+// }
 
 // Set up camps
 gameState.players.left.columns[0].setCard(0, {

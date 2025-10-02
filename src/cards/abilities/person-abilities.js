@@ -36,6 +36,7 @@ export const personAbilities = {
         state.pending = {
           type: "zeto_discard_selection",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           mustDiscard: 3,
           context,
@@ -90,6 +91,7 @@ export const personAbilities = {
         state.pending = {
           type: "damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           validTargets: validTargets,
           context,
@@ -122,6 +124,7 @@ export const personAbilities = {
         state.pending = {
           type: "injure",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,
@@ -154,6 +157,7 @@ export const personAbilities = {
         state.pending = {
           type: "damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           validTargets, // Add this for consistency
           context,
@@ -183,6 +187,7 @@ export const personAbilities = {
         state.pending = {
           type: "damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           validTargets: validTargets, // Include this for consistency
           context,
@@ -525,6 +530,7 @@ export const personAbilities = {
         state.pending = {
           type: "place_punk",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           adrenalineLabDestroy: context.fromAdrenalineLab
             ? {
@@ -569,6 +575,7 @@ export const personAbilities = {
         state.pending = {
           type: "damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
         };
@@ -602,6 +609,7 @@ export const personAbilities = {
         state.pending = {
           type: "pyromaniac_damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,
@@ -649,7 +657,7 @@ export const personAbilities = {
           sourcePlayerId: context.playerId,
           sourceColumn: context.columnIndex,
           sourcePosition: context.position,
-          shouldStayReady: preservedShouldStayReady, // PRESERVE THIS VALUE
+          shouldStayReady: preservedShouldStayReady,
           context,
           validTargets: validTargets,
         };
@@ -684,6 +692,7 @@ export const personAbilities = {
         state.pending = {
           type: "sniper_damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,
@@ -953,6 +962,7 @@ export const personAbilities = {
       state.pending = {
         type: "looter_damage",
         source: context.source,
+        sourceCard: context.source,
         sourcePlayerId: context.playerId,
         context,
       };
@@ -982,8 +992,9 @@ export const personAbilities = {
         state.pending = {
           type: "looter_damage",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
-          validTargets: validTargets, // ADD THIS!
+          validTargets: validTargets,
           context,
         };
 
@@ -1017,7 +1028,7 @@ export const personAbilities = {
         state.pending = {
           type: "restore",
           source: context.source,
-          sourceCard: context.source, // Add this to track the source card
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,
@@ -1162,10 +1173,10 @@ export const personAbilities = {
         state.pending = {
           type: "mimic_select_target",
           source: context.source,
-          sourceCard: context.source, // ADD THIS
+          sourceCard: context.source,
           sourcePlayerId: playerId,
-          sourceColumn: context.columnIndex, // ADD THIS
-          sourcePosition: context.position, // ADD THIS
+          sourceColumn: context.columnIndex,
+          sourcePosition: context.position,
           sourceContext: context,
           validTargets: validTargets.map((t) => ({
             card: t.card,
@@ -1208,6 +1219,7 @@ export const personAbilities = {
         state.pending = {
           type: "injure",
           source: context.source,
+          sourceCard: context.source,
           sourcePlayerId: context.playerId,
           context,
           validTargets: validTargets,

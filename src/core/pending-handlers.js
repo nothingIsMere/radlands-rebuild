@@ -228,14 +228,8 @@ class PlacePunkHandler extends PendingHandler {
       }
     }
 
-    // Mark camp ability complete if this was from a camp
-    if (
-      result &&
-      sourceCard &&
-      sourceCard.type === "camp" &&
-      !fromCache &&
-      !parachuteBaseContext
-    ) {
+    // Mark ability complete if this was from a camp OR person
+    if (result && sourceCard && !fromCache && !parachuteBaseContext) {
       if (!this.state.pending?.shouldStayReady) {
         sourceCard.isReady = false;
         console.log(

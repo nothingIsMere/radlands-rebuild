@@ -1439,6 +1439,7 @@ class CultLeaderSelectDestroyHandler extends PendingHandler {
         sourceCard: this.state.pending.sourceCard,
         validTargets: validTargets,
         adrenalineLabDestroy: adrenalineLabDestroy,
+        parachuteBaseDamage: this.state.pending.parachuteBaseDamage,
       };
       console.log(
         `Cult Leader: Now select enemy target to damage (${validTargets.length} targets)`

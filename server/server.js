@@ -29,6 +29,7 @@ function createTestCard(id, name, type, cost = 1) {
 gameState.deck = [
   // === ADRENALINE LAB TEST TARGETS ===
   // Simple damage dealers to use with Adrenaline Lab
+
   {
     id: "looter_1",
     name: "Looter",
@@ -36,6 +37,14 @@ gameState.deck = [
     cost: 1,
     abilities: [{ effect: "damage", cost: 2 }],
     junkEffect: "water",
+  },
+  {
+    id: "repair_bot_1",
+    name: "Repair Bot",
+    type: "person",
+    cost: 1,
+    abilities: [{ effect: "restore", cost: 2 }],
+    junkEffect: "injure",
   },
   {
     id: "looter_2",

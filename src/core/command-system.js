@@ -1094,8 +1094,15 @@ export class CommandSystem {
 
     const cardName = person.name.toLowerCase().replace(/\s+/g, "");
 
-    if (typeof window !== "undefined") {
-      const traitHandler = window.cardRegistry?.getTraitHandler(cardName);
+    const cardRegistry =
+      typeof window !== "undefined"
+        ? window.cardRegistry
+        : typeof global !== "undefined"
+        ? global.cardRegistry
+        : null;
+
+    if (cardRegistry) {
+      const traitHandler = cardRegistry.getTraitHandler(cardName);
 
       if (traitHandler?.onEntry) {
         console.log(`Triggering entry trait for ${person.name}`);

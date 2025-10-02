@@ -34,6 +34,7 @@ export const campAbilities = {
 
               if (affordableAbilities.length > 0) {
                 validTargets.push({
+                  playerId: context.playerId,
                   card,
                   columnIndex: col,
                   position: pos,
@@ -77,6 +78,7 @@ export const campAbilities = {
               ) {
                 // This person only has Argo's granted ability
                 validTargets.push({
+                  playerId: context.playerId,
                   card,
                   columnIndex: col,
                   position: pos,

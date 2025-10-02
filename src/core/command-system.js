@@ -78,6 +78,40 @@ export class CommandSystem {
     };
   }
 
+  executeAbilityViaAdrenalineLab(selectedPerson, abilityIndex, sourcePlayerId) {
+    const ability = selectedPerson.abilities[abilityIndex];
+
+    if (!ability) {
+      console.log("Invalid ability index");
+      return false;
+    }
+
+    const player = this.state.players[sourcePlayerId];
+
+    // Check if player can afford it
+    if (player.water < ability.cost) {
+      console.log(`Not enough water for ${ability.effect}`);
+      return false;
+    }
+
+    // Pay the cost
+    player.water -= ability.cost;
+    console.log(
+      `Paid ${ability.cost} water for ${selectedPerson.card.name}'s ability`
+    );
+
+    // Create ability context with fromAdrenalineLab flag
+    const result = this.executeAbility(ability, {
+      source: selectedPerson.card,
+      playerId: sourcePlayerId,
+      columnIndex: selectedPerson.columnIndex,
+      position: selectedPerson.position,
+      fromAdrenalineLab: true,
+    });
+
+    return result;
+  }
+
   findValidTargets(sourcePlayerId, options = {}) {
     // Use the pure function to count targets
     const opponentId = sourcePlayerId === "left" ? "right" : "left";
@@ -1856,8 +1890,11 @@ export class CommandSystem {
     // Store as active context
     this.activeAbilityContext = abilityContext;
 
-    // Get the card name for handler lookup
+    // Get the card name and effect name for handler lookup
     let cardName = context.source.name.toLowerCase().replace(/\s+/g, "");
+    const effectName = ability.effect.toLowerCase().replace(/\s+/g, ""); // ← MOVE THIS UP
+
+    console.log("Looking for ability:", cardName, effectName);
 
     // If this is Mimic copying another card, use THAT card's handler
     if (context.fromMimic && context.copiedFrom) {
@@ -1873,7 +1910,6 @@ export class CommandSystem {
           ? global.cardRegistry
           : null;
 
-      const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
       const campAbility = cardRegistry?.campAbilities?.[cardName]?.[effectName];
 
       if (campAbility?.handler) {
@@ -1889,21 +1925,29 @@ export class CommandSystem {
     }
 
     // Check person abilities
-    const effectName = ability.effect.toLowerCase().replace(/\s+/g, "");
-
-    // First check the registry with the correct card name
     let personAbility = null;
 
-    if (typeof window !== "undefined") {
-      personAbility =
-        window.cardRegistry?.personAbilities?.[cardName]?.[effectName];
+    const cardRegistry =
+      typeof window !== "undefined"
+        ? window.cardRegistry
+        : typeof global !== "undefined"
+        ? global.cardRegistry
+        : null;
+
+    if (cardRegistry) {
+      personAbility = cardRegistry.personAbilities?.[cardName]?.[effectName];
 
       // If not found in registry and this is Mimic, also check the imported personAbilities
       if (!personAbility && context.fromMimic) {
-        const personAbilitiesImport = window.personAbilities || {};
+        const personAbilitiesImport =
+          (typeof window !== "undefined" ? window.personAbilities : null) ||
+          (typeof global !== "undefined" ? global.personAbilities : null) ||
+          {};
         personAbility = personAbilitiesImport[cardName]?.[effectName];
       }
     }
+
+    console.log("Found person ability handler?", !!personAbility);
 
     if (personAbility?.handler) {
       const result = personAbility.handler(this.state, context);

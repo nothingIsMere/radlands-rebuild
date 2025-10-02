@@ -1,10 +1,10 @@
 import { WebSocketServer } from "ws";
 import { GameState } from "../src/core/game-state.js";
 import { CommandSystem } from "../src/core/command-system.js";
-import { cardRegistry } from "../src/cards/card-registry.js"; // ADD THIS
+import { cardRegistry } from "../src/cards/card-registry.js";
 
 // Make cardRegistry available globally in Node.js context
-global.cardRegistry = cardRegistry; // ADD THIS
+global.cardRegistry = cardRegistry;
 
 const wss = new WebSocketServer({ port: 8080 });
 const clients = new Map(); // Map of ws -> playerId

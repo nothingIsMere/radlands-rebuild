@@ -1442,6 +1442,7 @@ class CultLeaderSelectDestroyHandler extends PendingHandler {
       this.state.pending = {
         type: "cultleader_damage",
         sourcePlayerId: sourcePlayerId,
+        sourceCard: this.state.pending.sourceCard,
         validTargets: validTargets,
         adrenalineLabDestroy: adrenalineLabDestroy,
       };
@@ -1470,13 +1471,21 @@ class CultLeaderDamageHandler extends PendingHandler {
     }
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Store EVERYTHING you need BEFORE changing pending
     const adrenalineLabDestroy = this.state.pending.adrenalineLabDestroy;
+    const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard; // ← Store this NOW
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
-    // Clear pending first
-    this.state.pending = null;
+    // Set up proper damage pending state
+    this.state.pending = {
+      type: "damage",
+      sourcePlayerId: sourcePlayerId,
+      allowProtected: false,
+    };
 
-    // Apply damage
+    // Now resolve damage (this will set pending to null)
     const damaged = this.resolveDamage(
       targetPlayer,
       targetColumn,
@@ -1485,6 +1494,13 @@ class CultLeaderDamageHandler extends PendingHandler {
 
     if (damaged) {
       console.log("Cult Leader damage successful");
+    }
+
+    // Mark source card as not ready (using the stored reference)
+    if (sourceCard && !sourceCard.shouldStayReady) {
+      // Note: check sourceCard's property, not pending
+      sourceCard.isReady = false;
+      console.log("Cult Leader marked as not ready");
     }
 
     // Handle Adrenaline Lab cleanup if needed

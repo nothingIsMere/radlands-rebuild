@@ -612,6 +612,7 @@ export function createPunkFromCard(card, hasKarliBlaze = false) {
     originalName: card.name,
     originalCard: { ...card },
     name: "Punk",
+    abilities: [],
   };
 }
 

@@ -790,14 +790,16 @@ class VanguardDamageHandler extends PendingHandler {
           originalSourcePlayerId: sourcePlayerId,
           vanguardCard: vanguardCard,
           validTargets: counterTargets,
+          parachuteBaseDamage: parachuteBaseDamage,
         };
         console.log(
           `Opponent may counter-damage (${counterTargets.length} targets)`
         );
+        return damaged; // Return here - counter-damage will handle Parachute damage
       }
     }
 
-    // Apply Parachute Base damage if present
+    // Only apply Parachute Base damage if no counter-damage was set up
     if (parachuteBaseDamage) {
       console.log("Damage ability completed, applying Parachute Base damage");
       this.commandSystem.applyParachuteBaseDamage(
@@ -814,10 +816,22 @@ class VanguardDamageHandler extends PendingHandler {
 class VanguardCounterHandler extends PendingHandler {
   handle(payload) {
     const { cancel } = payload;
+    const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
 
     if (cancel) {
       console.log("Opponent chose not to counter-damage");
       this.state.pending = null;
+
+      // Apply Parachute damage even if cancelled
+      if (parachuteBaseDamage) {
+        console.log("Counter cancelled, applying Parachute Base damage");
+        this.commandSystem.applyParachuteBaseDamage(
+          parachuteBaseDamage.targetPlayer,
+          parachuteBaseDamage.targetColumn,
+          parachuteBaseDamage.targetPosition
+        );
+      }
+
       return true;
     }
 
@@ -889,6 +903,16 @@ class VanguardCounterHandler extends PendingHandler {
         target.isReady = false;
       }
       console.log(`Counter-damage injured ${target.name}`);
+    }
+
+    // Apply Parachute damage after counter-damage completes
+    if (parachuteBaseDamage) {
+      console.log("Counter-damage complete, applying Parachute Base damage");
+      this.commandSystem.applyParachuteBaseDamage(
+        parachuteBaseDamage.targetPlayer,
+        parachuteBaseDamage.targetColumn,
+        parachuteBaseDamage.targetPosition
+      );
     }
 
     return true;

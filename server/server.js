@@ -43,7 +43,7 @@ gameState.deck = [
     name: "Vanguard",
     type: "person",
     cost: 1,
-    abilities: [{ effect: "damage", cost: 1 }],
+    abilities: [{ effect: "damageandcounter", cost: 1 }],
     junkEffect: "raid",
   },
   {

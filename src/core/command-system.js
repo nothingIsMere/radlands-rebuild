@@ -2816,20 +2816,11 @@ export class CommandSystem {
           `Took ${topCard.name} from deck to make punk ${pending.punksRemaining}`
         );
 
-        // Create punk from top card
-        const punk = {
-          ...topCard,
-          isPunk: true,
-          isFaceDown: true,
-          isReady: false,
-          isDamaged: false,
-          originalName: topCard.name,
-          originalCard: { ...topCard }, // Store complete original card
-          name: "Punk",
-        };
+        const hasActiveKarli = this.checkForActiveKarli(pending.sourcePlayerId);
+        const punk = createPunkFromCard(topCard, hasActiveKarli);
 
         // Check for Karli Blaze's trait
-        const hasActiveKarli = this.checkForActiveKarli(pending.sourcePlayerId);
+
         if (hasActiveKarli) {
           punk.isReady = true;
           console.log("Punk enters play ready due to Karli Blaze's trait!");

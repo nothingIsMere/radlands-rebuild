@@ -339,6 +339,8 @@ export class CommandSystem {
       return false;
     }
 
+    const baseCost = ability.cost;
+
     // Get player
     const player = this.state.players[playerId];
 
@@ -346,7 +348,7 @@ export class CommandSystem {
     const validation = canUseCampAbility(
       camp,
       player,
-      ability.cost,
+      baseCost,
       this.state.turnEvents
     );
 
@@ -368,11 +370,18 @@ export class CommandSystem {
       console.log(`${camp.name} will stay ready due to Vera Vosh's trait!`);
     }
 
-    // Pay cost
-    player.water -= ability.cost;
-    console.log(
-      `Paid ${ability.cost} water for ${camp.name}'s ${ability.effect} ability`
-    );
+    // For Pillbox and Command Post, DON'T pay upfront - they handle their own cost reduction
+    if (camp.name === "Pillbox" || camp.name === "Command Post") {
+      console.log(
+        `${camp.name}: Cost will be calculated by handler (base ${baseCost})`
+      );
+    } else {
+      // Pay cost normally for other camps
+      player.water -= baseCost;
+      console.log(
+        `Paid ${baseCost} water for ${camp.name}'s ${ability.effect} ability`
+      );
+    }
 
     // Execute ability with the camp reference and Vera decision in context
     const result = this.executeAbility(ability, {
@@ -397,11 +406,13 @@ export class CommandSystem {
 
     // Check if ability failed to execute
     if (result === false) {
-      // Refund the water
-      player.water += ability.cost;
-      console.log(
-        `Camp ability could not be used, refunded ${ability.cost} water`
-      );
+      // Refund the water (only if we paid it)
+      if (camp.name !== "Pillbox" && camp.name !== "Command Post") {
+        player.water += baseCost;
+        console.log(
+          `Camp ability could not be used, refunded ${baseCost} water`
+        );
+      }
       // Also undo the Vera tracking
       if (shouldStayReady) {
         const index = this.state.turnEvents.veraFirstUseCards.indexOf(camp.id);

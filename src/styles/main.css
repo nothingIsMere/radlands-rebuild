@@ -1,3 +1,9 @@
+:root {
+  --card-width: 120px;
+  --card-height: 168px; /* 1.4:1 realistic aspect ratio */
+  --spacing: 8px;
+  --radius: 8px;
+}
 body {
   font-family: Arial, sans-serif;
   background: #f0f0f0;
@@ -37,59 +43,50 @@ h1 {
 /* Main game area with 3 columns */
 .game-area {
   display: grid;
-  grid-template-columns: 1fr 200px 1fr;
-  gap: 20px;
+  grid-template-columns: 100px 1fr 150px 1fr 100px;
+  gap: 10px;
   margin-bottom: 20px;
+  position: relative;
 }
 
 /* Central deck area */
+/* Compact central info strip */
 .central-column {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 30px;
-  padding: 20px;
+  flex-direction: row;
+  justify-content: space-around;
+  align-items: center;
+  gap: 20px;
+  padding: 10px;
   background: #e0e0e0;
   border-radius: 8px;
 }
+
 .deck-area {
   text-align: center;
+  min-width: 80px;
 }
+
 .deck-label {
   font-weight: bold;
-  margin-bottom: 10px;
+  margin-bottom: 5px;
   color: #555;
-  font-size: 14px;
-}
-.deck-pile {
-  width: 100%;
-  height: 140px;
-  border: 3px solid #333;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.deck-pile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-.draw-deck {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-.discard-pile {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-}
-.deck-count {
   font-size: 12px;
-  margin-top: 5px;
-  color: #666;
+}
+
+.deck-count {
+  font-size: 32px;
+  font-weight: bold;
+  color: #333;
+  line-height: 1;
+}
+
+.draw-deck .deck-count {
+  color: #667eea;
+}
+
+.discard-pile .deck-count {
+  color: #f5576c;
 }
 
 .player-board {
@@ -123,15 +120,17 @@ h1 {
 /* Event Queue Styles */
 .event-queue {
   display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding: 10px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
   background: #fff3e0;
   border-radius: 5px;
+  height: fit-content;
 }
+
 .event-slot {
-  flex: 1;
-  height: 80px;
+  width: 84px;
+  height: 50px;
   border: 2px dashed #ff9800;
   border-radius: 5px;
   display: flex;
@@ -141,29 +140,17 @@ h1 {
   position: relative;
   background: white;
 }
-.event-slot-number {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  background: #ff9800;
-  color: white;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 14px;
-}
+
 .event-card {
   background: #ff9800;
   color: white;
-  padding: 5px 10px;
+  padding: 4px 6px;
   border-radius: 3px;
-  font-size: 12px;
+  font-size: 10px;
   text-align: center;
   cursor: pointer;
+  max-width: 70px;
+  word-wrap: break-word;
 }
 .event-card:hover {
   background: #f57c00;
@@ -209,7 +196,7 @@ h1 {
   flex-direction: column-reverse; /* This flips it so position 0 is at bottom */
 }
 
-/* Remove the old ::before rule and add this instead */
+/* Remove the old ::before rule and add this instead
 .slot-badge {
   position: absolute;
   top: 2px;
@@ -225,12 +212,14 @@ h1 {
   align-items: center;
   justify-content: center;
   z-index: 10;
-}
+} */
 
 .card {
+  width: var(--card-width);
+  height: var(--card-height);
   background: #fff;
   border: 2px solid #333;
-  border-radius: 5px;
+  border-radius: var(--radius);
   padding: 8px;
   margin: 5px 0;
   text-align: center;
@@ -238,12 +227,14 @@ h1 {
   transition: all 0.2s;
   position: relative;
   font-size: 12px;
-  min-height: 60px; /* Add minimum height so badges don't overlap content */
+  min-height: 60px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
 .card.camp {
   background: #8bc34a;
@@ -324,16 +315,7 @@ button:disabled {
   background: #ccc;
   cursor: not-allowed;
 }
-.action-log {
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 10px;
-  height: 100px;
-  overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
-}
+
 .phase-indicator {
   padding: 8px 15px;
   border-radius: 5px;
@@ -1706,29 +1688,36 @@ body.has-pending .card.adrenalinelab-target {
 
 .camps-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
   margin-top: 20px;
+  max-width: 1200px;
 }
 
 .camp-card {
-  padding: 30px;
-  border: 2px solid #333;
-  border-radius: 8px;
+  width: 200px;
+  height: 280px;
+  padding: 20px;
+  border: 3px solid #ddd;
+  border-radius: var(--radius);
   cursor: pointer;
   background: white;
   transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-height: auto; /* Override the 150px */
 }
 
 .camp-card:hover {
-  background: #f0f0f0;
-  transform: translateY(-2px);
+  transform: scale(1.05);
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .camp-card.selected {
-  background: #4caf50;
-  color: white;
-  border-color: #45a049;
+  background: #e8f5e9;
+  border-color: #4caf50;
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
 }
 
 .camp-card {

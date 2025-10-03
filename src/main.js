@@ -36,6 +36,9 @@ const networkClient = new NetworkClient(
     gameState.activeAbilityContext = serverState.activeAbilityContext;
     gameState.winner = serverState.winner;
     gameState.winReason = serverState.winReason;
+    gameState.campOffers = serverState.campOffers;
+    gameState.campSelections = serverState.campSelections;
+    gameState.campDeck = serverState.campDeck;
 
     // Copy player data, but hide opponent's hand
     ["left", "right"].forEach((playerId) => {

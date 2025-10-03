@@ -1365,6 +1365,125 @@ export class CommandSystem {
     this.handlers.set("DRAW_CARD", this.handleDrawCard.bind(this));
     this.handlers.set("TAKE_WATER_SILO", this.handleTakeWaterSilo.bind(this));
     this.handlers.set("CANCEL_ACTION", this.handleCancelAction.bind(this));
+    this.handlers.set("SELECT_CAMPS", this.handleSelectCamps.bind(this));
+  }
+
+  handleSelectCamps(command) {
+    const { playerId, payload } = command;
+    const { camps } = payload;
+
+    console.log("=== SELECT_CAMPS DEBUG ===");
+    console.log("playerId:", playerId);
+    console.log("camps:", camps);
+    console.log("this.state.campOffers:", this.state.campOffers);
+    console.log("this.state.campSelections:", this.state.campSelections);
+    console.log("=========================");
+
+    // Validate selection
+    if (!camps || camps.length !== 3) {
+      console.log("Must select exactly 3 camps");
+      return false;
+    }
+
+    // Check if campOffers exists
+    if (!this.state.campOffers || !this.state.campOffers[playerId]) {
+      console.log("Camp offers not available");
+      return false;
+    }
+
+    // Verify all selected camps are in the player's offers
+    const playerOffers = this.state.campOffers?.[playerId];
+    const allValid = camps.every((camp) => playerOffers.includes(camp));
+
+    if (!allValid) {
+      console.log("Invalid camp selection - camps not in offers");
+      return false;
+    }
+
+    // Store selection
+    this.state.campSelections[playerId] = camps;
+    console.log(`${playerId} selected camps:`, camps);
+
+    // Check if both players have selected
+    if (this.state.campSelections.left && this.state.campSelections.right) {
+      this.finalizeCampSetup();
+    }
+
+    return true;
+  }
+
+  finalizeCampSetup() {
+    console.log("Both players selected camps - setting up game");
+
+    // Place camps for both players
+    ["left", "right"].forEach((playerId) => {
+      const player = this.state.players[playerId];
+      const selectedCamps = this.state.campSelections[playerId];
+
+      selectedCamps.forEach((campName, columnIndex) => {
+        const camp = this.createCamp(campName, columnIndex);
+        player.columns[columnIndex].setCard(0, camp);
+        console.log(`Placed ${campName} in ${playerId} column ${columnIndex}`);
+      });
+    });
+
+    // Draw initial hands based on camp draw values ONLY
+    ["left", "right"].forEach((playerId) => {
+      const player = this.state.players[playerId];
+      let totalDraw = 0; // Remove base 3
+
+      // Add camp draw bonuses
+      for (let col = 0; col < 3; col++) {
+        const camp = player.columns[col].getCard(0);
+        if (camp && camp.campDraw) {
+          totalDraw += camp.campDraw;
+        }
+      }
+
+      console.log(
+        `${playerId} draws ${totalDraw} cards (from camp draw values)`
+      );
+
+      for (let i = 0; i < totalDraw; i++) {
+        const result = this.state.drawCardWithReshuffle(true, playerId);
+        if (result.gameEnded) {
+          console.log("Game ended during initial draw");
+          return;
+        }
+      }
+    });
+
+    // Set starting water and phase
+    this.state.players.left.water = 3;
+    this.state.players.right.water = 3;
+    this.state.currentPlayer = "left";
+    this.state.phase = "actions";
+    this.state.turnNumber = 1;
+
+    console.log("Game setup complete - starting actions phase");
+  }
+
+  createCamp(name, columnIndex) {
+    // Access CAMP_CARDS from server.js
+    const CAMP_CARDS =
+      typeof window !== "undefined" ? window.CAMP_CARDS : global.CAMP_CARDS;
+
+    const data = CAMP_CARDS[name];
+    if (!data) {
+      console.error(`Camp not found: ${name}`);
+      return null;
+    }
+
+    return {
+      id: `${name.replace(/\s+/g, "_")}_${columnIndex}`,
+      name,
+      type: "camp",
+      isReady: true,
+      isDamaged: name === "Cannon", // Cannon starts damaged
+      isDestroyed: false,
+      abilities: data.abilities || [],
+      campDraw: data.campDraw || 0,
+    };
   }
 
   validateCommand(command) {
@@ -1373,18 +1492,23 @@ export class CommandSystem {
     // Basic validation
     if (!command.type) return false;
 
-    // SELECT_TARGET is a special case - it doesn't need playerId check
+    // SELECT_TARGET and SELECT_CAMPS are special cases
     if (command.type === "SELECT_TARGET") {
       return this.state.pending !== null;
     }
 
-    // All other commands need playerId
+    // NEW: Allow SELECT_CAMPS during camp selection phase for both players
+    if (command.type === "SELECT_CAMPS") {
+      return this.state.phase === "camp_selection";
+    }
+
+    // All other commands need playerId and turn check
     if (!command.playerId) {
       console.log("Command missing playerId");
       return false;
     }
 
-    // Check if it's player's turn
+    // Check if it's player's turn (skip for camp selection)
     if (command.playerId !== this.state.currentPlayer && !command.isForced) {
       console.log("Not player's turn");
       return false;
@@ -1393,7 +1517,7 @@ export class CommandSystem {
     // Phase-specific validation
     switch (command.type) {
       case "PLAY_CARD":
-      case "JUNK_CARD": // ADD THIS
+      case "JUNK_CARD":
       case "USE_ABILITY":
         return this.state.phase === "actions";
       case "END_TURN":
@@ -1428,7 +1552,9 @@ export class CommandSystem {
 
     if (handler) {
       const result = handler(
-        command.type === "SELECT_TARGET" ? command : command.payload
+        command.type === "SELECT_TARGET" || command.type === "SELECT_CAMPS"
+          ? command
+          : command.payload
       );
       console.log("Handler result:", result);
 

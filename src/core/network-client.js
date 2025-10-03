@@ -28,6 +28,10 @@ export class NetworkClient {
 
         if (message.type === "STATE_SYNC") {
           console.log("Received state from server");
+          console.log(
+            "campOffers in received message:",
+            message.state.campOffers
+          );
           this.onStateUpdate(message.state);
         }
       };

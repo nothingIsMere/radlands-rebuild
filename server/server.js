@@ -3,89 +3,19 @@ import { GameState } from "../src/core/game-state.js";
 import { CommandSystem } from "../src/core/command-system.js";
 import { cardRegistry } from "../src/cards/card-registry.js";
 
-// Make cardRegistry available globally in Node.js context
 global.cardRegistry = cardRegistry;
 
 const wss = new WebSocketServer({ port: 8080 });
-const clients = new Map(); // Map of ws -> playerId
-const players = { left: null, right: null }; // Which websocket is which player
+const clients = new Map();
+const players = { left: null, right: null };
 
-// Create a single game state on the server
 const gameState = new GameState();
+const commandSystem = new CommandSystem(gameState);
 
-// Test deck builder - easy to configure for different tests
-function createTestDeck(config) {
-  const deck = [];
+// ============================================================================
+// CARD DATA DEFINITIONS
+// ============================================================================
 
-  // Helper to add cards by name
-  const addPerson = (name, count = 1) => {
-    for (let i = 0; i < count; i++) {
-      const cardData = PERSON_CARDS[name];
-      if (!cardData) {
-        console.warn(`Unknown person: ${name}`);
-        continue;
-      }
-      deck.push({
-        id: `${name.toLowerCase().replace(/\s+/g, "_")}_${deck.length}`,
-        name: name,
-        type: "person",
-        cost: cardData.cost,
-        abilities: cardData.abilities,
-        junkEffect: cardData.junkEffect,
-      });
-    }
-  };
-
-  const addEvent = (name, count = 1) => {
-    for (let i = 0; i < count; i++) {
-      const cardData = EVENT_CARDS[name];
-      if (!cardData) {
-        console.warn(`Unknown event: ${name}`);
-        continue;
-      }
-      deck.push({
-        id: `${name.toLowerCase().replace(/\s+/g, "_")}_${deck.length}`,
-        name: name,
-        type: "event",
-        cost: cardData.cost,
-        queueNumber: cardData.queueNumber,
-        junkEffect: cardData.junkEffect,
-      });
-    }
-  };
-
-  // Add cards based on config
-  if (config.people) {
-    config.people.forEach((spec) => {
-      if (typeof spec === "string") {
-        addPerson(spec, 1);
-      } else {
-        addPerson(spec.name, spec.count || 1);
-      }
-    });
-  }
-
-  if (config.events) {
-    config.events.forEach((spec) => {
-      if (typeof spec === "string") {
-        addEvent(spec, 1);
-      } else {
-        addEvent(spec.name, spec.count || 1);
-      }
-    });
-  }
-
-  // Add filler cards if needed
-  if (config.fillTo) {
-    while (deck.length < config.fillTo) {
-      addPerson("Looter", 1);
-    }
-  }
-
-  return deck;
-}
-
-// Card definitions from your CSV data
 const PERSON_CARDS = {
   Looter: {
     cost: 1,
@@ -236,41 +166,95 @@ const EVENT_CARDS = {
 };
 
 const CAMP_CARDS = {
-  "The Octagon": {
+  Railgun: {
     campDraw: 0,
-    abilities: [{ effect: "destroy", cost: 1 }],
-  },
-  "Labor Camp": {
-    campDraw: 1,
-    abilities: [{ effect: "destroyrestore", cost: 0 }],
-  },
-  "Blood Bank": {
-    campDraw: 1,
-    abilities: [{ effect: "destroywater", cost: 0 }],
-  },
-  "Adrenaline Lab": {
-    campDraw: 1,
-    abilities: [{ effect: "usedamagedability", cost: 0 }],
-  },
-  Juggernaut: {
-    campDraw: 0,
-    abilities: [{ effect: "move", cost: 1 }],
-  },
-  "Parachute Base": {
-    campDraw: 1,
-    abilities: [{ effect: "paradrop", cost: 0 }],
-  },
-  Bonfire: {
-    campDraw: 1,
-    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+    abilities: [{ effect: "damage", cost: 2 }],
   },
   "Atomic Garden": {
     campDraw: 1,
     abilities: [{ effect: "restoreready", cost: 2 }],
   },
-  Mulcher: {
+  Cannon: {
+    campDraw: 2,
+    abilities: [{ effect: "damage", cost: 2 }], // Uses conditional logic in handler
+  },
+  Pillbox: {
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 3 }], // Discount handled in handler
+  },
+  "Scud Launcher": {
     campDraw: 0,
-    abilities: [{ effect: "destroydraw", cost: 0 }],
+    abilities: [{ effect: "damage", cost: 1 }],
+  },
+  "Victory Totem": {
+    campDraw: 1,
+    abilities: [
+      { effect: "damage", cost: 2 },
+      { effect: "raid", cost: 2 },
+    ],
+  },
+  Catapult: {
+    campDraw: 0,
+    abilities: [{ effect: "damage", cost: 2 }],
+  },
+  "Nest of Spies": {
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 1 }],
+  },
+  "Command Post": {
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 3 }], // Discount handled in handler
+  },
+  Obelisk: {
+    campDraw: 1,
+    abilities: [],
+  },
+  "Mercenary Camp": {
+    campDraw: 0,
+    abilities: [{ effect: "damagecamp", cost: 2 }],
+  },
+  Reactor: {
+    campDraw: 1,
+    abilities: [{ effect: "destroyall", cost: 2 }],
+  },
+  "The Octagon": {
+    campDraw: 0,
+    abilities: [{ effect: "destroy", cost: 1 }],
+  },
+  Juggernaut: {
+    campDraw: 0,
+    abilities: [{ effect: "move", cost: 1 }],
+  },
+  "Scavenger Camp": {
+    campDraw: 1,
+    abilities: [{ effect: "discardchoose", cost: 0 }],
+  },
+  Outpost: {
+    campDraw: 1,
+    abilities: [
+      { effect: "raid", cost: 2 },
+      { effect: "restore", cost: 2 },
+    ],
+  },
+  "Transplant Lab": {
+    campDraw: 2,
+    abilities: [{ effect: "restore", cost: 1 }],
+  },
+  Resonator: {
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 1 }],
+  },
+  Bonfire: {
+    campDraw: 1,
+    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+  },
+  Cache: {
+    campDraw: 1,
+    abilities: [{ effect: "raidpunk", cost: 2 }],
+  },
+  Watchtower: {
+    campDraw: 0,
+    abilities: [{ effect: "damage", cost: 1 }],
   },
   "Construction Yard": {
     campDraw: 1,
@@ -279,9 +263,25 @@ const CAMP_CARDS = {
       { effect: "raid", cost: 2 },
     ],
   },
-  "Scavenger Camp": {
+  "Adrenaline Lab": {
     campDraw: 1,
-    abilities: [{ effect: "discardchoose", cost: 0 }],
+    abilities: [{ effect: "usedamagedability", cost: 0 }],
+  },
+  Mulcher: {
+    campDraw: 0,
+    abilities: [{ effect: "destroydraw", cost: 0 }],
+  },
+  "Blood Bank": {
+    campDraw: 1,
+    abilities: [{ effect: "destroywater", cost: 0 }],
+  },
+  Arcade: {
+    campDraw: 1,
+    abilities: [{ effect: "gainpunk", cost: 1 }],
+  },
+  "Training Camp": {
+    campDraw: 2,
+    abilities: [{ effect: "damage", cost: 2 }],
   },
   "Supply Depot": {
     campDraw: 2,
@@ -291,170 +291,208 @@ const CAMP_CARDS = {
     campDraw: 1,
     abilities: [{ effect: "advance", cost: 1 }],
   },
-  Cache: {
+  Warehouse: {
     campDraw: 1,
-    abilities: [{ effect: "raidpunk", cost: 2 }],
+    abilities: [{ effect: "restore", cost: 1 }],
   },
-  Resonator: {
+  Garage: {
+    campDraw: 0,
+    abilities: [{ effect: "raid", cost: 1 }],
+  },
+  Oasis: {
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 1 }],
+    abilities: [], // Passive trait only
+  },
+  "Parachute Base": {
+    campDraw: 1,
+    abilities: [{ effect: "paradrop", cost: 0 }],
+  },
+  "Labor Camp": {
+    campDraw: 1,
+    abilities: [{ effect: "destroyrestore", cost: 0 }],
   },
 };
 
-// Example test configurations
-const TEST_CONFIGS = {
-  // Test camp abilities
-  camps: {
-    people: ["Looter", "Vigilante", "Mutant", "Repair Bot"],
-    events: ["Interrogate", "Strafe"],
-    fillTo: 20,
-  },
+global.CAMP_CARDS = CAMP_CARDS;
 
-  // Famine testing with lots of punk generation
-  famine: {
-    people: [
-      { name: "Rabble Rouser", count: 4 }, // Ability: Gain Punk
-      { name: "Looter", count: 2 },
-      { name: "Vigilante", count: 2 },
-    ],
-    events: [
-      { name: "Famine", count: 2 },
-      { name: "Uprising", count: 1 }, // Gives 3 punks immediately
-    ],
-    fillTo: 20,
-  },
+// ============================================================================
+// DECK CREATION FUNCTIONS
+// ============================================================================
 
-  // Test event cards
-  events: {
-    people: [
-      { name: "Looter", count: 3 },
-      { name: "Vigilante", count: 3 },
-      "Repair Bot",
-      "Vanguard",
-    ],
-    events: [
-      "High Ground",
-      "Famine",
-      "Uprising",
-      "Napalm",
-      "Radiation",
-      "Bombardment",
-      "Banish",
-      "Truce",
-      "Strafe",
-    ],
-    fillTo: 25,
-  },
+function createFullDeck() {
+  const deck = [];
 
-  // Test traits
-  traits: {
-    people: [
-      "Karli Blaze",
-      "Vera Vosh",
-      "Argo Yesky",
-      "Looter",
-      "Vigilante",
-      "Mutant",
-    ],
-    events: ["Interrogate"],
-    fillTo: 15,
-  },
-};
+  // 6 unique people (1 copy each)
+  [
+    "Karli Blaze",
+    "Vera Vosh",
+    "Argo Yesky",
+    "Zeto Kahn",
+    "Magnus Karv",
+    "Molgur Stang",
+  ].forEach((name) => {
+    const data = PERSON_CARDS[name];
+    deck.push({
+      id: `${name.replace(/\s+/g, "_")}_unique`,
+      name,
+      type: "person",
+      cost: data.cost,
+      abilities: data.abilities,
+      junkEffect: data.junkEffect,
+    });
+  });
 
-// Use a test config
-gameState.deck = createTestDeck(TEST_CONFIGS.famine);
+  // 20 people (2 copies each)
+  [
+    "Looter",
+    "Wounded Soldier",
+    "Cult Leader",
+    "Repair Bot",
+    "Gunner",
+    "Assassin",
+    "Scientist",
+    "Mutant",
+    "Vigilante",
+    "Rescue Team",
+    "Muse",
+    "Mimic",
+    "Exterminator",
+    "Scout",
+    "Pyromaniac",
+    "Holdout",
+    "Doomsayer",
+    "Rabble Rouser",
+    "Vanguard",
+    "Sniper",
+  ].forEach((name) => {
+    const data = PERSON_CARDS[name];
+    for (let i = 0; i < 2; i++) {
+      deck.push({
+        id: `${name.replace(/\s+/g, "_")}_${i}`,
+        name,
+        type: "person",
+        cost: data.cost,
+        abilities: data.abilities,
+        junkEffect: data.junkEffect,
+      });
+    }
+  });
 
-// Test camp configurations
-const CAMP_CONFIGS = {
-  standard: ["Adrenaline Lab", "Juggernaut", "Parachute Base"],
-  bonfire: ["Bonfire", "Atomic Garden", "Mulcher"],
-  octagon: ["The Octagon", "Labor Camp", "Blood Bank"],
-  construction: ["Construction Yard", "Scavenger Camp", "Supply Depot"],
-  advanced: ["Omen Clock", "Cache", "Resonator"],
-};
+  // 10 events (2 copies each)
+  [
+    "Interrogate",
+    "Truce",
+    "Uprising",
+    "Radiation",
+    "Famine",
+    "Napalm",
+    "Strafe",
+    "Bombardment",
+    "High Ground",
+    "Banish",
+  ].forEach((name) => {
+    const data = EVENT_CARDS[name];
+    for (let i = 0; i < 2; i++) {
+      deck.push({
+        id: `${name.replace(/\s+/g, "_")}_${i}`,
+        name,
+        type: "event",
+        cost: data.cost,
+        queueNumber: data.queueNumber,
+        junkEffect: data.junkEffect,
+      });
+    }
+  });
 
-// Choose which test to run
-const leftCamps = CAMP_CONFIGS.octagon;
-const rightCamps = CAMP_CONFIGS.standard;
+  // Shuffle
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
 
-// Helper function to create a camp card
+  console.log(`Created deck: 46 people + 20 events = ${deck.length} cards`);
+  return deck;
+}
+
+function createCampDeck() {
+  const camps = [
+    "Railgun",
+    "Atomic Garden",
+    "Cannon",
+    "Pillbox",
+    "Scud Launcher",
+    "Victory Totem",
+    "Catapult",
+    "Nest of Spies",
+    "Command Post",
+    "Obelisk",
+    "Mercenary Camp",
+    "Reactor",
+    "The Octagon",
+    "Juggernaut",
+    "Scavenger Camp",
+    "Outpost",
+    "Transplant Lab",
+    "Resonator",
+    "Bonfire",
+    "Cache",
+    "Watchtower",
+    "Construction Yard",
+    "Adrenaline Lab",
+    "Mulcher",
+    "Blood Bank",
+    "Arcade",
+    "Training Camp",
+    "Supply Depot",
+    "Omen Clock",
+    "Warehouse",
+    "Garage",
+    "Oasis",
+    "Parachute Base",
+    "Labor Camp",
+  ];
+
+  for (let i = camps.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [camps[i], camps[j]] = [camps[j], camps[i]];
+  }
+
+  return camps;
+}
+
 function createCamp(name, columnIndex) {
-  const campData = CAMP_CARDS[name];
-
-  if (!campData) {
+  const data = CAMP_CARDS[name];
+  if (!data) {
     console.error(`Camp not found: ${name}`);
     return null;
   }
 
   return {
-    id: `${name.toLowerCase().replace(/\s+/g, "_")}_${columnIndex}`,
-    name: name,
+    id: `${name.replace(/\s+/g, "_")}_${columnIndex}`,
+    name,
     type: "camp",
     isReady: true,
     isDamaged: name === "Cannon",
     isDestroyed: false,
-    abilities: campData.abilities || [],
-    campDraw: campData.campDraw || 0,
+    abilities: data.abilities || [],
+    campDraw: data.campDraw || 0,
   };
 }
 
-// Set up left player's camps using the config
-leftCamps.forEach((campName, index) => {
-  gameState.players.left.columns[index].setCard(0, createCamp(campName, index));
-});
+// ============================================================================
+// GAME SETUP - Wait for both players, then start camp selection
+// ============================================================================
 
-// Set up right player's camps using the config
-rightCamps.forEach((campName, index) => {
-  gameState.players.right.columns[index].setCard(
-    0,
-    createCamp(campName, index)
-  );
-});
-
-// Draw initial hands based on camp draw values
-for (let i = 0; i < 3; i++) {
-  const leftCamp = gameState.players.left.columns[i].getCard(0);
-  const rightCamp = gameState.players.right.columns[i].getCard(0);
-
-  // Draw cards for left player
-  for (let j = 0; j < (leftCamp?.campDraw || 0); j++) {
-    if (gameState.deck.length > 0) {
-      gameState.players.left.hand.push(gameState.deck.shift());
-    }
-  }
-
-  // Draw cards for right player
-  for (let j = 0; j < (rightCamp?.campDraw || 0); j++) {
-    if (gameState.deck.length > 0) {
-      gameState.players.right.hand.push(gameState.deck.shift());
-    }
-  }
-}
-
-console.log(`Left player drew ${gameState.players.left.hand.length} cards`);
-console.log(`Right player drew ${gameState.players.right.hand.length} cards`);
-
-// Start both players with 3 water (standard starting amount)
-gameState.players.left.water = 3;
-gameState.players.right.water = 3;
-
-gameState.phase = "actions";
-gameState.currentPlayer = "left";
-
-const commandSystem = new CommandSystem(gameState);
+gameState.phase = "waiting";
 
 function broadcast(message) {
   const data = JSON.stringify(message);
   clients.forEach((playerId, ws) => {
-    if (ws.readyState === 1) {
-      // WebSocket.OPEN
-      ws.send(data);
-    }
+    if (ws.readyState === 1) ws.send(data);
   });
 }
 
 wss.on("connection", (ws) => {
-  // Assign player ID
   let playerId = null;
 
   if (!players.left) {
@@ -470,11 +508,8 @@ wss.on("connection", (ws) => {
   }
 
   clients.set(ws, playerId);
-  console.log(
-    `Client connected as ${playerId} player. Total clients: ${clients.size}`
-  );
+  console.log(`${playerId} connected. Total clients: ${clients.size}`);
 
-  // Tell client which player they are
   ws.send(
     JSON.stringify({
       type: "PLAYER_ASSIGNED",
@@ -482,13 +517,59 @@ wss.on("connection", (ws) => {
     })
   );
 
-  // Send current state to the new client
-  ws.send(
-    JSON.stringify({
+  // Start camp selection when both players are connected
+  if (players.left && players.right && gameState.phase === "waiting") {
+    console.log("Both players connected - starting camp selection");
+
+    gameState.deck = createFullDeck();
+    gameState.campDeck = createCampDeck();
+
+    gameState.campOffers = {
+      left: gameState.campDeck.splice(0, 6),
+      right: gameState.campDeck.splice(0, 6),
+    };
+
+    gameState.campSelections = { left: null, right: null };
+    gameState.phase = "camp_selection";
+
+    console.log("Left camps:", gameState.campOffers.left);
+    console.log("Right camps:", gameState.campOffers.right);
+
+    // Create a plain serializable state object
+    const stateToSend = {
+      players: gameState.players,
+      currentPlayer: gameState.currentPlayer,
+      turnNumber: gameState.turnNumber,
+      phase: gameState.phase,
+      deck: gameState.deck,
+      discard: gameState.discard,
+      pending: gameState.pending,
+      turnEvents: gameState.turnEvents,
+      campOffers: gameState.campOffers,
+      campSelections: gameState.campSelections,
+      campDeck: gameState.campDeck,
+    };
+
+    const stateMessage = JSON.stringify({
       type: "STATE_SYNC",
-      state: gameState,
-    })
-  );
+      state: stateToSend,
+    });
+
+    if (players.left && players.left.readyState === 1) {
+      players.left.send(stateMessage);
+    }
+    if (players.right && players.right.readyState === 1) {
+      players.right.send(stateMessage);
+    }
+  } else {
+    // Send state to just this player
+    ws.send(
+      JSON.stringify({
+        type: "STATE_SYNC",
+        state: gameState,
+      })
+    );
+  }
 
   // Handle incoming messages
   ws.on("message", (data) => {
@@ -497,12 +578,10 @@ wss.on("connection", (ws) => {
     if (message.type === "COMMAND") {
       console.log(`Received command from ${playerId}:`, message.command.type);
 
-      // Execute command on server's game state
       const success = commandSystem.execute(message.command);
 
       if (success) {
         console.log("Command executed successfully, broadcasting state");
-        // Broadcast updated state to ALL clients
         broadcast({
           type: "STATE_SYNC",
           state: gameState,
@@ -524,6 +603,5 @@ wss.on("connection", (ws) => {
     console.error("WebSocket error:", error);
   });
 });
-
 console.log("Server running on ws://localhost:8080");
 console.log("Initial game state created");

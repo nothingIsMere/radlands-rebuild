@@ -40,6 +40,262 @@ export class UIRenderer {
     return this.isMyTurn();
   }
 
+  renderCampSelection() {
+    if (!this.container) {
+      this.container = document.getElementById("app");
+    }
+
+    this.container.innerHTML = "";
+
+    const selectionDiv = this.createElement("div", "camp-selection-screen");
+
+    const title = this.createElement("h1");
+    title.textContent = "Select 3 Camps";
+    selectionDiv.appendChild(title);
+
+    const myPlayerId = window.networkClient?.myPlayerId;
+    const myCamps = this.state.campOffers?.[myPlayerId] || [];
+
+    // Check if already selected
+    const alreadySelected = this.state.campSelections?.[myPlayerId];
+    if (alreadySelected) {
+      const waitingMsg = this.createElement("p");
+      waitingMsg.textContent = "Waiting for opponent to select camps...";
+      waitingMsg.style.fontSize = "24px";
+      waitingMsg.style.marginTop = "40px";
+      selectionDiv.appendChild(waitingMsg);
+
+      const yourCamps = this.createElement("div");
+      yourCamps.textContent = `Your camps: ${alreadySelected.join(", ")}`;
+      yourCamps.style.marginTop = "20px";
+      selectionDiv.appendChild(yourCamps);
+
+      this.container.appendChild(selectionDiv);
+      return;
+    }
+
+    const selectedCamps = new Set();
+    const campCards = [];
+
+    const campsGrid = this.createElement("div", "camps-grid");
+
+    myCamps.forEach((campName) => {
+      const campCard = this.createElement("div", "camp-card");
+
+      // Camp name
+      const nameDiv = this.createElement("div", "camp-card-name");
+      nameDiv.textContent = campName;
+      campCard.appendChild(nameDiv);
+
+      // Get camp data from CAMP_CARDS (we need to access it)
+      const campData = this.getCampData(campName);
+
+      if (campData) {
+        // Camp draw
+        const drawDiv = this.createElement("div", "camp-card-draw");
+        drawDiv.textContent = `Draw: ${campData.campDraw}`;
+        campCard.appendChild(drawDiv);
+
+        // Abilities
+        if (campData.abilities && campData.abilities.length > 0) {
+          const abilitiesDiv = this.createElement("div", "camp-card-abilities");
+          campData.abilities.forEach((ability) => {
+            const abilityDiv = this.createElement("div", "camp-card-ability");
+            abilityDiv.textContent = `${ability.effect} (${ability.cost}💧)`;
+            abilitiesDiv.appendChild(abilityDiv);
+          });
+          campCard.appendChild(abilitiesDiv);
+        }
+
+        // Traits
+        const trait = this.getCampTrait(campName);
+        if (trait) {
+          const traitDiv = this.createElement("div", "camp-card-trait");
+          traitDiv.textContent = trait;
+          campCard.appendChild(traitDiv);
+        }
+      }
+
+      campCards.push({ element: campCard, name: campName });
+
+      campCard.addEventListener("click", () => {
+        if (selectedCamps.has(campName)) {
+          selectedCamps.delete(campName);
+          campCard.classList.remove("selected");
+        } else if (selectedCamps.size < 3) {
+          selectedCamps.add(campName);
+          campCard.classList.add("selected");
+        }
+
+        confirmBtn.disabled = selectedCamps.size !== 3;
+        counter.textContent = `Selected: ${selectedCamps.size}/3`;
+      });
+
+      campsGrid.appendChild(campCard);
+    });
+
+    selectionDiv.appendChild(campsGrid);
+
+    // Selection counter
+    const counter = this.createElement("div");
+    counter.textContent = "Selected: 0/3";
+    counter.style.fontSize = "20px";
+    counter.style.marginTop = "20px";
+    selectionDiv.appendChild(counter);
+
+    // Confirm button
+    const confirmBtn = this.createElement("button");
+    confirmBtn.textContent = "Confirm Selection";
+    confirmBtn.disabled = true;
+    confirmBtn.style.marginTop = "20px";
+    confirmBtn.style.padding = "15px 30px";
+    confirmBtn.style.fontSize = "18px";
+
+    confirmBtn.addEventListener("click", () => {
+      this.commands.execute({
+        type: "SELECT_CAMPS",
+        playerId: myPlayerId,
+        payload: {
+          playerId: myPlayerId,
+          camps: Array.from(selectedCamps),
+        },
+      });
+    });
+
+    selectionDiv.appendChild(confirmBtn);
+    this.container.appendChild(selectionDiv);
+  }
+
+  // Add these helper methods to UIRenderer class
+  getCampData(campName) {
+    // This mirrors the CAMP_CARDS structure from server.js
+    const CAMP_CARDS = {
+      Railgun: { campDraw: 0, abilities: [{ effect: "damage", cost: 2 }] },
+      "Atomic Garden": {
+        campDraw: 1,
+        abilities: [{ effect: "restoreready", cost: 2 }],
+      },
+      Cannon: { campDraw: 2, abilities: [{ effect: "damage", cost: 2 }] },
+      Pillbox: { campDraw: 1, abilities: [{ effect: "damage", cost: 3 }] },
+      "Scud Launcher": {
+        campDraw: 0,
+        abilities: [{ effect: "damage", cost: 1 }],
+      },
+      "Victory Totem": {
+        campDraw: 1,
+        abilities: [
+          { effect: "damage", cost: 2 },
+          { effect: "raid", cost: 2 },
+        ],
+      },
+      Catapult: { campDraw: 0, abilities: [{ effect: "damage", cost: 2 }] },
+      "Nest of Spies": {
+        campDraw: 1,
+        abilities: [{ effect: "damage", cost: 1 }],
+      },
+      "Command Post": {
+        campDraw: 1,
+        abilities: [{ effect: "damage", cost: 3 }],
+      },
+      Obelisk: { campDraw: 1, abilities: [] },
+      "Mercenary Camp": {
+        campDraw: 0,
+        abilities: [{ effect: "damagecamp", cost: 2 }],
+      },
+      Reactor: { campDraw: 1, abilities: [{ effect: "destroyall", cost: 2 }] },
+      "The Octagon": {
+        campDraw: 0,
+        abilities: [{ effect: "destroy", cost: 1 }],
+      },
+      Juggernaut: { campDraw: 0, abilities: [{ effect: "move", cost: 1 }] },
+      "Scavenger Camp": {
+        campDraw: 1,
+        abilities: [{ effect: "discardchoose", cost: 0 }],
+      },
+      Outpost: {
+        campDraw: 1,
+        abilities: [
+          { effect: "raid", cost: 2 },
+          { effect: "restore", cost: 2 },
+        ],
+      },
+      "Transplant Lab": {
+        campDraw: 2,
+        abilities: [{ effect: "restore", cost: 1 }],
+      },
+      Resonator: { campDraw: 1, abilities: [{ effect: "damage", cost: 1 }] },
+      Bonfire: {
+        campDraw: 1,
+        abilities: [{ effect: "damagerestoremany", cost: 0 }],
+      },
+      Cache: { campDraw: 1, abilities: [{ effect: "raidpunk", cost: 2 }] },
+      Watchtower: { campDraw: 0, abilities: [{ effect: "damage", cost: 1 }] },
+      "Construction Yard": {
+        campDraw: 1,
+        abilities: [
+          { effect: "moveperson", cost: 1 },
+          { effect: "raid", cost: 2 },
+        ],
+      },
+      "Adrenaline Lab": {
+        campDraw: 1,
+        abilities: [{ effect: "usedamagedability", cost: 0 }],
+      },
+      Mulcher: { campDraw: 0, abilities: [{ effect: "destroydraw", cost: 0 }] },
+      "Blood Bank": {
+        campDraw: 1,
+        abilities: [{ effect: "destroywater", cost: 0 }],
+      },
+      Arcade: { campDraw: 1, abilities: [{ effect: "gainpunk", cost: 1 }] },
+      "Training Camp": {
+        campDraw: 2,
+        abilities: [{ effect: "damage", cost: 2 }],
+      },
+      "Supply Depot": {
+        campDraw: 2,
+        abilities: [{ effect: "drawdiscard", cost: 2 }],
+      },
+      "Omen Clock": {
+        campDraw: 1,
+        abilities: [{ effect: "advance", cost: 1 }],
+      },
+      Warehouse: { campDraw: 1, abilities: [{ effect: "restore", cost: 1 }] },
+      Garage: { campDraw: 0, abilities: [{ effect: "raid", cost: 1 }] },
+      Oasis: { campDraw: 1, abilities: [] },
+      "Parachute Base": {
+        campDraw: 1,
+        abilities: [{ effect: "paradrop", cost: 0 }],
+      },
+      "Labor Camp": {
+        campDraw: 1,
+        abilities: [{ effect: "destroyrestore", cost: 0 }],
+      },
+    };
+
+    return CAMP_CARDS[campName];
+  }
+
+  getCampTrait(campName) {
+    const traits = {
+      Cannon: "Starts damaged",
+      Obelisk: "Win on deck exhaust",
+      Oasis: "-1 cost if column empty",
+      Bonfire: "Cannot restore self",
+      Resonator: "Must be only ability",
+      Juggernaut: "Moves forward, opponent destroys camp on 3rd move",
+      "Transplant Lab": "Need 2+ people played",
+      "Nest of Spies": "Need 2+ people played",
+      "Mercenary Camp": "Need 4+ people",
+      Arcade: "Need 0-1 people",
+      "Training Camp": "Need 2 people in column",
+      "Command Post": "Cost -1 per punk",
+      Pillbox: "Cost -1 per destroyed camp",
+      Watchtower: "Need event resolved this turn",
+    };
+
+    return traits[campName] || null;
+  }
+
   renderGameOver() {
     console.log("=== RENDER GAME OVER ===");
     console.log("this.state.winner:", this.state.winner);
@@ -125,6 +381,12 @@ export class UIRenderer {
 
   render() {
     console.log("UI render called, pending state:", this.state.pending);
+
+    // Handle camp selection phase
+    if (this.state.phase === "camp_selection") {
+      this.renderCampSelection();
+      return;
+    }
 
     // Get or create main container
     if (!this.container) {

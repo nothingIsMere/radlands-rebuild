@@ -31,6 +31,18 @@ export class GameState {
       resonatorUsedThisTurn: false,
     };
 
+    // Camp selection state
+    this.campDeck = [];
+    this.campSelectionPhase = false;
+    this.campOffers = {
+      left: [],
+      right: [],
+    };
+    this.campSelections = {
+      left: null,
+      right: null,
+    };
+
     this.activeAbilityContext = null;
   }
 

@@ -1430,9 +1430,8 @@ export class CommandSystem {
     // Draw initial hands based on camp draw values ONLY
     ["left", "right"].forEach((playerId) => {
       const player = this.state.players[playerId];
-      let totalDraw = 0; // Remove base 3
+      let totalDraw = 0;
 
-      // Add camp draw bonuses
       for (let col = 0; col < 3; col++) {
         const camp = player.columns[col].getCard(0);
         if (camp && camp.campDraw) {
@@ -1453,14 +1452,17 @@ export class CommandSystem {
       }
     });
 
-    // Set starting water and phase
-    this.state.players.left.water = 3;
-    this.state.players.right.water = 3;
+    // Both players start with 0 water
+    this.state.players.left.water = 0;
+    this.state.players.right.water = 0;
     this.state.currentPlayer = "left";
-    this.state.phase = "actions";
+    this.state.phase = "events";
     this.state.turnNumber = 1;
 
-    console.log("Game setup complete - starting actions phase");
+    console.log("Game setup complete - starting at events phase (turn 1)");
+
+    // Process events phase (will be empty on turn 1)
+    this.processEventsPhase();
   }
 
   createCamp(name, columnIndex) {

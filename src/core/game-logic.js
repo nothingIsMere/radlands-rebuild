@@ -345,8 +345,11 @@ export function calculatePhaseTransition(currentPhase, hasEventsPending) {
 }
 
 export function calculateReplenishWater(turnNumber) {
-  // In the actual game, water might vary by turn
-  // For now, always give 3 water (you can adjust this)
+  // Turn 1: first player gets 1 water
+  // Turn 2+: everyone gets 3 water
+  if (turnNumber === 1) {
+    return 1;
+  }
   return 3;
 }
 

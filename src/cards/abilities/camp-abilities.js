@@ -1859,7 +1859,25 @@ export const campAbilities = {
 
         if (result?.triggerEffect) {
           console.log("Juggernaut third move! Opponent must destroy a camp.");
-          // TODO: Implement camp destruction choice
+          if (result?.triggerEffect) {
+            console.log("Juggernaut third move! Opponent must destroy a camp.");
+
+            // Set up opponent camp selection
+            const opponentId = playerId === "left" ? "right" : "left";
+            state.pending = {
+              type: "juggernaut_select_camp",
+              sourcePlayerId: playerId,
+              targetPlayerId: opponentId,
+              sourceCard: context.campCard || context.source,
+              shouldStayReady: context.veraDecision || false,
+            };
+
+            console.log(
+              `Juggernaut: ${opponentId} must choose one of their camps to destroy`
+            );
+          }
+
+          return true;
         }
 
         console.log(`Juggernaut should now be at position ${nextPosition}`);

@@ -13,242 +13,416 @@ const players = { left: null, right: null }; // Which websocket is which player
 // Create a single game state on the server
 const gameState = new GameState();
 
-// Bigger test deck to avoid exhaustion
-function createTestCard(id, name, type, cost = 1) {
-  return {
-    id: id,
-    name: name,
-    type: type,
-    cost: cost,
-    abilities: type === "person" ? [{ effect: "damage", cost: 1 }] : undefined,
-    junkEffect: "water",
+// Test deck builder - easy to configure for different tests
+function createTestDeck(config) {
+  const deck = [];
+
+  // Helper to add cards by name
+  const addPerson = (name, count = 1) => {
+    for (let i = 0; i < count; i++) {
+      const cardData = PERSON_CARDS[name];
+      if (!cardData) {
+        console.warn(`Unknown person: ${name}`);
+        continue;
+      }
+      deck.push({
+        id: `${name.toLowerCase().replace(/\s+/g, "_")}_${deck.length}`,
+        name: name,
+        type: "person",
+        cost: cardData.cost,
+        abilities: cardData.abilities,
+        junkEffect: cardData.junkEffect,
+      });
+    }
   };
+
+  const addEvent = (name, count = 1) => {
+    for (let i = 0; i < count; i++) {
+      const cardData = EVENT_CARDS[name];
+      if (!cardData) {
+        console.warn(`Unknown event: ${name}`);
+        continue;
+      }
+      deck.push({
+        id: `${name.toLowerCase().replace(/\s+/g, "_")}_${deck.length}`,
+        name: name,
+        type: "event",
+        cost: cardData.cost,
+        queueNumber: cardData.queueNumber,
+        junkEffect: cardData.junkEffect,
+      });
+    }
+  };
+
+  // Add cards based on config
+  if (config.people) {
+    config.people.forEach((spec) => {
+      if (typeof spec === "string") {
+        addPerson(spec, 1);
+      } else {
+        addPerson(spec.name, spec.count || 1);
+      }
+    });
+  }
+
+  if (config.events) {
+    config.events.forEach((spec) => {
+      if (typeof spec === "string") {
+        addEvent(spec, 1);
+      } else {
+        addEvent(spec.name, spec.count || 1);
+      }
+    });
+  }
+
+  // Add filler cards if needed
+  if (config.fillTo) {
+    while (deck.length < config.fillTo) {
+      addPerson("Looter", 1);
+    }
+  }
+
+  return deck;
 }
 
-// Test deck focused on Adrenaline Lab and complex multi-step abilities
-gameState.deck = [
-  // === ADRENALINE LAB TEST TARGETS ===
-  // Simple damage dealers to use with Adrenaline Lab
-
-  {
-    id: "looter_1",
-    name: "Looter",
-    type: "person",
+// Card definitions from your CSV data
+const PERSON_CARDS = {
+  Looter: {
     cost: 1,
     abilities: [{ effect: "damage", cost: 2 }],
     junkEffect: "water",
   },
-  {
-    id: "vanguard_1",
-    name: "Vanguard",
-    type: "person",
+  Vigilante: {
     cost: 1,
-    abilities: [{ effect: "damageandcounter", cost: 1 }],
+    abilities: [{ effect: "injure", cost: 1 }],
     junkEffect: "raid",
   },
-  {
-    id: "repair_bot_1",
-    name: "Repair Bot",
-    type: "person",
+  "Cult Leader": {
     cost: 1,
-    abilities: [{ effect: "restore", cost: 2 }],
-    junkEffect: "injure",
+    abilities: [{ effect: "destroyowndamage", cost: 0 }],
+    junkEffect: "card",
   },
-
-  {
-    id: "looter_2",
-    name: "Looter",
-    type: "person",
-    cost: 1,
-    abilities: [{ effect: "damage", cost: 2 }],
-    junkEffect: "water",
-  },
-  {
-    id: "mutant_1",
-    name: "Mutant",
-    type: "person",
+  Mutant: {
     cost: 1,
     abilities: [{ effect: "damagerestore", cost: 0 }],
     junkEffect: "injure",
   },
-  {
-    id: "karli_blaze_1",
-    name: "Karli Blaze",
-    type: "person",
-    cost: 2,
-    abilities: [{ effect: "damage", cost: 1 }],
-    junkEffect: "card",
-  },
-
-  // Multi-step ability (hardest test for Adrenaline Lab)
-  {
-    id: "cult_leader_1",
-    name: "Cult Leader",
-    type: "person",
-    cost: 2,
-    abilities: [{ effect: "destroyowndamage", cost: 0 }],
-    junkEffect: "restore",
-  },
-
-  // === OTHER COMPLEX CARDS TO TEST ===
-  {
-    id: "mimic_1",
-    name: "Mimic",
-    type: "person",
-    cost: 2,
-    abilities: [{ effect: "copyability", cost: 0 }],
-    junkEffect: "water",
-  },
-  {
-    id: "rabble_rouser_1",
-    name: "Rabble Rouser",
-    type: "person",
+  "Rabble Rouser": {
     cost: 1,
     abilities: [
       { effect: "gainpunk", cost: 1 },
       { effect: "punkdamage", cost: 1 },
     ],
+    junkEffect: "raid",
+  },
+  "Repair Bot": {
+    cost: 1,
+    abilities: [{ effect: "restore", cost: 2 }],
+    junkEffect: "injure",
+  },
+  Vanguard: {
+    cost: 1,
+    abilities: [{ effect: "damageandcounter", cost: 1 }],
+    junkEffect: "raid",
+  },
+  "Wounded Soldier": {
+    cost: 1,
+    abilities: [{ effect: "damage", cost: 1 }],
+    junkEffect: "injure",
+  },
+  "Karli Blaze": {
+    cost: 3,
+    abilities: [{ effect: "damage", cost: 1 }],
     junkEffect: "punk",
   },
-
-  // === BASIC UTILITY CARDS ===
-  {
-    id: "vigilante_1",
-    name: "Vigilante",
-    type: "person",
-    cost: 1,
+  "Vera Vosh": {
+    cost: 3,
     abilities: [{ effect: "injure", cost: 1 }],
+    junkEffect: "punk",
+  },
+  "Argo Yesky": {
+    cost: 3,
+    abilities: [{ effect: "damage", cost: 1 }],
+    junkEffect: "punk",
+  },
+  Mimic: {
+    cost: 1,
+    abilities: [{ effect: "copyability", cost: 0 }],
+    junkEffect: "injure",
+  },
+  Assassin: {
+    cost: 1,
+    abilities: [{ effect: "destroyperson", cost: 2 }],
     junkEffect: "raid",
   },
-  {
-    id: "vigilante_2",
-    name: "Vigilante",
-    type: "person",
+  Sniper: {
     cost: 1,
-    abilities: [{ effect: "injure", cost: 1 }],
-    junkEffect: "raid",
+    abilities: [{ effect: "damageany", cost: 2 }],
+    junkEffect: "restore",
   },
-  {
-    id: "muse_1",
-    name: "Muse",
-    type: "person",
+  Muse: {
     cost: 1,
     abilities: [{ effect: "extra_water", cost: 0 }],
     junkEffect: "injure",
   },
-  {
-    id: "muse_2",
-    name: "Muse",
-    type: "person",
+  "Zeto Kahn": {
+    cost: 3,
+    abilities: [{ effect: "drawdiscard", cost: 1 }],
+    junkEffect: "punk",
+  },
+  Scientist: {
     cost: 1,
-    abilities: [{ effect: "extra_water", cost: 0 }],
+    abilities: [{ effect: "discardchoose", cost: 1 }],
+    junkEffect: "raid",
+  },
+  "Rescue Team": {
+    cost: 1,
+    abilities: [{ effect: "returnperson", cost: 0 }],
     junkEffect: "injure",
   },
-
-  // === BASIC EVENTS ===
-  {
-    id: "strafe_1",
-    name: "Strafe",
-    type: "event",
-    cost: 2,
-    queueNumber: 0,
+  "Magnus Karv": {
+    cost: 3,
+    abilities: [{ effect: "damagecolumn", cost: 2 }],
+    junkEffect: "punk",
+  },
+  Exterminator: {
+    cost: 1,
+    abilities: [{ effect: "destroyalldamaged", cost: 1 }],
     junkEffect: "card",
   },
-  {
-    id: "interrogate_1",
-    name: "Interrogate",
-    type: "event",
+  Gunner: {
     cost: 1,
-    queueNumber: 0,
+    abilities: [{ effect: "injureall", cost: 2 }],
+    junkEffect: "restore",
+  },
+  Pyromaniac: {
+    cost: 1,
+    abilities: [{ effect: "damagecamp", cost: 1 }],
+    junkEffect: "injure",
+  },
+  "Molgur Stang": {
+    cost: 4,
+    abilities: [{ effect: "destroycamp", cost: 1 }],
+    junkEffect: "punk",
+  },
+  Doomsayer: {
+    cost: 1,
+    abilities: [{ effect: "conditionaldamage", cost: 1 }],
+    junkEffect: "card",
+  },
+  Scout: {
+    cost: 1,
+    abilities: [{ effect: "raid", cost: 1 }],
     junkEffect: "water",
   },
-];
+  Holdout: {
+    cost: 2,
+    abilities: [{ effect: "damage", cost: 1 }],
+    junkEffect: "raid",
+  },
+};
 
-// // Duplicate to reach 30 cards
-// const baseDeck = [...gameState.deck];
-// while (gameState.deck.length < 30) {
-//   baseDeck.forEach((card) => {
-//     if (gameState.deck.length < 30) {
-//       gameState.deck.push({
-//         ...card,
-//         id: `${card.name.toLowerCase().replace(/\s+/g, "_")}_${
-//           gameState.deck.length
-//         }`,
-//       });
-//     }
-//   });
-// }
+const EVENT_CARDS = {
+  Interrogate: { cost: 1, queueNumber: 0, junkEffect: "water" },
+  Truce: { cost: 2, queueNumber: 0, junkEffect: "injure" },
+  Strafe: { cost: 2, queueNumber: 0, junkEffect: "card" },
+  "High Ground": { cost: 0, queueNumber: 1, junkEffect: "water" },
+  Famine: { cost: 1, queueNumber: 1, junkEffect: "injure" },
+  Napalm: { cost: 2, queueNumber: 1, junkEffect: "restore" },
+  Radiation: { cost: 2, queueNumber: 1, junkEffect: "raid" },
+  Banish: { cost: 1, queueNumber: 1, junkEffect: "raid" },
+  Uprising: { cost: 1, queueNumber: 2, junkEffect: "injure" },
+  Bombardment: { cost: 4, queueNumber: 3, junkEffect: "restore" },
+};
 
-// Set up camps - Adrenaline Lab for left player, basic camp for right
-gameState.players.left.columns[0].setCard(0, {
-  id: "camp_left_1",
-  name: "Adrenaline Lab",
-  type: "camp",
-  campDraw: 1,
-  abilities: [{ effect: "usedamagedability", cost: 0 }],
-  isReady: true,
-  isDamaged: false,
+const CAMP_CARDS = {
+  "The Octagon": {
+    campDraw: 0,
+    abilities: [{ effect: "destroy", cost: 1 }],
+  },
+  "Labor Camp": {
+    campDraw: 1,
+    abilities: [{ effect: "destroyrestore", cost: 0 }],
+  },
+  "Blood Bank": {
+    campDraw: 1,
+    abilities: [{ effect: "destroywater", cost: 0 }],
+  },
+  "Adrenaline Lab": {
+    campDraw: 1,
+    abilities: [{ effect: "usedamagedability", cost: 0 }],
+  },
+  Juggernaut: {
+    campDraw: 0,
+    abilities: [{ effect: "move", cost: 1 }],
+  },
+  "Parachute Base": {
+    campDraw: 1,
+    abilities: [{ effect: "paradrop", cost: 0 }],
+  },
+  Bonfire: {
+    campDraw: 1,
+    abilities: [{ effect: "damagerestoremany", cost: 0 }],
+  },
+  "Atomic Garden": {
+    campDraw: 1,
+    abilities: [{ effect: "restoreready", cost: 2 }],
+  },
+  Mulcher: {
+    campDraw: 0,
+    abilities: [{ effect: "destroydraw", cost: 0 }],
+  },
+  "Construction Yard": {
+    campDraw: 1,
+    abilities: [
+      { effect: "moveperson", cost: 1 },
+      { effect: "raid", cost: 2 },
+    ],
+  },
+  "Scavenger Camp": {
+    campDraw: 1,
+    abilities: [{ effect: "discardchoose", cost: 0 }],
+  },
+  "Supply Depot": {
+    campDraw: 2,
+    abilities: [{ effect: "drawdiscard", cost: 2 }],
+  },
+  "Omen Clock": {
+    campDraw: 1,
+    abilities: [{ effect: "advance", cost: 1 }],
+  },
+  Cache: {
+    campDraw: 1,
+    abilities: [{ effect: "raidpunk", cost: 2 }],
+  },
+  Resonator: {
+    campDraw: 1,
+    abilities: [{ effect: "damage", cost: 1 }],
+  },
+};
+
+// Example test configurations
+const TEST_CONFIGS = {
+  // Test camp abilities
+  camps: {
+    people: ["Looter", "Vigilante", "Mutant", "Repair Bot"],
+    events: ["Interrogate", "Strafe"],
+    fillTo: 20,
+  },
+
+  // Test event cards
+  events: {
+    people: [
+      { name: "Looter", count: 3 },
+      { name: "Vigilante", count: 3 },
+      "Repair Bot",
+      "Vanguard",
+    ],
+    events: [
+      "High Ground",
+      "Famine",
+      "Uprising",
+      "Napalm",
+      "Radiation",
+      "Bombardment",
+      "Banish",
+      "Truce",
+      "Strafe",
+    ],
+    fillTo: 25,
+  },
+
+  // Test traits
+  traits: {
+    people: [
+      "Karli Blaze",
+      "Vera Vosh",
+      "Argo Yesky",
+      "Looter",
+      "Vigilante",
+      "Mutant",
+    ],
+    events: ["Interrogate"],
+    fillTo: 15,
+  },
+};
+
+// Use a test config
+gameState.deck = createTestDeck(TEST_CONFIGS.events);
+
+// Test camp configurations
+const CAMP_CONFIGS = {
+  standard: ["Adrenaline Lab", "Juggernaut", "Parachute Base"],
+  bonfire: ["Bonfire", "Atomic Garden", "Mulcher"],
+  octagon: ["The Octagon", "Labor Camp", "Blood Bank"],
+  construction: ["Construction Yard", "Scavenger Camp", "Supply Depot"],
+  advanced: ["Omen Clock", "Cache", "Resonator"],
+};
+
+// Choose which test to run
+const leftCamps = CAMP_CONFIGS.octagon;
+const rightCamps = CAMP_CONFIGS.standard;
+
+// Helper function to create a camp card
+function createCamp(name, columnIndex) {
+  const campData = CAMP_CARDS[name];
+
+  if (!campData) {
+    console.error(`Camp not found: ${name}`);
+    return null;
+  }
+
+  return {
+    id: `${name.toLowerCase().replace(/\s+/g, "_")}_${columnIndex}`,
+    name: name,
+    type: "camp",
+    isReady: true,
+    isDamaged: name === "Cannon",
+    isDestroyed: false,
+    abilities: campData.abilities || [],
+    campDraw: campData.campDraw || 0,
+  };
+}
+
+// Set up left player's camps using the config
+leftCamps.forEach((campName, index) => {
+  gameState.players.left.columns[index].setCard(0, createCamp(campName, index));
 });
 
-gameState.players.left.columns[1].setCard(0, {
-  id: "camp_left_2",
-  name: "Cache",
-  type: "camp",
-  campDraw: 1,
-  abilities: [{ effect: "raidpunk", cost: 2 }],
-  isReady: true,
-  isDamaged: false,
+// Set up right player's camps using the config
+rightCamps.forEach((campName, index) => {
+  gameState.players.right.columns[index].setCard(
+    0,
+    createCamp(campName, index)
+  );
 });
 
-gameState.players.left.columns[2].setCard(0, {
-  id: "camp_left_3",
-  name: "Parachute Base",
-  type: "camp",
-  campDraw: 1,
-  abilities: [{ effect: "paradrop", cost: 0 }],
-  isReady: true,
-  isDamaged: false,
-});
+// Draw initial hands based on camp draw values
+for (let i = 0; i < 3; i++) {
+  const leftCamp = gameState.players.left.columns[i].getCard(0);
+  const rightCamp = gameState.players.right.columns[i].getCard(0);
 
-gameState.players.right.columns[0].setCard(0, {
-  id: "camp_right_1",
-  name: "Test Camp Right 1",
-  type: "camp",
-  campDraw: 1,
-  abilities: [],
-  isReady: true,
-  isDamaged: false,
-});
+  // Draw cards for left player
+  for (let j = 0; j < (leftCamp?.campDraw || 0); j++) {
+    if (gameState.deck.length > 0) {
+      gameState.players.left.hand.push(gameState.deck.shift());
+    }
+  }
 
-gameState.players.right.columns[1].setCard(0, {
-  id: "camp_right_2",
-  name: "Test Camp Right 2",
-  type: "camp",
-  campDraw: 1,
-  abilities: [],
-  isReady: true,
-  isDamaged: false,
-});
+  // Draw cards for right player
+  for (let j = 0; j < (rightCamp?.campDraw || 0); j++) {
+    if (gameState.deck.length > 0) {
+      gameState.players.right.hand.push(gameState.deck.shift());
+    }
+  }
+}
 
-gameState.players.right.columns[2].setCard(0, {
-  id: "camp_right_3",
-  name: "Test Camp Right 3",
-  type: "camp",
-  campDraw: 1,
-  abilities: [],
-  isReady: true,
-  isDamaged: false,
-});
+console.log(`Left player drew ${gameState.players.left.hand.length} cards`);
+console.log(`Right player drew ${gameState.players.right.hand.length} cards`);
 
-// Give both players plenty of water and some cards in hand
-gameState.players.left.water = 10;
-gameState.players.right.water = 10;
-gameState.players.left.hand = [
-  createTestCard("hand_l1", "HandCard1", "person"),
-];
-gameState.players.right.hand = [
-  createTestCard("hand_r1", "HandCard1", "person"),
-];
+// Start both players with 3 water (standard starting amount)
+gameState.players.left.water = 3;
+gameState.players.right.water = 3;
 
 gameState.phase = "actions";
 gameState.currentPlayer = "left";

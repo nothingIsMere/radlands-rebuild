@@ -919,6 +919,45 @@ class VanguardCounterHandler extends PendingHandler {
   }
 }
 
+class JuggernautSelectCampHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Verify correct player selecting
+    if (targetPlayer !== this.state.pending.targetPlayerId) {
+      console.log("You must select your own camp");
+      return false;
+    }
+
+    // Verify it's a camp (position 0)
+    if (targetPosition !== 0) {
+      console.log("Must select a camp");
+      return false;
+    }
+
+    const camp = this.state.getCard(targetPlayer, targetColumn, 0);
+    if (!camp || camp.type !== "camp" || camp.isDestroyed) {
+      console.log("Invalid camp selection");
+      return false;
+    }
+
+    // Destroy the camp
+    camp.isDestroyed = true;
+    console.log(`Juggernaut destroyed ${camp.name}!`);
+
+    // Mark Juggernaut as not ready
+    const sourceCard = this.state.pending.sourceCard;
+    if (sourceCard && !this.state.pending.shouldStayReady) {
+      sourceCard.isReady = false;
+    }
+
+    this.state.pending = null;
+    this.commandSystem.checkGameEnd();
+
+    return true;
+  }
+}
+
 // Special camp damage handlers
 class MolgurDestroyCampHandler extends PendingHandler {
   handle(payload) {
@@ -3948,6 +3987,7 @@ export const pendingHandlers = {
   parachute_select_ability: ParachuteSelectAbilityHandler,
   mimic_select_target: MimicSelectTargetHandler,
   mimic_select_ability: MimicSelectAbilityHandler,
+  juggernaut_select_camp: JuggernautSelectCampHandler,
 };
 
 // Export a function to get the right handler

@@ -388,6 +388,18 @@ export class UIRenderer {
           }
           break;
 
+        case "juggernaut_select_camp":
+          // Show which player needs to act
+          if (this.state.pending.targetPlayerId === this.state.currentPlayer) {
+            message.textContent =
+              "💥 JUGGERNAUT IMPACT! Choose one of YOUR camps to DESTROY";
+            overlay.classList.add("juggernaut-attack-self");
+          } else {
+            message.textContent = `⏳ Waiting for ${this.state.pending.targetPlayerId.toUpperCase()} to choose a camp to destroy...`;
+            overlay.classList.add("juggernaut-waiting");
+          }
+          break;
+
         case "place_punk":
           message.textContent = "📍 Click any slot to place a PUNK";
           overlay.classList.add("punk-placement");
@@ -871,6 +883,13 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("banish-target");
+      }
+    }
+
+    // Juggernaut destroy targeting
+    if (this.state.pending?.type === "juggernaut_select_camp") {
+      if (playerId === this.state.pending.targetPlayerId && position === 0) {
+        cardDiv.classList.add("juggernaut-destroy-target");
       }
     }
 
@@ -1603,6 +1622,23 @@ export class UIRenderer {
           ) {
             console.log(
               "Only the targeted player can select a camp for Raiders"
+            );
+            return;
+          }
+          // Allow the click to proceed for the target player
+          this.handleCardTargetClick(playerId, columnIndex, position);
+          return;
+        }
+
+        // SPECIAL CASE: Octagon opponent destroy - only target player can click
+        if (this.state.pending?.type === "octagon_opponent_destroy") {
+          // Only the TARGET player (opponent) can select, not the active player
+          if (
+            window.networkClient?.myPlayerId !==
+            this.state.pending.targetPlayerId
+          ) {
+            console.log(
+              "Only the targeted player can destroy their own person for Octagon"
             );
             return;
           }

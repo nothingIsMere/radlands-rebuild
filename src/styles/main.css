@@ -1681,3 +1681,18 @@ body.has-pending .card.adrenalinelab-target {
   background: #555;
   color: #999;
 }
+
+.overlay.juggernaut-attack-self {
+  background: rgba(150, 0, 0, 0.9);
+}
+
+.overlay.juggernaut-waiting {
+  background: rgba(50, 50, 50, 0.8);
+}
+
+.card.juggernaut-destroy-target {
+  animation: pulse-red 1.5s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 20px #ff0000;
+  border-color: #ff0000;
+}

@@ -115,49 +115,6 @@ export class GameState {
     return { gameEnded: false };
   }
 
-  drawCardWithReshuffle(addToPlayerHand = true, playerId = null) {
-    // Check if deck is already empty before trying to draw
-    if (this.deck.length === 0) {
-      const exhaustion = this.checkDeckExhaustion();
-      if (exhaustion.gameEnded) {
-        return { gameEnded: true, card: null };
-      }
-      // Deck was reshuffled if we get here
-    }
-
-    // Draw if possible
-    if (this.deck.length > 0) {
-      const card = this.deck.shift();
-
-      if (addToPlayerHand && playerId) {
-        this.players[playerId].hand.push(card);
-      }
-
-      console.log(
-        `[DRAW] Drew card: ${card.name}. Deck now has ${this.deck.length} cards`
-      );
-
-      // CHECK EXHAUSTION IMMEDIATELY AFTER DECK BECOMES EMPTY
-      if (this.deck.length === 0) {
-        console.log(
-          "[DRAW] Deck just became empty - checking exhaustion immediately"
-        );
-        const exhaustion = this.checkDeckExhaustion();
-        if (exhaustion.gameEnded) {
-          return { gameEnded: true, card: null };
-        }
-        // If not game ended, deck was just reshuffled
-        console.log(
-          `[DRAW] Deck reshuffled, now has ${this.deck.length} cards`
-        );
-      }
-
-      return { gameEnded: false, card: card };
-    }
-
-    return { gameEnded: false, card: null };
-  }
-
   checkForObelisk() {
     for (const playerId of ["left", "right"]) {
       const player = this.players[playerId];

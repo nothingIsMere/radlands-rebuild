@@ -9,11 +9,28 @@ export class UIRenderer {
   }
 
   isMyTurn() {
-    // Check if we know our player ID and if it's our turn
     if (!window.networkClient || !window.networkClient.myPlayerId) {
-      return true; // Default to allowing interaction if not connected
+      return true;
     }
     return this.state.currentPlayer === window.networkClient.myPlayerId;
+  }
+
+  // NEW HELPER - Add this right after isMyTurn()
+  canInteractWithPending() {
+    // If no pending state, follow normal turn rules
+    if (!this.state.pending) {
+      return this.isMyTurn();
+    }
+
+    // If there's a targetPlayerId, only that player can interact
+    if (this.state.pending.targetPlayerId) {
+      return (
+        window.networkClient?.myPlayerId === this.state.pending.targetPlayerId
+      );
+    }
+
+    // Otherwise, only the source/active player can interact
+    return this.isMyTurn();
   }
 
   renderGameOver() {
@@ -1613,55 +1630,9 @@ export class UIRenderer {
 
         if (e.defaultPrevented) return;
 
-        // SPECIAL CASE: Raiders camp selection - only target player can click
-        if (this.state.pending?.type === "raiders_select_camp") {
-          // Only the TARGET player (opponent) can select, not the active player
-          if (
-            window.networkClient?.myPlayerId !==
-            this.state.pending.targetPlayerId
-          ) {
-            console.log(
-              "Only the targeted player can select a camp for Raiders"
-            );
-            return;
-          }
-          // Allow the click to proceed for the target player
-          this.handleCardTargetClick(playerId, columnIndex, position);
-          return;
-        }
-
-        // SPECIAL CASE: Octagon opponent destroy - only target player can click
-        if (this.state.pending?.type === "octagon_opponent_destroy") {
-          // Only the TARGET player (opponent) can select, not the active player
-          if (
-            window.networkClient?.myPlayerId !==
-            this.state.pending.targetPlayerId
-          ) {
-            console.log(
-              "Only the targeted player can destroy their own person for Octagon"
-            );
-            return;
-          }
-          // Allow the click to proceed for the target player
-          this.handleCardTargetClick(playerId, columnIndex, position);
-          return;
-        }
-
-        // SPECIAL CASE: Junk effects - only active player can select targets
-        if (
-          this.state.pending?.type === "junk_injure" ||
-          this.state.pending?.type === "junk_restore" ||
-          this.state.pending?.type === "place_punk"
-        ) {
-          // Only the active player can complete their junk effect
-          if (!this.isMyTurn()) {
-            console.log(
-              "Only the active player can complete their junk action"
-            );
-            return;
-          }
-          // Allow the click to proceed for active player
-          this.handleCardTargetClick(playerId, columnIndex, position);
+        // UNIVERSAL CHECK: Block all pending interactions if not the designated player
+        if (this.state.pending && !this.canInteractWithPending()) {
+          console.log("Not your turn to interact with this pending action");
           return;
         }
 

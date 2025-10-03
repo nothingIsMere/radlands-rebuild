@@ -267,6 +267,146 @@ class PlacePunkHandler extends PendingHandler {
   }
 }
 
+class FamineSelectKeepHandler extends PendingHandler {
+  handle(payload) {
+    const { targetPlayer, targetColumn, targetPosition } = payload;
+
+    // Verify correct player is selecting
+    if (targetPlayer !== this.state.pending.currentSelectingPlayer) {
+      console.log("Not your turn to select for Famine");
+      return false;
+    }
+
+    if (!this.isValidTarget(payload)) {
+      console.log("Not a valid Famine target");
+      return false;
+    }
+
+    const selectedPerson = this.getTarget(payload);
+    if (!selectedPerson || selectedPerson.type !== "person") {
+      console.log("Must select a person");
+      return false;
+    }
+
+    console.log(`Famine: ${targetPlayer} keeping ${selectedPerson.name}`);
+
+    // Destroy all OTHER people for this player
+    const player = this.state.players[targetPlayer];
+    let destroyedCount = 0;
+
+    for (let col = 0; col < 3; col++) {
+      for (let pos = 2; pos >= 1; pos--) {
+        // Process back to front
+        const card = player.columns[col].getCard(pos);
+
+        console.log(`Famine scanning ${targetPlayer} col ${col} pos ${pos}:`, {
+          hasCard: !!card,
+          type: card?.type,
+          isPunk: card?.isPunk,
+          name: card?.name,
+          isDestroyed: card?.isDestroyed,
+        });
+
+        if (card && card.type === "person" && !card.isDestroyed) {
+          // Skip the selected person
+          if (col === targetColumn && pos === targetPosition) {
+            continue;
+          }
+
+          console.log(
+            `Famine checking: ${
+              card.isPunk ? "PUNK" : card.name
+            } at ${col},${pos}`
+          );
+
+          // Destroy this person
+          card.isDestroyed = true;
+
+          if (card.isPunk) {
+            const returnCard = {
+              id: card.id,
+              name: card.originalName || "Unknown Card",
+              type: "person",
+              cost: card.cost || 0,
+            };
+            this.state.deck.unshift(returnCard);
+            console.log(`Famine destroyed punk`);
+          } else {
+            this.state.discard.push(card);
+            console.log(`Famine destroyed ${card.name}`);
+          }
+
+          // Remove from column
+          player.columns[col].setCard(pos, null);
+
+          // Shift if needed
+          if (pos === 1) {
+            const cardInFront = player.columns[col].getCard(2);
+            if (cardInFront) {
+              player.columns[col].setCard(1, cardInFront);
+              player.columns[col].setCard(2, null);
+            }
+          }
+
+          destroyedCount++;
+        }
+      }
+    }
+
+    console.log(
+      `Famine: Destroyed ${destroyedCount} people for ${targetPlayer}`
+    );
+
+    // Check if we need opponent to select now
+    if (!this.state.pending.activePlayerDone) {
+      // Active player just finished, now opponent's turn
+      const opponentId = targetPlayer === "left" ? "right" : "left";
+      const opponent = this.state.players[opponentId];
+      let opponentPeople = [];
+
+      for (let col = 0; col < 3; col++) {
+        for (let pos = 1; pos <= 2; pos++) {
+          const card = opponent.columns[col].getCard(pos);
+          if (card && card.type === "person" && !card.isDestroyed) {
+            opponentPeople.push({
+              playerId: opponentId,
+              columnIndex: col,
+              position: pos,
+              card,
+            });
+          }
+        }
+      }
+
+      if (opponentPeople.length <= 1) {
+        console.log(
+          `Famine complete: ${opponentId} has ≤1 people, no selection needed`
+        );
+        this.state.pending = null;
+        return true;
+      }
+
+      // Set up opponent selection
+      this.state.pending = {
+        type: "famine_select_keep",
+        currentSelectingPlayer: opponentId,
+        activePlayerId: this.state.pending.activePlayerId,
+        validTargets: opponentPeople,
+        eventCard: this.state.pending.eventCard,
+        activePlayerDone: true,
+      };
+
+      console.log(`Famine: ${opponentId} must now select one person to keep`);
+      return true;
+    }
+
+    // Both players done
+    console.log("Famine complete");
+    this.state.pending = null;
+    return true;
+  }
+}
+
 class RestoreHandler extends PendingHandler {
   handle(payload) {
     const { targetPlayer, targetColumn, targetPosition } = payload;
@@ -3988,6 +4128,7 @@ export const pendingHandlers = {
   mimic_select_target: MimicSelectTargetHandler,
   mimic_select_ability: MimicSelectAbilityHandler,
   juggernaut_select_camp: JuggernautSelectCampHandler,
+  famine_select_keep: FamineSelectKeepHandler,
 };
 
 // Export a function to get the right handler

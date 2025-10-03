@@ -605,6 +605,7 @@ export function createPunkFromCard(card, hasKarliBlaze = false) {
 
   return {
     ...card,
+    type: "person",
     isPunk: true,
     isFaceDown: true,
     isReady: hasKarliBlaze, // Karli makes punks enter ready

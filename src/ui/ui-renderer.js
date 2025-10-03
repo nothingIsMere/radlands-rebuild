@@ -15,14 +15,21 @@ export class UIRenderer {
     return this.state.currentPlayer === window.networkClient.myPlayerId;
   }
 
-  // NEW HELPER - Add this right after isMyTurn()
   canInteractWithPending() {
     // If no pending state, follow normal turn rules
     if (!this.state.pending) {
       return this.isMyTurn();
     }
 
-    // If there's a targetPlayerId, only that player can interact
+    // Check for currentSelectingPlayer (used by Famine, High Ground, etc.)
+    if (this.state.pending.currentSelectingPlayer) {
+      return (
+        window.networkClient?.myPlayerId ===
+        this.state.pending.currentSelectingPlayer
+      );
+    }
+
+    // Check for targetPlayerId (used by Raiders, Juggernaut, Octagon, etc.)
     if (this.state.pending.targetPlayerId) {
       return (
         window.networkClient?.myPlayerId === this.state.pending.targetPlayerId
@@ -1630,6 +1637,18 @@ export class UIRenderer {
 
         if (e.defaultPrevented) return;
 
+        console.log("=== PENDING CLICK CHECK ===");
+        console.log("Pending type:", this.state.pending?.type);
+        console.log(
+          "currentSelectingPlayer:",
+          this.state.pending?.currentSelectingPlayer
+        );
+        console.log("My player ID:", window.networkClient?.myPlayerId);
+        console.log(
+          "canInteractWithPending result:",
+          this.canInteractWithPending()
+        );
+
         // UNIVERSAL CHECK: Block all pending interactions if not the designated player
         if (this.state.pending && !this.canInteractWithPending()) {
           console.log("Not your turn to interact with this pending action");
@@ -1674,6 +1693,42 @@ export class UIRenderer {
             targetPosition: position,
           });
           return;
+        }
+
+        // Handle Famine selection
+        if (this.state.pending?.type === "famine_select_keep") {
+          console.log("FAMINE CLICK DETECTED");
+          console.log(
+            "Card:",
+            card?.name,
+            "at",
+            playerId,
+            columnIndex,
+            position
+          );
+          console.log("Valid targets:", this.state.pending.validTargets);
+
+          if (card && card.type === "person" && !card.isDestroyed) {
+            const isValidTarget = this.state.pending.validTargets?.some(
+              (t) =>
+                t.playerId === playerId &&
+                t.columnIndex === columnIndex &&
+                t.position === position
+            );
+
+            console.log("Is valid target?", isValidTarget);
+
+            if (isValidTarget) {
+              console.log("SENDING FAMINE SELECT COMMAND");
+              this.commands.execute({
+                type: "SELECT_TARGET",
+                targetPlayer: playerId,
+                targetColumn: columnIndex,
+                targetPosition: position,
+              });
+            }
+            return;
+          }
         }
 
         console.log(

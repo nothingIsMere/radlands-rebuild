@@ -310,6 +310,20 @@ const TEST_CONFIGS = {
     fillTo: 20,
   },
 
+  // Famine testing with lots of punk generation
+  famine: {
+    people: [
+      { name: "Rabble Rouser", count: 4 }, // Ability: Gain Punk
+      { name: "Looter", count: 2 },
+      { name: "Vigilante", count: 2 },
+    ],
+    events: [
+      { name: "Famine", count: 2 },
+      { name: "Uprising", count: 1 }, // Gives 3 punks immediately
+    ],
+    fillTo: 20,
+  },
+
   // Test event cards
   events: {
     people: [
@@ -348,7 +362,7 @@ const TEST_CONFIGS = {
 };
 
 // Use a test config
-gameState.deck = createTestDeck(TEST_CONFIGS.events);
+gameState.deck = createTestDeck(TEST_CONFIGS.famine);
 
 // Test camp configurations
 const CAMP_CONFIGS = {

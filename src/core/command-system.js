@@ -3296,9 +3296,6 @@ export class CommandSystem {
   }
 
   handleEndTurn() {
-    // Clear pending states
-    this.state.pending = null;
-
     // Reset turn events
     this.state.turnEvents = {
       eventsPlayed: 0,

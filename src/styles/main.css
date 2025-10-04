@@ -1,3 +1,6 @@
+/* ===================================
+   ROOT VARIABLES
+   =================================== */
 :root {
   --card-width: 140px;
   --card-height: 196px;
@@ -6,13 +9,16 @@
   --neon-pink: #ee507f;
   --neon-green: #0fd146;
   --neon-blue: #00c3ff;
-  --neon-purple: #c77dff; /* NEW: vibrant purple */
-  --neon-red: #ff0000; /* NEW: bright red for damage */
+  --neon-purple: #c77dff;
+  --neon-red: #ff0000;
   --bg-dark: #1c1c1c;
   --bg-medium: #2a2a2a;
   --bg-light: #3a3a3a;
 }
 
+/* ===================================
+   BASE STYLES
+   =================================== */
 body {
   font-family: Arial, sans-serif;
   background: var(--bg-dark);
@@ -20,15 +26,39 @@ body {
   padding: 10px;
 }
 
-/* Make the main container border purple */
+button {
+  background: var(--neon-green);
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #00ff41;
+}
+
+button:disabled {
+  background: #555;
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* ===================================
+   MAIN CONTAINER
+   =================================== */
 .container {
   max-width: 1600px;
   margin: 0 auto;
   background: var(--bg-medium);
   border-radius: 8px;
   padding: 15px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(199, 125, 255, 0.3); /* Add purple glow */
-  border: 2px solid var(--neon-purple); /* Add this */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(199, 125, 255, 0.3);
+  border: 2px solid var(--neon-purple);
 }
 
 h1 {
@@ -39,7 +69,13 @@ h1 {
   text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
-/* Make game info bar have purple accent */
+.controls {
+  display: none;
+}
+
+/* ===================================
+   GAME INFO BAR
+   =================================== */
 .game-info {
   background: var(--bg-dark);
   padding: 10px 15px;
@@ -48,8 +84,8 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid var(--neon-purple); /* Changed from var(--bg-light) */
-  box-shadow: 0 0 10px rgba(199, 125, 255, 0.2); /* Add purple glow */
+  border: 1px solid var(--neon-purple);
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.2);
 }
 
 .info-item {
@@ -63,6 +99,48 @@ h1 {
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
 }
 
+.phase-indicator {
+  padding: 8px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 14px;
+  animation: pulse 1s infinite;
+}
+
+.phase-events {
+  background: var(--neon-pink);
+  color: white;
+}
+
+.phase-replenish {
+  background: var(--neon-blue);
+  color: #000;
+}
+
+.phase-actions {
+  background: var(--neon-green);
+  color: #000;
+}
+
+.phase-draw {
+  background: #666;
+  color: white;
+  animation: pulse 1s infinite;
+}
+
+.highground-active {
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-green));
+  color: #000;
+  padding: 8px 16px;
+  font-weight: bold;
+  text-align: center;
+  animation: pulse 1s infinite;
+}
+
+/* ===================================
+   GAME AREA LAYOUT
+   =================================== */
 .game-area {
   display: grid;
   grid-template-columns: 150px 1fr 120px 1fr 150px;
@@ -86,10 +164,13 @@ h1 {
   padding: 10px;
   background: var(--bg-dark);
   border-radius: 8px;
-  border: 1px solid var(--neon-purple); /* Purple border */
+  border: 1px solid var(--neon-purple);
   box-shadow: 0 0 10px rgba(199, 125, 255, 0.3);
 }
 
+/* ===================================
+   DECK AREA
+   =================================== */
 .deck-area {
   text-align: center;
   width: 100%;
@@ -98,7 +179,7 @@ h1 {
 .deck-label {
   font-weight: bold;
   margin-bottom: 5px;
-  color: var(--neon-purple); /* Purple labels */
+  color: var(--neon-purple);
   font-size: 14px;
   text-shadow: 0 0 8px rgba(199, 125, 255, 0.4);
 }
@@ -112,7 +193,7 @@ h1 {
 }
 
 .deck-count:hover {
-  color: var(--neon-purple); /* Purple on hover */
+  color: var(--neon-purple);
   transform: scale(1.1);
   transition: all 0.2s;
   text-shadow: 0 0 15px rgba(199, 125, 255, 0.6);
@@ -126,13 +207,15 @@ h1 {
   color: var(--neon-pink);
 }
 
-/* Make player boards have purple accents */
+/* ===================================
+   PLAYER BOARDS
+   =================================== */
 .player-board {
-  border: 2px solid var(--neon-purple); /* Changed from var(--bg-light) */
+  border: 2px solid var(--neon-purple);
   border-radius: 8px;
   padding: 10px;
   background: var(--bg-dark);
-  box-shadow: 0 0 15px rgba(199, 125, 255, 0.2); /* Add purple glow */
+  box-shadow: 0 0 15px rgba(199, 125, 255, 0.2);
 }
 
 .player-board.active {
@@ -216,7 +299,7 @@ h1 {
 }
 
 .inline-control-btn.end-turn-btn {
-  background: var(--neon-purple); /* Purple End Turn button */
+  background: var(--neon-purple);
   color: #ffffff;
 }
 
@@ -235,135 +318,9 @@ h1 {
   box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
 }
 
-.event-queue {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px;
-  background: var(--bg-dark);
-  border-radius: 5px;
-  height: fit-content;
-  border: 2px solid var(--neon-pink);
-  box-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
-}
-
-.side-column:first-child .event-queue {
-  flex-direction: column-reverse;
-}
-
-.event-slot {
-  width: var(--card-width); /* Already correct - 140px */
-  height: var(--card-height); /* Already correct - 196px */
-  border: 2px dashed var(--neon-pink);
-  border-radius: var(--radius);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: var(--bg-medium);
-}
-
-.event-card {
-  background: var(--neon-pink);
-  color: #ffffff;
-  padding: 8px;
-  border-radius: 5px;
-  font-size: 13px;
-  text-align: center;
-  cursor: pointer;
-  width: calc(100% - 16px);
-  height: calc(100% - 16px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  word-wrap: break-word;
-  font-weight: bold;
-  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
-  position: relative;
-  z-index: 1;
-}
-
-.event-slot-number {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 14px;
-  color: var(--neon-pink);
-  font-weight: bold;
-  background: var(--bg-dark);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--neon-pink);
-  box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
-}
-
-.event-card:hover {
-  background: #ff006e;
-  transform: scale(1.05);
-  box-shadow: 0 0 15px rgba(255, 0, 110, 0.7);
-  z-index: 1000;
-}
-
-.special-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px;
-  background: var(--bg-dark);
-  border-radius: 5px;
-  border: 2px solid var(--neon-purple); /* Purple border for special cards */
-  box-shadow: 0 0 10px rgba(199, 125, 255, 0.3);
-}
-
-.special-card {
-  padding: 6px 8px;
-  border: 2px solid var(--neon-purple); /* Purple borders */
-  border-radius: 4px;
-  background: var(--bg-medium);
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 11px;
-  text-align: center;
-}
-
-.special-card:hover {
-  background: var(--neon-purple); /* Purple on hover */
-  color: #000000;
-  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
-}
-
-.special-card.used {
-  opacity: 0.3;
-  cursor: not-allowed;
-  border-color: #555;
-}
-
-.special-card.in-hand {
-  background: var(--bg-light);
-  border-color: var(--neon-green);
-  color: var(--neon-green);
-}
-
-.special-card.in-queue {
-  background: var(--neon-pink);
-  color: #ffffff;
-  border-color: var(--neon-pink);
-}
-
-.special-card.available {
-  background: var(--bg-medium);
-}
-
-.special-card.clickable {
-  cursor: pointer;
-}
-
+/* ===================================
+   CAMPS / TABLEAU
+   =================================== */
 .camps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -378,16 +335,19 @@ h1 {
   padding: 6px;
   display: flex;
   flex-direction: column-reverse;
-  overflow: visible; /* Add this line */
+  overflow: visible;
 }
 
+/* ===================================
+   CARDS (TABLEAU)
+   =================================== */
 .card {
   width: var(--card-width);
   height: var(--card-height);
   background: #ffffff;
   border: 2px solid #000;
   border-radius: var(--radius);
-  padding: 8px;
+  padding: 0;
   margin: 4px 0;
   text-align: center;
   cursor: pointer;
@@ -397,18 +357,13 @@ h1 {
   min-height: 60px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: visible;
-  z-index: 1; /* Add this - establishes stacking context */
+  z-index: 1;
 }
 
 .card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-  z-index: 1000; /* Add this - elevates hovered card above siblings */
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
 }
 
 .card.camp {
@@ -421,8 +376,22 @@ h1 {
   background: #fff;
 }
 
+.card.punk {
+  background: #000;
+  color: var(--neon-purple);
+  border: 2px solid var(--neon-purple);
+  font-style: italic;
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
+}
+
+.card.empty {
+  border: 2px dashed #555;
+  background: var(--bg-light);
+  color: #888;
+}
+
 .card.damaged {
-  border: 3px solid var(--neon-red) !important; /* Bright red for damage */
+  border: 3px solid var(--neon-red) !important;
   box-shadow: 0 0 15px rgba(255, 0, 64, 0.7);
 }
 
@@ -433,11 +402,27 @@ h1 {
   opacity: 0.7;
 }
 
+.card.not-ready > *:not(.card-preview):not(.tableau-preview) {
+  position: relative;
+  z-index: 2;
+}
+
+.card.not-ready
+  > *:not(.card-preview):not(.tableau-preview):not(.card-image-tableau) {
+  position: relative;
+  z-index: 6; /* Above the overlay */
+}
+
 .card.not-ready {
-  /* Remove opacity: 0.5; */
+  position: relative;
 }
 
 .card.not-ready::before {
+  display: none; /* Remove the overlay entirely for cards with images */
+}
+
+/* For cards WITHOUT images, keep the old overlay */
+.card.not-ready:not(:has(.card-image-tableau))::before {
   content: "";
   position: absolute;
   top: 0;
@@ -447,11 +432,11 @@ h1 {
   background: rgba(0, 0, 0, 0.5);
   pointer-events: none;
   z-index: 1;
+  border-radius: var(--radius);
 }
 
-.card.not-ready > *:not(.card-preview):not(.tableau-preview) {
-  position: relative;
-  z-index: 2;
+.card.not-ready .card-image-tableau {
+  filter: brightness(0.5);
 }
 
 .card.not-ready .card-preview,
@@ -466,25 +451,11 @@ h1 {
 }
 
 .card.not-ready::after {
-  content: "⏳";
   position: absolute;
   top: 2px;
   right: 2px;
   font-size: 16px;
-}
-
-.card.empty {
-  border: 2px dashed #555;
-  background: var(--bg-light);
-  color: #888;
-}
-
-.card.punk {
-  background: #000;
-  color: var(--neon-purple); /* Purple punks! */
-  border: 2px solid var(--neon-purple);
-  font-style: italic;
-  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
+  z-index: 20;
 }
 
 .card-name {
@@ -492,331 +463,86 @@ h1 {
   margin-bottom: 4px;
 }
 
-.hand {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 8px;
-  background: var(--bg-dark);
-  border-radius: 5px;
-  min-height: 50px;
-  border: 1px solid var(--bg-light);
-}
-
-.hand-card {
-  background: white;
-  border: 2px solid var(--neon-green);
-  padding: 6px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 12px;
-  color: #000;
-  box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
-  position: relative; /* Important for positioning the preview */
-}
-
-.card-preview {
+/* Card image */
+.card-image-tableau {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
   position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  background: rgba(42, 42, 42, 0.98);
-  border: 3px solid var(--neon-purple);
-  border-radius: 8px;
-  padding: 20px; /* Increased from 15px */
-  min-width: 320px; /* Increased from 250px */
-  max-width: 400px; /* Increased from 300px */
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(199, 125, 255, 0.5);
-  z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
-  color: white;
-  font-size: 14px; /* Add this to make text slightly bigger */
-}
-
-.hand-card:hover .card-preview {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-5px);
-}
-
-.preview-name {
-  font-size: 20px; /* Increased from 18px */
-  font-weight: bold;
-  color: var(--neon-purple);
-  margin-bottom: 10px;
-  text-align: center;
-  border-bottom: 2px solid var(--neon-purple);
-  padding-bottom: 6px;
-}
-
-.preview-info {
-  font-size: 15px; /* Increased from 14px */
-  color: var(--neon-blue);
-  text-align: center;
-  margin-bottom: 14px;
-  font-weight: bold;
-}
-
-.preview-section-title {
-  font-size: 11px;
-  font-weight: bold;
-  color: var(--neon-pink);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-top: 10px;
-  margin-bottom: 5px;
-  border-bottom: 1px solid var(--bg-light);
-  padding-bottom: 3px;
-}
-
-.preview-abilities,
-.preview-trait,
-.preview-junk {
-  margin-bottom: 8px;
-}
-
-.preview-ability {
-  padding: 5px 10px; /* Increased from 4px 8px */
-  background: rgba(199, 125, 255, 0.2);
-  border-radius: 4px;
-  margin: 4px 0;
-  font-size: 14px; /* Increased from 13px */
-  color: var(--neon-green);
-}
-
-/* Add styling for ability notes */
-.preview-ability-note {
-  padding: 4px 8px;
-  background: rgba(0, 195, 255, 0.15);
-  border-radius: 4px;
-  margin: 3px 0;
-  font-size: 11px;
-  color: white;
-  font-style: italic;
-  border-left: 2px solid var(--neon-blue);
-}
-
-.preview-trait-text {
-  font-size: 13px;
-  color: #e0e0e0;
-  font-style: italic;
-  padding: 4px 8px;
-  background: rgba(92, 217, 255, 0.2);
-  border-radius: 4px;
-}
-
-.preview-junk-text {
-  font-size: 13px;
-  color: #e0e0e0;
-  padding: 4px 8px;
-  background: rgba(255, 92, 141, 0.2);
-  border-radius: 4px;
-}
-
-.tableau-preview {
-  position: absolute;
-  bottom: auto;
-  top: 50%;
-  left: 100%;
-  transform: translateY(-50%) translateX(10px);
-  margin-left: 10px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s, transform 0.2s;
-}
-
-.card:hover .tableau-preview {
-  opacity: 1;
-  transform: translateY(-50%) translateX(15px);
-  z-index: 2000;
-}
-
-/* For cards on the right side of screen, flip preview to left */
-.game-area > :nth-child(4) .tableau-preview,
-.game-area > :nth-child(5) .tableau-preview {
-  left: auto;
-  right: 100%;
-  transform: translateY(-50%) translateX(-10px);
-  margin-left: 0;
-  margin-right: 10px;
-}
-
-.game-area > :nth-child(4) .card:hover .tableau-preview,
-.game-area > :nth-child(5) .card:hover .tableau-preview {
-  transform: translateY(-50%) translateX(-15px);
-}
-
-/* Handle edge cases where preview would go off-screen */
-.hand-card:first-child .card-preview {
+  top: 0;
   left: 0;
-  transform: translateX(0) translateY(-10px);
+  z-index: 0;
 }
 
-.hand-card:first-child:hover .card-preview {
-  transform: translateX(0) translateY(-5px);
+/* Card abilities overlay */
+.card .ability-info {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
 }
 
-.hand-card:last-child .card-preview {
-  left: auto;
-  right: 0;
-  transform: translateX(0) translateY(-10px);
-}
-
-.hand-card:last-child:hover .card-preview {
-  transform: translateX(0) translateY(-5px);
-}
-
-.hand-card.selected {
-  background: var(--neon-purple); /* Purple for selected cards */
-  color: #ffffff;
-  border-color: var(--neon-purple);
-  box-shadow: 0 0 15px rgba(199, 125, 255, 0.6);
-}
-
-.hand-card.water-silo-card {
-  background: var(--neon-blue);
-  color: #000;
-  border-color: var(--neon-blue);
-}
-
-.hand-card.water-silo-card:hover {
-  box-shadow: 0 0 15px rgba(0, 217, 255, 0.6);
-}
-
-.hand-card.parachute-target {
-  border: 2px solid var(--neon-purple); /* Purple for parachute targeting */
-  background: #e8d4ff;
-  cursor: pointer;
-  animation: pulse-purple 1s infinite;
-}
-
-.hand-card.selected[data-card-type="event"] {
-  background: var(--neon-pink);
-  color: white;
-  border-color: var(--neon-pink);
-}
-
-.hand-card {
-  user-select: none;
-}
-
-.hand-card:active:not(:hover) {
-  transform: scale(0.95);
-}
-
-.hidden-card {
-  filter: grayscale(100%);
-  opacity: 0.6;
-  background: #555;
-  color: #999;
-}
-
-.card-text {
-  font-size: 12px;
-}
-
-.controls {
+/* Hide all text content when card has an image */
+.card:has(.card-image-tableau) .card-name {
   display: none;
 }
 
-button {
-  background: var(--neon-green);
-  color: #000;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
+.card:hover .ability-info {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-button:hover {
-  background: #00ff41;
+/* Ensure ability overlay shows correctly on not-ready cards */
+.card.not-ready:hover .ability-info {
+  opacity: 1 !important;
+  pointer-events: auto;
 }
 
-button:disabled {
-  background: #555;
-  color: #888;
-  cursor: not-allowed;
+/* Make sure ability info stays in the same position for image cards */
+.card:has(.card-image-tableau) .ability-info {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 10;
 }
 
-.phase-indicator {
-  padding: 8px 15px;
-  border-radius: 5px;
-  font-weight: bold;
-  text-transform: uppercase;
-  font-size: 14px;
-  animation: pulse 1s infinite;
+/* For cards with images, lock the ability overlay position */
+.card:has(.card-image-tableau) .ability-info {
+  position: absolute !important;
+  bottom: 8px !important;
+  left: 8px !important;
+  right: 8px !important;
+  z-index: 10 !important;
+  margin: 0 !important;
+  transform: none !important;
 }
 
-.phase-events {
-  background: var(--neon-pink);
-  color: white;
+.card:has(.card-image-tableau):hover .ability-info {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.phase-replenish {
-  background: var(--neon-blue);
-  color: #000;
-}
-
-.phase-actions {
-  background: var(--neon-green);
-  color: #000;
-}
-
-.phase-draw {
-  background: #666;
-  color: white;
-  animation: pulse 1s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.junk-label {
-  color: #6633aa; /* Purple junk labels */
-  font-weight: 600;
-  margin-left: 4px;
-}
-
-.hand-card:hover .junk-label {
-  color: #b565ff;
-  font-weight: bold;
-  text-decoration: underline;
-}
-
-.junk-effect {
-  font-size: 0.8em;
-  color: #888;
-  margin-top: 2px;
-}
-
-.ability-info {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid #ddd;
-  font-size: 10px;
+.card.not-ready:has(.card-image-tableau):hover .ability-info {
+  opacity: 1 !important;
+  pointer-events: auto;
 }
 
 .ability-btn {
   display: block;
   width: 100%;
-  padding: 2px 4px;
+  padding: 6px 8px;
   margin: 2px 0;
-  background: var(--neon-pink); /* Pink buttons with white text */
+  background: var(--neon-pink);
   color: #ffffff;
   border: none;
-  border-radius: 3px;
-  font-size: 10px;
+  border-radius: 4px;
+  font-size: 11px;
   font-weight: bold;
   cursor: pointer;
 }
@@ -826,30 +552,12 @@ button:disabled {
 }
 
 .ability-btn.argo-granted {
-  background: var(--neon-purple); /* Purple for Argo's granted abilities */
+  background: var(--neon-purple);
   color: #ffffff;
 }
 
 .ability-btn.argo-granted:hover {
   background: #b565ff;
-}
-
-.ability-text {
-  display: block;
-  color: #666;
-  font-size: 10px;
-  padding: 2px 0;
-}
-
-.ability-text-used {
-  display: inline-block;
-  padding: 2px 6px;
-  margin: 2px;
-  background: #999;
-  color: #666;
-  border-radius: 3px;
-  font-size: 0.9em;
-  text-decoration: line-through;
 }
 
 .ability-text-disabled {
@@ -868,6 +576,7 @@ button:disabled {
   font-style: italic;
 }
 
+/* Card trait indicators */
 .karli-trait-active {
   background: linear-gradient(45deg, var(--neon-pink), var(--neon-green));
   color: white;
@@ -877,27 +586,6 @@ button:disabled {
   font-weight: bold;
   margin-top: 4px;
   animation: pulse-gold 1s infinite;
-}
-
-@keyframes pulse-gold {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.argo-trait-active {
-  background: var(--neon-purple); /* Purple for Argo */
-  color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-  margin-top: 4px;
-  animation: pulse-purple 1s infinite;
 }
 
 .vera-trait-active {
@@ -918,15 +606,6 @@ button:disabled {
   margin-top: 2px;
 }
 
-.highground-active {
-  background: linear-gradient(135deg, var(--neon-pink), var(--neon-green));
-  color: #000;
-  padding: 8px 16px;
-  font-weight: bold;
-  text-align: center;
-  animation: pulse 1s infinite;
-}
-
 .protected-indicator {
   position: absolute;
   top: 2px;
@@ -935,20 +614,13 @@ button:disabled {
   opacity: 0.7;
 }
 
+/* ===================================
+   CARD TARGETING STATES
+   =================================== */
 .card.restore-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 10px var(--neon-green);
-}
-
-@keyframes pulse-green {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-green);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-green), 0 0 30px var(--neon-green);
-  }
 }
 
 .card.restore-target:hover {
@@ -959,18 +631,8 @@ button:disabled {
 .card.damage-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px var(--neon-red); /* Red for damage targeting */
+  box-shadow: 0 0 10px var(--neon-red);
   border-color: var(--neon-red);
-}
-
-@keyframes pulse-red {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-red);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-red), 0 0 30px var(--neon-red);
-  }
 }
 
 .card.damage-target:hover {
@@ -989,54 +651,8 @@ button:disabled {
   box-shadow: 0 0 25px var(--neon-red);
 }
 
-.card.punk-target {
-  animation: pulse-purple 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px var(--neon-purple); /* Purple for punk targeting */
-  border-color: var(--neon-purple);
-  border-style: dashed;
-}
-
-@keyframes pulse-purple {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-purple);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-purple), 0 0 30px var(--neon-purple);
-  }
-}
-
-.card.raiders-target {
-  animation: pulse-orange 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px var(--neon-blue);
-  border-color: var(--neon-blue);
-}
-
-@keyframes pulse-orange {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-blue);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
-  }
-}
-
-.card.raiders-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px var(--neon-blue);
-}
-
-.card.raiders-target-camp {
-  box-shadow: 0 0 15px 3px var(--neon-red);
-  cursor: pointer;
-  animation: pulse-red 1.5s infinite;
-}
-
 .card.mimic-target {
-  box-shadow: 0 0 10px 2px var(--neon-purple); /* Purple for mimic */
+  box-shadow: 0 0 10px 2px var(--neon-purple);
   cursor: pointer;
 }
 
@@ -1050,21 +666,17 @@ button:disabled {
   cursor: pointer;
 }
 
+.card.raiders-target-camp {
+  box-shadow: 0 0 15px 3px var(--neon-red);
+  cursor: pointer;
+  animation: pulse-red 1.5s infinite;
+}
+
 .card.assassin-target {
   animation: pulse-dark 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 10px #000;
   border-color: #000;
-}
-
-@keyframes pulse-dark {
-  0%,
-  100% {
-    box-shadow: 0 0 5px #000;
-  }
-  50% {
-    box-shadow: 0 0 20px #000, 0 0 30px #000;
-  }
 }
 
 .card.sniper-target {
@@ -1090,31 +702,11 @@ button:disabled {
   border-color: var(--neon-red);
 }
 
-@keyframes pulse-fire {
-  0%,
-  100% {
-    box-shadow: 0 0 10px var(--neon-red);
-  }
-  50% {
-    box-shadow: 0 0 25px var(--neon-red), 0 0 35px var(--neon-red);
-  }
-}
-
 .card.molgur-target {
   animation: pulse-dark-red 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 20px #000;
   border: 3px solid #000;
-}
-
-@keyframes pulse-dark-red {
-  0%,
-  100% {
-    box-shadow: 0 0 15px #000;
-  }
-  50% {
-    box-shadow: 0 0 30px #000, 0 0 40px var(--neon-red);
-  }
 }
 
 .card.molgur-target::after {
@@ -1154,12 +746,6 @@ button:disabled {
 .card.mutant-damage-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-}
-
-.card.mutant-restore-target:hover,
-.card.mutant-damage-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px var(--neon-green);
 }
 
 .card.vanguard-target,
@@ -1262,15 +848,10 @@ button:disabled {
   font-weight: bold;
 }
 
-.card.highground-placement-target {
-  animation: pulse-blue 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px var(--neon-blue);
-  border: 2px dashed var(--neon-blue);
-}
-
+.card.highground-placement-target,
 .card.highground-placement-empty {
   animation: pulse-blue 1s infinite;
+  cursor: pointer;
   box-shadow: 0 0 10px var(--neon-blue);
   border: 2px dashed var(--neon-blue);
 }
@@ -1279,16 +860,6 @@ button:disabled {
   animation: pulse-yellow 1s infinite;
   box-shadow: 0 0 10px var(--neon-green);
   border: 2px dashed var(--neon-green);
-}
-
-@keyframes pulse-yellow {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-green);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-green);
-  }
 }
 
 .card.highground-placement-pushable::after {
@@ -1302,11 +873,6 @@ button:disabled {
   border-radius: 3px;
   font-size: 10px;
   font-weight: bold;
-}
-
-.card.highground-placement-blocked {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .card.mulcher-target {
@@ -1511,150 +1077,11 @@ button:disabled {
   background: rgba(199, 125, 255, 0.1);
 }
 
-.card.rabblerouser-target {
-  animation: pulse-red 1s infinite;
-  cursor: pointer;
-}
-
-.card.adrenalinelab-person-target {
-  animation: pulse-purple 1s infinite;
-  cursor: pointer;
-}
-
-.pending-overlay {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  pointer-events: none;
-}
-
-.pending-message-banner {
-  background: linear-gradient(
-    135deg,
-    var(--neon-purple) 0%,
-    var(--neon-pink) 100%
-  ); /* Purple-pink gradient */
-  color: white;
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: pulse 2s infinite;
-}
-
-.pending-overlay.punk-placement .pending-message-banner {
-  background: linear-gradient(
-    135deg,
-    var(--neon-purple) 0%,
-    var(--neon-green) 100%
-  );
-}
-
-.pending-overlay.raiders-attack-self .pending-message-banner {
-  background: linear-gradient(135deg, var(--neon-red) 0%, #000 100%);
-  animation: shake 0.5s infinite;
-}
-
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  25% {
-    transform: translateX(-52%) translateY(-2px);
-  }
-  75% {
-    transform: translateX(-48%) translateY(2px);
-  }
-}
-
-.pending-overlay.raiders-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
-.pending-overlay.parachute-placement .pending-message-banner {
-  background: linear-gradient(
-    135deg,
-    var(--neon-blue) 0%,
-    var(--neon-purple) 100%
-  );
-  font-size: 20px;
-  animation: float 2s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.pending-overlay.famine-selection .pending-message-banner {
-  background: linear-gradient(135deg, #000 0%, var(--neon-red) 100%);
-  animation: pulse-urgent 0.5s infinite;
-}
-
-@keyframes pulse-urgent {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-.pending-overlay.highground-rearrange .pending-message-banner {
-  background: linear-gradient(
-    135deg,
-    var(--neon-blue) 0%,
-    var(--neon-green) 100%
-  );
-}
-
-.pending-overlay.scudlauncher-self .pending-message-banner {
-  background: linear-gradient(
-    135deg,
-    var(--neon-red) 0%,
-    var(--neon-blue) 100%
-  );
-  animation: shake 0.5s infinite;
-}
-
-.pending-overlay.scudlauncher-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
-.pending-overlay.octagon-forced .pending-message-banner {
-  background: linear-gradient(135deg, var(--neon-red) 0%, #000 100%);
-  animation: shake 0.5s infinite;
-}
-
-.pending-overlay.octagon-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
 .card.parachute-placement-target {
-  border: 3px dashed var(--neon-purple); /* Purple for parachute placement */
+  border: 3px dashed var(--neon-purple);
   background: rgba(199, 125, 255, 0.1);
   cursor: pointer;
   animation: pulse-blue 1.5s infinite;
-}
-
-@keyframes pulse-blue {
-  0%,
-  100% {
-    box-shadow: 0 0 5px var(--neon-purple);
-  }
-  50% {
-    box-shadow: 0 0 20px var(--neon-purple);
-  }
 }
 
 .card.parachute-placement-empty {
@@ -1695,20 +1122,8 @@ button:disabled {
 .card.punk-placement-target {
   position: relative;
   animation: glow 1.5s infinite;
-  border: 3px dashed var(--neon-purple); /* Purple for punk placement */
+  border: 3px dashed var(--neon-purple);
   cursor: pointer;
-}
-
-@keyframes glow {
-  0%,
-  100% {
-    box-shadow: 0 0 5px 2px var(--neon-purple),
-      inset 0 0 10px rgba(199, 125, 255, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px 5px var(--neon-purple),
-      inset 0 0 20px rgba(199, 125, 255, 0.5);
-  }
 }
 
 .card.punk-placement-target::after {
@@ -1726,6 +1141,327 @@ button:disabled {
   pointer-events: none;
 }
 
+/* ===================================
+   HAND CARDS
+   =================================== */
+.hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-dark);
+  border-radius: 5px;
+  min-height: 50px;
+  border: 1px solid var(--bg-light);
+}
+
+.hand-card {
+  background: white;
+  border: 2px solid var(--neon-green);
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #000;
+  box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
+  position: relative;
+  user-select: none;
+}
+
+.hand-card:active:not(:hover) {
+  transform: scale(0.95);
+}
+
+.hand-card.selected {
+  background: var(--neon-purple);
+  color: #ffffff;
+  border-color: var(--neon-purple);
+  box-shadow: 0 0 15px rgba(199, 125, 255, 0.6);
+}
+
+.hand-card.selected[data-card-type="event"] {
+  background: var(--neon-pink);
+  color: white;
+  border-color: var(--neon-pink);
+}
+
+.hand-card.water-silo-card {
+  background: var(--neon-blue);
+  color: #000;
+  border-color: var(--neon-blue);
+}
+
+.hand-card.water-silo-card:hover {
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.6);
+}
+
+.hand-card.parachute-target {
+  border: 2px solid var(--neon-purple);
+  background: #e8d4ff;
+  cursor: pointer;
+  animation: pulse-purple 1s infinite;
+}
+
+.hidden-card {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  background: #555;
+  color: #999;
+}
+
+.card-text {
+  font-size: 12px;
+}
+
+.junk-label {
+  color: #6633aa;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.hand-card:hover .junk-label {
+  color: #b565ff;
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* ===================================
+   CARD PREVIEWS (HOVER)
+   =================================== */
+.card-preview {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(42, 42, 42, 0.98);
+  border: 3px solid var(--neon-purple);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 320px;
+  max-width: 400px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(199, 125, 255, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  color: white;
+  font-size: 14px;
+}
+
+.hand-card:hover .card-preview {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-5px);
+}
+
+.hand-card:first-child .card-preview {
+  left: 0;
+  transform: translateX(0) translateY(-10px);
+}
+
+.hand-card:first-child:hover .card-preview {
+  transform: translateX(0) translateY(-5px);
+}
+
+.hand-card:last-child .card-preview {
+  left: auto;
+  right: 0;
+  transform: translateX(0) translateY(-10px);
+}
+
+.hand-card:last-child:hover .card-preview {
+  transform: translateX(0) translateY(-5px);
+}
+
+.tableau-preview {
+  position: absolute;
+  bottom: auto;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%) translateX(10px);
+  margin-left: 10px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.card:hover .tableau-preview {
+  opacity: 1;
+  transform: translateY(-50%) translateX(15px);
+  z-index: 2000;
+}
+
+.game-area > :nth-child(4) .tableau-preview,
+.game-area > :nth-child(5) .tableau-preview {
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%) translateX(-10px);
+  margin-left: 0;
+  margin-right: 10px;
+}
+
+.game-area > :nth-child(4) .card:hover .tableau-preview,
+.game-area > :nth-child(5) .card:hover .tableau-preview {
+  transform: translateY(-50%) translateX(-15px);
+}
+
+.preview-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--neon-purple);
+  margin-bottom: 10px;
+  text-align: center;
+  border-bottom: 2px solid var(--neon-purple);
+  padding-bottom: 6px;
+}
+
+.preview-info {
+  font-size: 15px;
+  color: var(--neon-blue);
+  text-align: center;
+  margin-bottom: 14px;
+  font-weight: bold;
+}
+
+.preview-section-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--neon-pink);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--bg-light);
+  padding-bottom: 3px;
+}
+
+.preview-abilities,
+.preview-trait,
+.preview-junk {
+  margin-bottom: 8px;
+}
+
+.preview-ability {
+  padding: 5px 10px;
+  background: rgba(199, 125, 255, 0.2);
+  border-radius: 4px;
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--neon-green);
+}
+
+.preview-ability-note {
+  padding: 4px 8px;
+  background: rgba(0, 195, 255, 0.15);
+  border-radius: 4px;
+  margin: 3px 0;
+  font-size: 11px;
+  color: white;
+  font-style: italic;
+  border-left: 2px solid var(--neon-blue);
+}
+
+.preview-trait-text {
+  font-size: 13px;
+  color: #e0e0e0;
+  font-style: italic;
+  padding: 4px 8px;
+  background: rgba(92, 217, 255, 0.2);
+  border-radius: 4px;
+}
+
+.preview-junk-text {
+  font-size: 13px;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  background: rgba(255, 92, 141, 0.2);
+  border-radius: 4px;
+}
+
+.card:hover > .tableau-preview,
+.event-card:hover > .event-preview {
+  opacity: 1 !important;
+  display: block !important;
+  visibility: visible !important;
+  z-index: 9999 !important;
+}
+
+/* ===================================
+   EVENT QUEUE
+   =================================== */
+.event-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-dark);
+  border-radius: 5px;
+  height: fit-content;
+  border: 2px solid var(--neon-pink);
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
+}
+
+.side-column:first-child .event-queue {
+  flex-direction: column-reverse;
+}
+
+.event-slot {
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 2px dashed var(--neon-pink);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--bg-medium);
+}
+
+.event-slot-number {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 14px;
+  color: var(--neon-pink);
+  font-weight: bold;
+  background: var(--bg-dark);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--neon-pink);
+  box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
+}
+
+.event-card {
+  background: var(--neon-pink);
+  color: #ffffff;
+  padding: 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-wrap: break-word;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.event-card:hover {
+  background: #ff006e;
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 0, 110, 0.7);
+  z-index: 1000;
+}
+
 .event-slot-clickable {
   cursor: pointer;
   border-color: var(--neon-green);
@@ -1737,6 +1473,169 @@ button:disabled {
   transform: scale(1.05);
   box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
   background: rgba(0, 255, 65, 0.1);
+}
+
+.event-preview {
+  position: absolute;
+  bottom: auto;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%) translateX(10px);
+  min-width: 320px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 2000;
+}
+
+.event-card:hover .event-preview {
+  opacity: 1 !important;
+  transform: translateY(-50%) translateX(15px);
+  z-index: 9999 !important;
+}
+
+.side-column:last-child .event-preview {
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%) translateX(-10px);
+}
+
+.side-column:last-child .event-card:hover .event-preview {
+  transform: translateY(-50%) translateX(-15px);
+}
+
+/* ===================================
+   SPECIAL CARDS (RAIDERS/WATER SILO)
+   =================================== */
+.special-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-dark);
+  border-radius: 5px;
+  border: 2px solid var(--neon-purple);
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.3);
+}
+
+.special-card {
+  padding: 6px 8px;
+  border: 2px solid var(--neon-purple);
+  border-radius: 4px;
+  background: var(--bg-medium);
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 11px;
+  text-align: center;
+}
+
+.special-card:hover {
+  background: var(--neon-purple);
+  color: #000000;
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
+}
+
+.special-card.used {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #555;
+}
+
+.special-card.in-hand {
+  background: var(--bg-light);
+  border-color: var(--neon-green);
+  color: var(--neon-green);
+}
+
+.special-card.in-queue {
+  background: var(--neon-pink);
+  color: #ffffff;
+  border-color: var(--neon-pink);
+}
+
+.special-card.available {
+  background: var(--bg-medium);
+}
+
+.special-card.clickable {
+  cursor: pointer;
+}
+
+.special-card.available:nth-child(2) {
+  border-color: var(--neon-blue);
+  box-shadow: 0 0 8px rgba(0, 195, 255, 0.4);
+}
+
+/* ===================================
+   PENDING STATE OVERLAYS
+   =================================== */
+.pending-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.pending-message-banner {
+  background: linear-gradient(
+    135deg,
+    var(--neon-purple) 0%,
+    var(--neon-pink) 100%
+  );
+  color: white;
+  padding: 12px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.pending-overlay.punk-placement .pending-message-banner {
+  background: linear-gradient(
+    135deg,
+    var(--neon-purple) 0%,
+    var(--neon-green) 100%
+  );
+}
+
+.pending-overlay.raiders-attack-self .pending-message-banner,
+.pending-overlay.scudlauncher-self .pending-message-banner,
+.pending-overlay.octagon-forced .pending-message-banner {
+  background: linear-gradient(135deg, var(--neon-red) 0%, #000 100%);
+  animation: shake 0.5s infinite;
+}
+
+.pending-overlay.raiders-waiting .pending-message-banner,
+.pending-overlay.scudlauncher-waiting .pending-message-banner,
+.pending-overlay.octagon-waiting .pending-message-banner {
+  background: linear-gradient(135deg, #666 0%, #333 100%);
+}
+
+.pending-overlay.parachute-placement .pending-message-banner {
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue) 0%,
+    var(--neon-purple) 100%
+  );
+  font-size: 20px;
+  animation: float 2s ease-in-out infinite;
+}
+
+.pending-overlay.famine-selection .pending-message-banner {
+  background: linear-gradient(135deg, #000 0%, var(--neon-red) 100%);
+  animation: pulse-urgent 0.5s infinite;
+}
+
+.pending-overlay.highground-rearrange .pending-message-banner {
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue) 0%,
+    var(--neon-green) 100%
+  );
 }
 
 body.has-pending .hand-card:not(.parachute-target),
@@ -1787,13 +1686,6 @@ body.has-pending .card.mercenary-target {
   pointer-events: auto !important;
 }
 
-body.has-pending .card.rabblerouser-target,
-body.has-pending .card.adrenalinelab-person-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
 body.has-pending
   .player-board:not(.active)
   .card:not(.damage-target):not(.injure-target):not(.mimic-target) {
@@ -1810,6 +1702,9 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   pointer-events: auto !important;
 }
 
+/* ===================================
+   MODALS
+   =================================== */
 .ability-selection-modal {
   position: fixed;
   top: 0;
@@ -1839,7 +1734,7 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   max-width: 500px;
   z-index: 1001;
-  border: 2px solid var(--neon-purple); /* Purple modal border */
+  border: 2px solid var(--neon-purple);
 }
 
 .modal-title {
@@ -1879,13 +1774,7 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   box-shadow: 0 4px 8px rgba(0, 255, 65, 0.4);
 }
 
-.ability-select-btn:disabled {
-  background: #555;
-  color: #888;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
+.ability-select-btn:disabled,
 .ability-select-btn.disabled {
   background: #555;
   color: #888;
@@ -1933,11 +1822,11 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 
 .selectable-card:hover:not(.disabled) {
   background: var(--bg-light);
-  border-color: var(--neon-purple); /* Purple on hover */
+  border-color: var(--neon-purple);
 }
 
 .selectable-card.selected {
-  background: var(--neon-purple); /* Purple when selected */
+  background: var(--neon-purple);
   color: white;
   border-color: var(--neon-purple);
 }
@@ -1995,7 +1884,7 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .event-select-btn.will-resolve {
-  background: var(--neon-red); /* Red for urgent events */
+  background: var(--neon-red);
   animation: pulse 1s infinite;
 }
 
@@ -2024,10 +1913,13 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .person-select-btn.damaged {
-  background: var(--neon-red); /* Red for damaged */
+  background: var(--neon-red);
   color: white;
 }
 
+/* ===================================
+   CAMP SELECTION SCREEN
+   =================================== */
 .camp-selection-screen {
   display: flex;
   flex-direction: column;
@@ -2036,16 +1928,9 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   color: white;
 }
 
-.camp-selection-screen h1 {
-  color: white; /* Add this */
-}
-
+.camp-selection-screen h1,
 .camp-selection-screen p {
-  color: white; /* Add this */
-}
-
-.camp-selection-screen button {
-  /* Your existing button styles will remain */
+  color: white;
 }
 
 .camps-grid {
@@ -2057,9 +1942,9 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .camp-card {
-  width: 240px; /* Increased from 200px to fit more text */
-  height: auto; /* Changed from fixed 280px to auto */
-  min-height: 320px; /* Add minimum height */
+  width: 240px;
+  height: auto;
+  min-height: 320px;
   padding: 15px;
   border: 3px solid var(--bg-light);
   border-radius: var(--radius);
@@ -2072,7 +1957,7 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 
 .camp-card:hover {
   transform: scale(1.05);
-  border-color: var(--neon-purple); /* Purple on hover */
+  border-color: var(--neon-purple);
   box-shadow: 0 4px 16px rgba(199, 125, 255, 0.4);
 }
 
@@ -2114,34 +1999,31 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 
 .camp-card-ability {
   background: rgba(14, 255, 74, 0.856);
-  padding: 6px 8px; /* Increased padding */
-  margin: 4px 0; /* Increased margin */
+  padding: 6px 8px;
+  margin: 4px 0;
   border-radius: 3px;
   font-size: 15px;
   color: rgb(0, 0, 0);
-  line-height: 1.3; /* Add line height for multi-line text */
+  line-height: 1.3;
 }
 
 .camp-card-trait {
-  color: var(--neon-pink);
-  font-style: italic;
-  font-size: 11px;
   margin-top: 8px;
-  padding: 4px;
-  background: rgba(255, 0, 110, 0.2);
-  border-radius: 3px;
 }
 
 .camp-card-trait-text {
   color: white;
   font-style: italic;
   font-size: 15px;
-  padding: 6px 8px; /* Increased padding */
+  padding: 6px 8px;
   background: rgba(255, 0, 110, 0.2);
   border-radius: 3px;
-  line-height: 1.4; /* Add line height for readability */
+  line-height: 1.4;
 }
 
+/* ===================================
+   GAME OVER SCREEN
+   =================================== */
 .game-over-overlay {
   position: fixed;
   top: 0;
@@ -2162,56 +2044,164 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   text-align: center;
   box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
   max-width: 500px;
-  border: 3px solid var(--neon-purple); /* Purple game over border */
+  border: 3px solid var(--neon-purple);
   color: white;
 }
 
-/* Event card previews */
-.event-card {
-  position: relative;
+/* ===================================
+   ANIMATIONS
+   =================================== */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
-/* Event card previews - position to the side */
-.event-preview {
-  position: absolute;
-  bottom: auto;
-  top: 50%;
-  left: 100%; /* Default: appear to the right */
-  transform: translateY(-50%) translateX(10px);
-  min-width: 320px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
-  z-index: 2000;
+@keyframes pulse-gold {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
-.event-card:hover .event-preview {
-  opacity: 1 !important;
-  transform: translateY(-50%) translateX(15px);
-  z-index: 9999 !important;
+@keyframes pulse-purple {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-purple);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-purple), 0 0 30px var(--neon-purple);
+  }
 }
 
-/* For right-side event queue, show preview to the left */
-.side-column:last-child .event-preview {
-  left: auto;
-  right: 100%;
-  transform: translateY(-50%) translateX(-10px);
+@keyframes pulse-blue {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-purple);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-purple);
+  }
 }
 
-.side-column:last-child .event-card:hover .event-preview {
-  transform: translateY(-50%) translateX(-15px);
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-green);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-green), 0 0 30px var(--neon-green);
+  }
 }
 
-/* Force previews to always be visible on hover, regardless of pending state */
-.card:hover > .tableau-preview,
-.event-card:hover > .event-preview {
-  opacity: 1 !important;
-  display: block !important;
-  visibility: visible !important;
-  z-index: 9999 !important;
+@keyframes pulse-red {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-red);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-red), 0 0 30px var(--neon-red);
+  }
 }
 
-.special-card.available:nth-child(2) {
-  border-color: var(--neon-blue);
-  box-shadow: 0 0 8px rgba(0, 191, 255, 0.428);
+@keyframes pulse-fire {
+  0%,
+  100% {
+    box-shadow: 0 0 10px var(--neon-red);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--neon-red), 0 0 35px var(--neon-red);
+  }
+}
+
+@keyframes pulse-dark {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #000;
+  }
+  50% {
+    box-shadow: 0 0 20px #000, 0 0 30px #000;
+  }
+}
+
+@keyframes pulse-dark-red {
+  0%,
+  100% {
+    box-shadow: 0 0 15px #000;
+  }
+  50% {
+    box-shadow: 0 0 30px #000, 0 0 40px var(--neon-red);
+  }
+}
+
+@keyframes pulse-orange {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-blue);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
+  }
+}
+
+@keyframes pulse-yellow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px var(--neon-green);
+  }
+  50% {
+    box-shadow: 0 0 20px var(--neon-green);
+  }
+}
+
+@keyframes pulse-urgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  25% {
+    transform: translateX(-52%) translateY(-2px);
+  }
+  75% {
+    transform: translateX(-48%) translateY(2px);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px 2px var(--neon-purple),
+      inset 0 0 10px rgba(199, 125, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px var(--neon-purple),
+      inset 0 0 20px rgba(199, 125, 255, 0.5);
+  }
 }

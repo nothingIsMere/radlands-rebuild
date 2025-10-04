@@ -1025,8 +1025,8 @@ export class UIRenderer {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
           t.playerId === playerId &&
-          t.columnIndex === columnIndex && // Changed from targetColumn
-          t.position === position // Changed from targetPosition
+          t.columnIndex === columnIndex &&
+          t.position === position
       );
       if (isValidTarget) {
         cardDiv.classList.add("bloodbank-target");
@@ -1190,12 +1190,6 @@ export class UIRenderer {
       }
     });
 
-    // Add a slot index badge
-    const slotBadge = this.createElement("div", "slot-badge");
-    const globalSlotIndex = columnIndex * 3 + position;
-    slotBadge.textContent = globalSlotIndex;
-    cardDiv.appendChild(slotBadge);
-
     // Check for specific damage types FIRST, before the generic check
     if (this.state.pending?.type === "pyromaniac_damage") {
       const isValidTarget = this.state.pending.validTargets?.some(
@@ -1281,29 +1275,6 @@ export class UIRenderer {
       }
     }
 
-    // Vera Vosh trait indicator
-    if (
-      card &&
-      card.name === "Vera Vosh" &&
-      !card.isDamaged &&
-      !card.isDestroyed
-    ) {
-      const trait = this.createElement("div", "vera-trait-active");
-      trait.textContent = "🔄 First ability use stays ready!";
-      cardDiv.appendChild(trait);
-    }
-
-    // Show if this card has already used Vera's trait
-    if (
-      card &&
-      card.type === "person" &&
-      this.state.turnEvents.veraFirstUseCards?.includes(card.id)
-    ) {
-      const usedVera = this.createElement("div", "vera-used");
-      usedVera.textContent = "✓ Vera bonus used";
-      cardDiv.appendChild(usedVera);
-    }
-
     if (this.state.pending?.type === "raiders_select_camp") {
       // Highlight camps that belong to the target player
       if (
@@ -1337,9 +1308,9 @@ export class UIRenderer {
       // Highlight valid injure targets
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
-          t.playerId === playerId && // Changed from targetPlayer
-          t.columnIndex === columnIndex && // Changed from targetColumn
-          t.position === position // Changed from targetPosition
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
       );
 
       if (isValidTarget) {
@@ -1447,9 +1418,9 @@ export class UIRenderer {
       // Only highlight cards in the valid targets list
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
-          t.playerId === playerId && // Changed from targetPlayer
-          t.columnIndex === columnIndex && // Changed from targetColumn
-          t.position === position // Changed from targetPosition
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
       );
 
       if (isValidTarget) {
@@ -1539,7 +1510,6 @@ export class UIRenderer {
           return;
         }
         // Handle Parachute Base placement
-        // Handle Parachute Base placement
         if (
           this.state.pending?.type === "parachute_place_person" &&
           playerId === this.state.pending.sourcePlayerId
@@ -1566,6 +1536,321 @@ export class UIRenderer {
         }
       });
     } else {
+      // ============================================
+      // CARD EXISTS - Check if it has an image
+      // ============================================
+      // Check if card has an image defined in CARD_DESCRIPTIONS
+      const cardData =
+        card.type === "person"
+          ? CARD_DESCRIPTIONS.people?.[card.name]
+          : card.type === "camp"
+          ? CARD_DESCRIPTIONS.camps?.[card.name]
+          : null;
+
+      // Punks always use the punk.webp image, regardless of underlying card
+      const hasImage = card.isPunk || cardData?.hasImage === true;
+
+      if (hasImage) {
+        // ===== IMAGE CARD PATH - MINIMAL DOM =====
+
+        // Add type classes
+        if (card.type === "camp") {
+          cardDiv.classList.add("camp");
+        } else if (card.type === "person") {
+          cardDiv.classList.add("person");
+        }
+
+        // Add state classes
+        if (card.isDamaged) cardDiv.classList.add("damaged");
+        if (card.isDestroyed) cardDiv.classList.add("destroyed");
+        if (card.type === "person" && !card.isReady) {
+          cardDiv.classList.add("not-ready");
+        }
+
+        // Add image
+        const img = this.createElement("img", "card-image-tableau");
+
+        if (card.isPunk) {
+          // All punks use the same back-of-card image
+          img.src = `assets/cards/punk.webp`;
+          img.alt = "Punk (face-down card)";
+        } else {
+          // Regular cards use their specific image
+          const fileName = card.name.toLowerCase().replace(/\s+/g, "-");
+          img.src = `assets/cards/${fileName}.webp`;
+          img.alt = card.name;
+
+          img.onerror = () => {
+            console.warn(`Image file not found: assets/cards/${fileName}.webp`);
+          };
+        }
+
+        cardDiv.appendChild(img);
+
+        // Optional: Add error handling for missing images
+        img.onerror = () => {
+          console.warn(`Image file not found: assets/cards/${fileName}.webp`);
+          // Image will show broken image icon, or you could add fallback logic here
+        };
+
+        cardDiv.appendChild(img);
+
+        // Add ONLY the ability overlay
+        if (card.abilities && card.abilities.length > 0) {
+          const abilities = this.createElement("div", "ability-info");
+
+          card.abilities.forEach((ability, index) => {
+            let canUseAbility = false;
+
+            if (card.type === "camp") {
+              canUseAbility = card.isReady && !card.isDestroyed;
+            } else if (card.type === "person") {
+              canUseAbility =
+                card.isReady && !card.isDamaged && !card.isDestroyed;
+            }
+
+            const isYourTurn = this.isMyTurn();
+
+            if (
+              canUseAbility &&
+              playerId === this.state.currentPlayer &&
+              isYourTurn &&
+              !this.state.pending
+            ) {
+              const btn = this.createElement("button", "ability-btn");
+              btn.textContent = `Use Ability (${ability.cost}💧)`;
+
+              btn.addEventListener("click", (e) => {
+                if (this.state.phase === "game_over") return;
+                e.stopPropagation();
+
+                if (this.state.pending) {
+                  console.log("Action in progress - please complete it first");
+                  return;
+                }
+
+                if (card.name === "Juggernaut") {
+                  this.commands.execute({
+                    type: "USE_CAMP_ABILITY",
+                    playerId: playerId,
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: position,
+                      abilityIndex: index,
+                    },
+                  });
+                } else if (card.type === "camp") {
+                  this.commands.execute({
+                    type: "USE_CAMP_ABILITY",
+                    playerId: playerId,
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: 0,
+                      abilityIndex: index,
+                    },
+                  });
+                } else {
+                  this.commands.execute({
+                    type: "USE_ABILITY",
+                    playerId: playerId,
+                    payload: {
+                      playerId: playerId,
+                      columnIndex: columnIndex,
+                      position: position,
+                      abilityIndex: index,
+                    },
+                  });
+                }
+              });
+              abilities.appendChild(btn);
+            } else {
+              const text = this.createElement("span", "ability-text-disabled");
+              if (card.abilities.length > 1) {
+                const abilityIndex = card.abilities.indexOf(ability) + 1;
+                text.textContent = `Ability ${abilityIndex} (${ability.cost}💧)`;
+              } else {
+                text.textContent = `Use Ability (${ability.cost}💧)`;
+              }
+
+              const isYourTurn = this.isMyTurn();
+
+              if (!isYourTurn) {
+                text.textContent += " [Not Your Turn]";
+              } else if (this.state.pending) {
+                text.textContent += " [Action in Progress]";
+              } else if (card.type === "person") {
+                if (!card.isReady) text.textContent += " [Not Ready]";
+                if (card.isDamaged) text.textContent += " [Damaged]";
+              } else if (card.type === "camp") {
+                if (!card.isReady) text.textContent += " [Used]";
+                if (card.isDestroyed) text.textContent += " [Destroyed]";
+              }
+
+              abilities.appendChild(text);
+            }
+          });
+
+          cardDiv.appendChild(abilities);
+        }
+
+        // Add hover preview
+        const preview = this.createCardPreview(card);
+        preview.classList.add("tableau-preview");
+        cardDiv.appendChild(preview);
+
+        // Add click handler
+        cardDiv.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
+          e.stopPropagation();
+
+          if (e.defaultPrevented) return;
+
+          if (this.state.pending && !this.canInteractWithPending()) {
+            console.log("Not your turn to interact with this pending action");
+            return;
+          }
+
+          if (!this.state.pending) {
+            if (playerId !== window.networkClient?.myPlayerId) {
+              console.log(
+                "Cannot interact with opponent's board when not targeting"
+              );
+              return;
+            }
+          }
+
+          // All the same click handling logic as before
+          if (
+            this.state.pending?.type === "constructionyard_select_person" &&
+            card.type === "person" &&
+            !card.isDestroyed
+          ) {
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
+            return;
+          }
+
+          if (
+            this.state.pending?.type ===
+              "constructionyard_select_destination" &&
+            playerId === this.state.pending.movingToPlayerId &&
+            position > 0
+          ) {
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
+            return;
+          }
+
+          if (this.state.pending?.type === "famine_select_keep") {
+            if (card && card.type === "person" && !card.isDestroyed) {
+              const isValidTarget = this.state.pending.validTargets?.some(
+                (t) =>
+                  t.playerId === playerId &&
+                  t.columnIndex === columnIndex &&
+                  t.position === position
+              );
+
+              if (isValidTarget) {
+                this.commands.execute({
+                  type: "SELECT_TARGET",
+                  targetPlayer: playerId,
+                  targetColumn: columnIndex,
+                  targetPosition: position,
+                });
+              }
+              return;
+            }
+          }
+
+          if (
+            this.state.pending?.type === "highground_place_person" &&
+            playerId === this.state.pending.playerId &&
+            position > 0
+          ) {
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
+            return;
+          }
+
+          if (
+            this.state.pending?.type === "uprising_place_punks" &&
+            playerId === this.state.pending.sourcePlayerId &&
+            this.isMyTurn()
+          ) {
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetPlayer: playerId,
+              targetColumn: columnIndex,
+              targetPosition: position,
+            });
+            return;
+          }
+
+          if (this.state.pending) {
+            if (
+              this.state.pending.type === "parachute_place_person" &&
+              playerId === this.state.pending.sourcePlayerId
+            ) {
+              if (
+                position === 0 ||
+                card.type === "camp" ||
+                card.name === "Juggernaut"
+              ) {
+                return;
+              }
+
+              if (card.type === "person") {
+                const otherSlot = position === 1 ? 2 : 1;
+                const otherCard =
+                  this.state.players[playerId].columns[columnIndex].getCard(
+                    otherSlot
+                  );
+                if (otherCard) {
+                  return;
+                }
+              }
+
+              this.commands.execute({
+                type: "SELECT_TARGET",
+                targetType: "slot",
+                playerId: playerId,
+                columnIndex: columnIndex,
+                position: position,
+              });
+              cardDiv.classList.add("parachute-placement-target");
+              return;
+            }
+
+            this.handleCardTargetClick(playerId, columnIndex, position);
+            return;
+          } else if (
+            this.selectedCard?.card?.type === "person" &&
+            playerId === this.state.currentPlayer
+          ) {
+            this.handleCardSlotClick(playerId, columnIndex, position);
+          }
+        });
+
+        // Return early - no more DOM additions for image cards
+        return cardDiv;
+      }
+
+      // ===== NON-IMAGE CARD PATH - YOUR EXISTING CODE =====
+
       // THIS is where card type checking should be - when card EXISTS
       if (card.type === "camp") {
         cardDiv.classList.add("camp");
@@ -1582,12 +1867,34 @@ export class UIRenderer {
       if (card.type === "person" && !card.isReady) {
         cardDiv.classList.add("not-ready");
       }
-      // Camps should NEVER get the visual not-ready class even if isReady is false
 
-      // Card name
+      // Add a slot index badge
+      const slotBadge = this.createElement("div", "slot-badge");
+      const globalSlotIndex = columnIndex * 3 + position;
+      slotBadge.textContent = globalSlotIndex;
+      cardDiv.appendChild(slotBadge);
+
+      // Add card name
       const name = this.createElement("div", "card-name");
       name.textContent = card.name;
       cardDiv.appendChild(name);
+
+      // Vera Vosh trait indicator
+      if (card.name === "Vera Vosh" && !card.isDamaged && !card.isDestroyed) {
+        const trait = this.createElement("div", "vera-trait-active");
+        trait.textContent = "🔄 First ability use stays ready!";
+        cardDiv.appendChild(trait);
+      }
+
+      // Show if this card has already used Vera's trait
+      if (
+        card.type === "person" &&
+        this.state.turnEvents.veraFirstUseCards?.includes(card.id)
+      ) {
+        const usedVera = this.createElement("div", "vera-used");
+        usedVera.textContent = "✓ Vera bonus used";
+        cardDiv.appendChild(usedVera);
+      }
 
       if (card.name === "Karli Blaze" && !card.isDamaged && !card.isDestroyed) {
         const trait = this.createElement("div", "karli-trait-active");
@@ -1597,12 +1904,10 @@ export class UIRenderer {
 
       // Check if Argo Yesky is giving this card an extra damage ability
       let hasArgoBonus = false;
-      // Check for both person cards AND punks
       if (
         (card.type === "person" || card.isPunk) &&
         playerId === this.state.currentPlayer
       ) {
-        // Check for active Argo directly
         for (let col = 0; col < 3; col++) {
           for (let pos = 0; pos < 3; pos++) {
             const checkCard =
@@ -1614,7 +1919,6 @@ export class UIRenderer {
               !checkCard.isDestroyed &&
               checkCard.id !== card.id
             ) {
-              // Don't give Argo his own bonus
               hasArgoBonus = true;
               break;
             }
@@ -1652,15 +1956,7 @@ export class UIRenderer {
             ) {
               const btn = this.createElement("button", "ability-btn");
 
-              // Special text for Rabble Rouser's conditional ability
-              if (
-                card.name === "Rabble Rouser" &&
-                ability.effect === "punkdamage"
-              ) {
-                btn.textContent = `Damage (if punk) (${ability.cost}💧)`;
-              } else {
-                btn.textContent = `${ability.effect} (${ability.cost}💧)`;
-              }
+              btn.textContent = `Use Ability (${ability.cost}💧)`;
 
               btn.addEventListener("click", (e) => {
                 if (this.state.phase === "game_over") return;
@@ -1684,12 +1980,11 @@ export class UIRenderer {
                     payload: {
                       playerId: playerId,
                       columnIndex: columnIndex,
-                      position: position, // Include actual position for Juggernaut
+                      position: position,
                       abilityIndex: index,
                     },
                   });
                 } else if (card.type === "camp") {
-                  // Regular camps are always at position 0
                   console.log(
                     "Camp ability clicked:",
                     card.name,
@@ -1724,14 +2019,11 @@ export class UIRenderer {
             } else {
               // Show disabled ability text
               const text = this.createElement("span", "ability-text-disabled");
-
-              if (
-                card.name === "Rabble Rouser" &&
-                ability.effect === "punkdamage"
-              ) {
-                text.textContent = `Damage (if punk) (${ability.cost}💧)`;
+              if (card.abilities.length > 1) {
+                const abilityIndex = card.abilities.indexOf(ability) + 1;
+                text.textContent = `Ability ${abilityIndex} (${ability.cost}💧)`;
               } else {
-                text.textContent = `${ability.effect} (${ability.cost}💧)`;
+                text.textContent = `Use Ability (${ability.cost}💧)`;
               }
 
               // Add specific reason for blocking - check turn FIRST
@@ -1790,7 +2082,7 @@ export class UIRenderer {
                   playerId: playerId,
                   columnIndex: columnIndex,
                   position: position,
-                  abilityIndex: card.abilities ? card.abilities.length : 0, // Handle case where no abilities
+                  abilityIndex: card.abilities ? card.abilities.length : 0,
                   isArgoGranted: true,
                 },
               });
@@ -2127,12 +2419,14 @@ export class UIRenderer {
         const canAfford = player.water >= ability.cost;
 
         // Special text for conditional abilities
-        let abilityText = `${ability.effect} (${ability.cost}💧)`;
-        if (ability.effect === "punkdamage") {
-          abilityText = `Damage if Punk (${ability.cost}💧)`;
-        } else if (ability.effect === "gainpunk") {
-          abilityText = `Gain Punk (${ability.cost}💧)`;
+        let abilityText;
+        if (card.abilities.length > 1) {
+          const abilityIndex = card.abilities.indexOf(ability) + 1;
+          abilityText = `Ability ${abilityIndex} (${ability.cost}💧)`;
+        } else {
+          abilityText = `Use Ability (${ability.cost}💧)`;
         }
+        btn.textContent = abilityText;
 
         btn.textContent = abilityText;
         btn.disabled = !canAfford;
@@ -2897,11 +3191,14 @@ export class UIRenderer {
         const canAfford = player.water >= ability.cost;
 
         // Special text for conditional abilities
-        let abilityText = `${ability.effect} (${ability.cost}💧)`;
-        if (ability.effect === "punkdamage") {
-          abilityText = `Damage if Punk (${ability.cost}💧)`;
+        let abilityText;
+        if (card.abilities.length > 1) {
+          const abilityIndex = card.abilities.indexOf(ability) + 1;
+          abilityText = `Ability ${abilityIndex} (${ability.cost}💧)`;
+        } else {
+          abilityText = `Use Ability (${ability.cost}💧)`;
         }
-
+        btn.textContent = abilityText;
         btn.textContent = abilityText;
         btn.disabled = !canAfford;
 
@@ -2972,13 +3269,7 @@ export class UIRenderer {
         const player = this.state.players[this.state.pending.sourcePlayerId];
         const canAfford = player.water >= ability.cost;
 
-        // Special text for conditional abilities
-        let abilityText = `${ability.effect} (${ability.cost}💧)`;
-        if (ability.effect === "punkdamage") {
-          abilityText = `Damage if Punk (${ability.cost}💧)`;
-        }
-
-        btn.textContent = abilityText;
+        btn.textContent = `Use Ability (${ability.cost}💧)`;
         btn.disabled = !canAfford;
 
         if (!canAfford) {

@@ -256,12 +256,33 @@ h1 {
 }
 
 .water {
-  background: var(--neon-blue);
-  color: #000000;
-  padding: 5px 15px;
-  border-radius: 20px;
+  background: white;
+  padding: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.water-droplet {
+  position: absolute;
+  width: 36px;
+  height: 45px;
+  z-index: 0;
+}
+
+.water-amount {
+  position: relative;
+  z-index: 1;
+  font-size: 24px;
   font-weight: bold;
-  box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  top: 3px;
 }
 
 .turn-controls {
@@ -274,9 +295,9 @@ h1 {
   background: var(--neon-green);
   color: #000000;
   border: none;
-  padding: 6px 12px;
+  padding: 10px 20px; /* Increase from 6px 12px */
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 16px; /* Increase from 13px */
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
@@ -463,7 +484,7 @@ h1 {
   margin-bottom: 4px;
 }
 
-/* Card image */
+/* Make sure the image fills the card completely */
 .card-image-tableau {
   width: 100%;
   height: 100%;
@@ -473,6 +494,7 @@ h1 {
   top: 0;
   left: 0;
   z-index: 0;
+  display: block;
 }
 
 /* Card abilities overlay */
@@ -510,6 +532,15 @@ h1 {
   left: 8px;
   right: 8px;
   z-index: 10;
+}
+
+.card:has(.card-image-tableau) {
+  width: var(--card-width);
+  height: var(--card-height);
+  padding: 0;
+  margin: 4px 0;
+  box-sizing: border-box;
+  display: block;
 }
 
 /* For cards with images, lock the ability overlay position */
@@ -1942,10 +1973,9 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .camp-card {
-  width: 240px;
-  height: auto;
-  min-height: 320px;
-  padding: 15px;
+  width: 200px;
+  height: 280px;
+  padding: 8px;
   border: 3px solid var(--bg-light);
   border-radius: var(--radius);
   cursor: pointer;
@@ -2019,6 +2049,11 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   background: rgba(255, 0, 110, 0.2);
   border-radius: 3px;
   line-height: 1.4;
+}
+
+/* Remove background color for camps with images */
+.card.camp:has(.card-image-tableau) {
+  background: transparent;
 }
 
 /* ===================================
@@ -2204,4 +2239,38 @@ body.has-pending .player-board.active .card.parachute-placement-target {
     box-shadow: 0 0 20px 5px var(--neon-purple),
       inset 0 0 20px rgba(199, 125, 255, 0.5);
   }
+}
+
+/* Adjust column padding for tighter fit */
+.camp-column {
+  padding: 4px; /* Reduced from 6px */
+}
+
+/* Camp cards with images should be exactly the same size as person cards */
+.card.camp:has(.card-image-tableau) {
+  width: var(--card-width);
+  height: var(--card-height);
+  min-height: var(--card-height);
+  max-height: var(--card-height);
+}
+
+.camp-selection-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.camp-card {
+  width: 320px;
+  height: auto;
+  min-height: 420px; /* Increase to accommodate image */
+  padding: 15px;
+  border: 3px solid var(--bg-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  background: var(--bg-medium);
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: white;
 }

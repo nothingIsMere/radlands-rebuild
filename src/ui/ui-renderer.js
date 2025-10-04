@@ -119,55 +119,15 @@ export class UIRenderer {
     myCamps.forEach((campName) => {
       const campCard = this.createElement("div", "camp-card");
 
-      // Camp name
-      const nameDiv = this.createElement("div", "camp-card-name");
-      nameDiv.textContent = campName;
-      campCard.appendChild(nameDiv);
-
       // Get camp data from CARD_DESCRIPTIONS
       const campData = CARD_DESCRIPTIONS.camps[campName];
 
-      // Get camp draw from the old getCampData method
-      const campAbilities = this.getCampData(campName);
-
-      if (campAbilities) {
-        // Camp draw
-        const drawDiv = this.createElement("div", "camp-card-draw");
-        drawDiv.textContent = `Draw: ${campAbilities.campDraw}`;
-        campCard.appendChild(drawDiv);
-      }
-
-      // Abilities with human-readable descriptions from CARD_DESCRIPTIONS
-      if (campData?.abilities && campData.abilities.length > 0) {
-        const abilitiesDiv = this.createElement("div", "camp-card-abilities");
-        const abilitiesTitle = this.createElement(
-          "div",
-          "camp-card-abilities-title"
-        );
-        abilitiesTitle.textContent = "ABILITIES:";
-        abilitiesDiv.appendChild(abilitiesTitle);
-
-        campData.abilities.forEach((abilityText) => {
-          const abilityDiv = this.createElement("div", "camp-card-ability");
-          abilityDiv.textContent = abilityText;
-          abilitiesDiv.appendChild(abilityDiv);
-        });
-        campCard.appendChild(abilitiesDiv);
-      }
-
-      // Traits with full text from CARD_DESCRIPTIONS
-      if (campData?.trait) {
-        const traitDiv = this.createElement("div", "camp-card-trait");
-        const traitTitle = this.createElement("div", "camp-card-trait-title");
-        traitTitle.textContent = "TRAIT:";
-        traitDiv.appendChild(traitTitle);
-
-        const traitText = this.createElement("div", "camp-card-trait-text");
-        traitText.textContent = campData.trait;
-        traitDiv.appendChild(traitText);
-
-        campCard.appendChild(traitDiv);
-      }
+      // Add camp image
+      const img = this.createElement("img", "camp-selection-image");
+      const fileName = campName.toLowerCase().replace(/\s+/g, "-");
+      img.src = `assets/cards/${fileName}.webp`;
+      img.alt = campName;
+      campCard.appendChild(img);
 
       campCard.addEventListener("click", () => {
         if (selectedCamps.has(campName)) {
@@ -768,7 +728,27 @@ export class UIRenderer {
     }
 
     const water = this.createElement("div", "water");
-    water.textContent = `Water: ${player.water}`;
+
+    // Create SVG droplet
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "water-droplet");
+    svg.setAttribute("viewBox", "0 0 24 30");
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute(
+      "d",
+      "M12 0C12 0 0 12 0 18C0 24.627 5.373 30 12 30C18.627 30 24 24.627 24 18C24 12 12 0 12 0Z"
+    );
+    path.setAttribute("fill", "var(--neon-blue)");
+
+    svg.appendChild(path);
+    water.appendChild(svg);
+
+    // Add water amount
+    const waterAmount = this.createElement("span", "water-amount");
+    waterAmount.textContent = player.water;
+    water.appendChild(waterAmount);
+
     header.appendChild(water);
 
     board.appendChild(header);

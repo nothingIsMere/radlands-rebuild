@@ -1,4 +1,5 @@
 import { CONSTANTS } from "../core/constants.js";
+import { CARD_DESCRIPTIONS } from "./card-data.js";
 
 export class UIRenderer {
   constructor(state, commands) {
@@ -288,6 +289,11 @@ export class UIRenderer {
       if (player.eventQueue[i]) {
         const eventCard = this.createElement("div", "event-card");
         eventCard.textContent = player.eventQueue[i].name;
+
+        // Add event preview
+        const eventPreview = this.createEventPreview(player.eventQueue[i]);
+        eventCard.appendChild(eventPreview);
+
         slot.appendChild(eventCard);
       }
 
@@ -2017,6 +2023,13 @@ export class UIRenderer {
       });
     }
 
+    // Add hover preview for non-empty, non-hidden cards
+    if (card && !card.hidden) {
+      const preview = this.createCardPreview(card);
+      preview.classList.add("tableau-preview");
+      cardDiv.appendChild(preview);
+    }
+
     return cardDiv;
   }
 
@@ -3188,22 +3201,36 @@ export class UIRenderer {
 
       card.abilities.forEach((ability) => {
         const abilityDiv = this.createElement("div", "preview-ability");
-        abilityDiv.textContent = `${ability.effect} (${ability.cost}💧)`;
+        const description =
+          CARD_DESCRIPTIONS.abilities[ability.effect] || ability.effect;
+        abilityDiv.textContent = `${description} (${ability.cost}💧)`;
         abilitiesSection.appendChild(abilityDiv);
       });
+
+      // Add special ability notes
+      const cardData =
+        CARD_DESCRIPTIONS.people[card.name] ||
+        CARD_DESCRIPTIONS.camps[card.name];
+      if (cardData?.abilityNote) {
+        const noteDiv = this.createElement("div", "preview-ability-note");
+        noteDiv.textContent = cardData.abilityNote;
+        abilitiesSection.appendChild(noteDiv);
+      }
 
       preview.appendChild(abilitiesSection);
     }
 
-    // Entry trait
-    if (card.entryTrait) {
+    // Entry trait or special trait
+    const trait = this.getFullTraitDescription(card);
+    if (trait) {
       const traitSection = this.createElement("div", "preview-trait");
       const traitTitle = this.createElement("div", "preview-section-title");
-      traitTitle.textContent = "ENTRY TRAIT";
+      traitTitle.textContent =
+        card.type === "camp" ? "CAMP TRAIT" : "ENTRY TRAIT";
       traitSection.appendChild(traitTitle);
 
       const traitText = this.createElement("div", "preview-trait-text");
-      traitText.textContent = this.getTraitDescription(card);
+      traitText.textContent = trait;
       traitSection.appendChild(traitText);
 
       preview.appendChild(traitSection);
@@ -3217,7 +3244,8 @@ export class UIRenderer {
       junkSection.appendChild(junkTitle);
 
       const junkText = this.createElement("div", "preview-junk-text");
-      junkText.textContent = this.getJunkDescription(card.junkEffect);
+      junkText.textContent =
+        CARD_DESCRIPTIONS.junkEffects[card.junkEffect] || card.junkEffect;
       junkSection.appendChild(junkText);
 
       preview.appendChild(junkSection);
@@ -3226,30 +3254,65 @@ export class UIRenderer {
     return preview;
   }
 
-  getTraitDescription(card) {
-    // Map card names to their trait descriptions
-    const traits = {
-      "Repair Bot": "When played: Restore a damaged card",
-      Vigilante: "When played: Injure an opponent's person",
-      "Vera Vosh": "First ability use each turn stays ready",
-      "Karli Blaze": "All people you play enter ready",
-      "Argo Yesky": "All your people gain 'Damage (1💧)'",
-      // ... add more as needed
-    };
+  createEventPreview(event) {
+    const preview = this.createElement("div", "card-preview event-preview");
 
-    return traits[card.name] || card.entryTrait || "Special effect on entry";
+    const name = this.createElement("div", "preview-name");
+    name.textContent = event.name;
+    preview.appendChild(name);
+
+    const eventData = CARD_DESCRIPTIONS.events[event.name];
+
+    const info = this.createElement("div", "preview-info");
+    const queueNum = eventData?.queue ?? "?";
+    info.textContent = `EVENT • Queue: ${queueNum}`;
+    preview.appendChild(info);
+
+    const effectSection = this.createElement("div", "preview-trait");
+    const effectTitle = this.createElement("div", "preview-section-title");
+    effectTitle.textContent = "EFFECT";
+    effectSection.appendChild(effectTitle);
+
+    const effectText = this.createElement("div", "preview-trait-text");
+    effectText.textContent = eventData?.effect || event.name;
+    effectSection.appendChild(effectText);
+
+    preview.appendChild(effectSection);
+
+    // Add junk effect if present
+    if (event.junkEffect) {
+      const junkSection = this.createElement("div", "preview-junk");
+      const junkTitle = this.createElement("div", "preview-section-title");
+      junkTitle.textContent = "JUNK";
+      junkSection.appendChild(junkTitle);
+
+      const junkText = this.createElement("div", "preview-junk-text");
+      junkText.textContent =
+        CARD_DESCRIPTIONS.junkEffects[event.junkEffect] || event.junkEffect;
+      junkSection.appendChild(junkText);
+
+      preview.appendChild(junkSection);
+    }
+
+    return preview;
   }
 
-  getJunkDescription(junkEffect) {
-    const descriptions = {
-      restore: "Restore a damaged card",
-      injure: "Injure an opponent's person",
-      damage: "Damage a card",
-      punk: "Gain a punk",
-      // ... add more as needed
-    };
+  getFullTraitDescription(card) {
+    if (card.type === "person") {
+      return CARD_DESCRIPTIONS.people[card.name]?.trait || null;
+    } else if (card.type === "camp") {
+      return CARD_DESCRIPTIONS.camps[card.name]?.trait || null;
+    }
+    return null;
+  }
 
-    return descriptions[junkEffect] || junkEffect;
+  getFullTraitDescription(card) {
+    if (card.type === "person") {
+      return CARD_DESCRIPTIONS.people[card.name]?.trait || null;
+    } else if (card.type === "camp") {
+      return CARD_DESCRIPTIONS.camps[card.name]?.trait || null;
+    }
+    return null;
   }
 
   renderCentralArea() {

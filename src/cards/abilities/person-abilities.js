@@ -712,7 +712,6 @@ export const personAbilities = {
       handler: (state, context) => {
         console.log("Assassin ability: Destroy unprotected enemy person");
 
-        // Find enemy people (respects protection unless High Ground active)
         const validTargets = TargetValidator.findValidTargets(
           state,
           context.playerId,
@@ -729,8 +728,11 @@ export const personAbilities = {
 
         state.pending = {
           type: "assassin_destroy",
+          source: context.source, // ← Add this
+          sourceCard: context.source, // ← Add this
           sourcePlayerId: context.playerId,
           validTargets: validTargets,
+          context, // ← Add this
         };
 
         console.log(

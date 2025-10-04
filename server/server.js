@@ -82,7 +82,7 @@ const PERSON_CARDS = {
   },
   Assassin: {
     cost: 1,
-    abilities: [{ effect: "destroyperson", cost: 2 }],
+    abilities: [{ effect: "destroy", cost: 2 }],
     junkEffect: "raid",
   },
   Sniper: {

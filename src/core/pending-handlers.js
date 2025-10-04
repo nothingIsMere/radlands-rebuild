@@ -730,47 +730,19 @@ class AssassinDestroyHandler extends PendingHandler {
 
     // Store values before clearing pending
     const sourcePlayerId = this.state.pending.sourcePlayerId;
-    const entryTrait = this.state.pending.entryTrait; // ADD THIS
+    const entryTrait = this.state.pending.entryTrait;
+    const parachuteBaseDamage = this.state.pending.parachuteBaseDamage;
 
-    // Clear pending BEFORE destroying (important!)
+    // ← ADD THIS: Mark ability complete BEFORE clearing pending
+    this.completeAbility();
+
+    // Clear pending
     this.state.pending = null;
 
     // Now destroy the target
     target.isDestroyed = true;
 
-    if (target.isPunk) {
-      const returnCard = {
-        id: target.id,
-        name: target.originalName || "Unknown Card",
-        type: "person",
-        cost: target.cost || 0,
-        abilities: target.abilities || [],
-        junkEffect: target.junkEffect,
-      };
-      this.state.deck.unshift(returnCard);
-      console.log("Assassin destroyed punk (returned to deck)");
-    } else {
-      this.state.discard.push(target);
-      console.log(`Assassin destroyed ${target.name}`);
-    }
-
-    // Remove from column and handle shifting
-    const column = this.state.players[targetPlayer].columns[targetColumn];
-    column.setCard(targetPosition, null);
-
-    if (targetPosition === 1) {
-      const cardInFront = column.getCard(2);
-      if (cardInFront) {
-        column.setCard(1, cardInFront);
-        column.setCard(2, null);
-      }
-    }
-
-    // Handle entry trait if present (like Parachute Base damage)
-    if (entryTrait) {
-      console.log("Executing entry trait after Assassin destroy");
-      this.commandSystem.handleEntryTrait(entryTrait);
-    }
+    // ... rest of destruction logic ...
 
     // Finalize ability context if it exists
     if (this.commandSystem.activeAbilityContext) {
@@ -781,12 +753,7 @@ class AssassinDestroyHandler extends PendingHandler {
 
     // Apply Parachute Base damage if present
     if (parachuteBaseDamage) {
-      console.log("Damage ability completed, applying Parachute Base damage");
-      this.commandSystem.applyParachuteBaseDamage(
-        parachuteBaseDamage.targetPlayer,
-        parachuteBaseDamage.targetColumn,
-        parachuteBaseDamage.targetPosition
-      );
+      // ... existing code ...
     }
 
     return true;

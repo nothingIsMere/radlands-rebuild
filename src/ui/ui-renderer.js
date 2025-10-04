@@ -88,36 +88,50 @@ export class UIRenderer {
       nameDiv.textContent = campName;
       campCard.appendChild(nameDiv);
 
-      // Get camp data from CAMP_CARDS (we need to access it)
-      const campData = this.getCampData(campName);
+      // Get camp data from CARD_DESCRIPTIONS
+      const campData = CARD_DESCRIPTIONS.camps[campName];
 
-      if (campData) {
+      // Get camp draw from the old getCampData method
+      const campAbilities = this.getCampData(campName);
+
+      if (campAbilities) {
         // Camp draw
         const drawDiv = this.createElement("div", "camp-card-draw");
-        drawDiv.textContent = `Draw: ${campData.campDraw}`;
+        drawDiv.textContent = `Draw: ${campAbilities.campDraw}`;
         campCard.appendChild(drawDiv);
-
-        // Abilities
-        if (campData.abilities && campData.abilities.length > 0) {
-          const abilitiesDiv = this.createElement("div", "camp-card-abilities");
-          campData.abilities.forEach((ability) => {
-            const abilityDiv = this.createElement("div", "camp-card-ability");
-            abilityDiv.textContent = `${ability.effect} (${ability.cost}💧)`;
-            abilitiesDiv.appendChild(abilityDiv);
-          });
-          campCard.appendChild(abilitiesDiv);
-        }
-
-        // Traits
-        const trait = this.getCampTrait(campName);
-        if (trait) {
-          const traitDiv = this.createElement("div", "camp-card-trait");
-          traitDiv.textContent = trait;
-          campCard.appendChild(traitDiv);
-        }
       }
 
-      campCards.push({ element: campCard, name: campName });
+      // Abilities with human-readable descriptions from CARD_DESCRIPTIONS
+      if (campData?.abilities && campData.abilities.length > 0) {
+        const abilitiesDiv = this.createElement("div", "camp-card-abilities");
+        const abilitiesTitle = this.createElement(
+          "div",
+          "camp-card-abilities-title"
+        );
+        abilitiesTitle.textContent = "ABILITIES:";
+        abilitiesDiv.appendChild(abilitiesTitle);
+
+        campData.abilities.forEach((abilityText) => {
+          const abilityDiv = this.createElement("div", "camp-card-ability");
+          abilityDiv.textContent = abilityText;
+          abilitiesDiv.appendChild(abilityDiv);
+        });
+        campCard.appendChild(abilitiesDiv);
+      }
+
+      // Traits with full text from CARD_DESCRIPTIONS
+      if (campData?.trait) {
+        const traitDiv = this.createElement("div", "camp-card-trait");
+        const traitTitle = this.createElement("div", "camp-card-trait-title");
+        traitTitle.textContent = "TRAIT:";
+        traitDiv.appendChild(traitTitle);
+
+        const traitText = this.createElement("div", "camp-card-trait-text");
+        traitText.textContent = campData.trait;
+        traitDiv.appendChild(traitText);
+
+        campCard.appendChild(traitDiv);
+      }
 
       campCard.addEventListener("click", () => {
         if (selectedCamps.has(campName)) {
@@ -3182,47 +3196,43 @@ export class UIRenderer {
   createCardPreview(card) {
     const preview = this.createElement("div", "card-preview");
 
-    // Card name header
+    // Card name
     const name = this.createElement("div", "preview-name");
     name.textContent = card.name;
     preview.appendChild(name);
 
-    // Card type and cost
-    const info = this.createElement("div", "preview-info");
-    info.textContent = `${card.type.toUpperCase()} • ${card.cost}💧`;
-    preview.appendChild(info);
+    // Card type and cost (only show cost for person cards)
+    if (card.type === "person") {
+      const info = this.createElement("div", "preview-info");
+      info.textContent = `${card.type.toUpperCase()} • ${card.cost}💧`;
+      preview.appendChild(info);
+    } else {
+      const info = this.createElement("div", "preview-info");
+      info.textContent = card.type.toUpperCase();
+      preview.appendChild(info);
+    }
 
-    // Abilities (for person cards)
-    if (card.abilities && card.abilities.length > 0) {
+    const cardData =
+      CARD_DESCRIPTIONS.people[card.name] || CARD_DESCRIPTIONS.camps[card.name];
+
+    // Abilities
+    if (cardData?.abilities && cardData.abilities.length > 0) {
       const abilitiesSection = this.createElement("div", "preview-abilities");
       const abilitiesTitle = this.createElement("div", "preview-section-title");
       abilitiesTitle.textContent = "ABILITIES";
       abilitiesSection.appendChild(abilitiesTitle);
 
-      card.abilities.forEach((ability) => {
+      cardData.abilities.forEach((abilityText) => {
         const abilityDiv = this.createElement("div", "preview-ability");
-        const description =
-          CARD_DESCRIPTIONS.abilities[ability.effect] || ability.effect;
-        abilityDiv.textContent = `${description} (${ability.cost}💧)`;
+        abilityDiv.textContent = abilityText;
         abilitiesSection.appendChild(abilityDiv);
       });
-
-      // Add special ability notes
-      const cardData =
-        CARD_DESCRIPTIONS.people[card.name] ||
-        CARD_DESCRIPTIONS.camps[card.name];
-      if (cardData?.abilityNote) {
-        const noteDiv = this.createElement("div", "preview-ability-note");
-        noteDiv.textContent = cardData.abilityNote;
-        abilitiesSection.appendChild(noteDiv);
-      }
 
       preview.appendChild(abilitiesSection);
     }
 
-    // Entry trait or special trait
-    const trait = this.getFullTraitDescription(card);
-    if (trait) {
+    // Trait
+    if (cardData?.trait) {
       const traitSection = this.createElement("div", "preview-trait");
       const traitTitle = this.createElement("div", "preview-section-title");
       traitTitle.textContent =
@@ -3230,22 +3240,23 @@ export class UIRenderer {
       traitSection.appendChild(traitTitle);
 
       const traitText = this.createElement("div", "preview-trait-text");
-      traitText.textContent = trait;
+      traitText.textContent = cardData.trait;
       traitSection.appendChild(traitText);
 
       preview.appendChild(traitSection);
     }
 
-    // Junk effect
-    if (card.junkEffect) {
+    // Junk
+    if (card.junkEffect || cardData?.junk) {
       const junkSection = this.createElement("div", "preview-junk");
       const junkTitle = this.createElement("div", "preview-section-title");
       junkTitle.textContent = "JUNK";
       junkSection.appendChild(junkTitle);
 
       const junkText = this.createElement("div", "preview-junk-text");
-      junkText.textContent =
-        CARD_DESCRIPTIONS.junkEffects[card.junkEffect] || card.junkEffect;
+      const junkName = cardData?.junk || card.junkEffect;
+      const junkDesc = CARD_DESCRIPTIONS.junkEffects[junkName.toLowerCase()];
+      junkText.textContent = junkDesc || junkName;
       junkSection.appendChild(junkText);
 
       preview.appendChild(junkSection);

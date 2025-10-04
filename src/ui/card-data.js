@@ -1,252 +1,368 @@
 // card-data.js
+// card-data.js
 export const CARD_DESCRIPTIONS = {
-  // ABILITY EFFECTS - Human-readable descriptions
-  abilities: {
-    damage: "Deal 1 damage to an unprotected enemy card",
-    restore: "Remove all damage from a damaged card",
-    restoreready: "Remove all damage from a damaged person and make them ready",
-    raid: "Take 1 water from opponent",
-    injure: "Deal 1 damage to an unprotected enemy person",
-    gainpunk: "Draw a Punk from the deck and place it",
-    destroyall: "Destroy this card and all people in play",
-    destroy: "Destroy one of your people, then opponent destroys one of theirs",
-    move: "Move this card forward one space",
-    discardchoose:
-      "Discard a card (not Water Silo), then gain a Punk or extra water",
-    usedamagedability:
-      "Use the ability of any damaged person (must pay cost), then destroy it",
-    destroydraw: "Destroy one of your people, then draw 1 card",
-    destroywater: "Destroy one of your people, then gain extra water",
-    advance: "Advance any event by 1 queue position",
-    drawdiscard: "Draw 2 cards, then discard one of them",
-    paradrop:
-      "Play a person and use their ability (must pay both costs), then damage them",
-    destroyrestore: "Destroy one of your people, then restore a card",
-    damagecamp: "Deal 1 damage to any camp if you have 4+ people",
-    raidpunk: "Raid and gain a Punk",
-    moveperson: "Move any person to any place on your side",
-    punkdamage: "If you have a Punk, deal 1 damage",
-    damagerestoremany: "Damage this card, then restore any number of cards",
-  },
-
-  // JUNK EFFECTS - Human-readable descriptions
-  junkEffects: {
-    water: "Gain 1 extra water",
-    injure: "Deal 1 damage to an unprotected enemy person",
-    restore: "Remove all damage from a damaged card",
-    raid: "Take 1 water from opponent",
-    card: "Draw 1 card from the deck",
-    punk: "Draw a Punk from the deck and place it",
-    damage: "Deal 1 damage to an unprotected enemy card",
-  },
-
-  // PEOPLE CARDS - Traits and special abilities
   people: {
     Looter: {
+      abilities: ["Damage. If this hits a camp, draw 1 card (2💧)"],
       trait: null,
-      abilityNote: "If this hits a camp, draw 1 card",
+      junk: "Water",
     },
     "Wounded Soldier": {
+      abilities: ["Deal 1 damage to an unprotected enemy card (1💧)"],
       trait: "When this card enters play, draw 1 card, then damage this card",
+      junk: "Injure",
     },
     "Cult Leader": {
+      abilities: ["Destroy one of your people, then deal 1 damage (0💧)"],
       trait: null,
-      abilityNote: "Can destroy himself with his ability",
+      junk: "Card",
     },
     "Repair Bot": {
+      abilities: ["Remove all damage from a damaged card (2💧)"],
       trait: "When this card enters play, restore a card",
+      junk: "Injure",
     },
     Gunner: {
+      abilities: ["Injure all unprotected enemies (2💧)"],
       trait: null,
-      abilityNote: "Injures ALL unprotected enemies",
+      junk: "Restore",
     },
     Assassin: {
+      abilities: ["Destroy an unprotected person (2💧)"],
       trait: null,
+      junk: "Raid",
     },
     Scientist: {
+      abilities: [
+        "Discard top 3 cards of deck. You may use one junk effect (1💧)",
+      ],
       trait: null,
-      abilityNote: "Discard top 3 cards of deck. You may use one junk effect",
+      junk: "Raid",
     },
     Mutant: {
+      abilities: ["Damage and/or Restore, then damage this card (0💧)"],
       trait: null,
-      abilityNote: "Damage and/or Restore, then damage this card",
+      junk: "Injure",
     },
     Vigilante: {
+      abilities: ["Deal 1 damage to an unprotected enemy person (1💧)"],
       trait: "When this card enters play, injure an enemy person",
+      junk: "Raid",
     },
     "Rescue Team": {
+      abilities: ["Return one of your people to your hand (0💧)"],
       trait: "This card enters play ready",
-      abilityNote: "Can return itself to hand",
+      junk: "Injure",
     },
     Muse: {
+      abilities: ["Gain extra water (0💧)"],
       trait: null,
+      junk: "Injure",
     },
     Mimic: {
+      abilities: [
+        "Use any ready person's ability or any undamaged enemy's ability (variable cost)",
+      ],
       trait: null,
-      abilityNote:
-        "Use any ready person's ability or any undamaged enemy's ability",
+      junk: "Injure",
     },
     Exterminator: {
+      abilities: ["Destroy all damaged enemies (1💧)"],
       trait: null,
-      abilityNote: "Destroys ALL damaged enemies",
+      junk: "Card",
     },
     Scout: {
+      abilities: ["Take 1 water from opponent (1💧)"],
       trait: null,
+      junk: "Water",
     },
     Pyromaniac: {
+      abilities: ["Deal 1 damage to an unprotected camp (1💧)"],
       trait: null,
-      abilityNote: "Damages unprotected camps",
+      junk: "Injure",
     },
     Holdout: {
+      abilities: ["Deal 1 damage to an unprotected enemy card (1💧)"],
       trait:
         "If you have a destroyed camp, you can play this card in that column for 0 water",
+      junk: "Raid",
     },
     Doomsayer: {
+      abilities: ["If opponent has an event in play, deal 1 damage (1💧)"],
       trait:
         "When this card enters play, you may move all opponent's events back 1 queue",
+      junk: "Card",
     },
     "Rabble Rouser": {
+      abilities: [
+        "Draw a Punk from the deck and place it (1💧)",
+        "If you have a Punk, deal 1 damage (1💧)",
+      ],
       trait: null,
+      junk: "Raid",
     },
     Vanguard: {
+      abilities: ["Deal 1 damage, then opponent damages you back (1💧)"],
       trait: "When this card enters play, gain a Punk",
-      abilityNote: "Opponent damages you back immediately during your turn",
+      junk: "Raid",
     },
     Sniper: {
+      abilities: ["Deal 1 damage to any card (2💧)"],
       trait: null,
-      abilityNote: "Can damage ANY card (ignores protection)",
+      junk: "Restore",
     },
     "Magnus Karv": {
+      abilities: ["Damage all cards in one opponent column (2💧)"],
       trait: null,
-      abilityNote: "Damages ALL cards in one opponent column",
+      junk: "Punk",
     },
     "Zeto Kahn": {
+      abilities: ["Draw 3 cards, then discard 3 cards (not Water Silo) (1💧)"],
       trait: "The first event you play each turn goes to 0 queue",
+      junk: "Punk",
     },
     "Vera Vosh": {
+      abilities: ["Deal 1 damage to an unprotected enemy person (1💧)"],
       trait:
         "The first time you use a card's ability each turn, that card stays ready",
+      junk: "Punk",
     },
     "Karli Blaze": {
+      abilities: ["Deal 1 damage to an unprotected enemy card (1💧)"],
       trait: "All your people (including this card) enter play ready",
+      junk: "Punk",
     },
     "Molgur Stang": {
+      abilities: ["Destroy any camp (1💧)"],
       trait: null,
-      abilityNote: "Can destroy ANY camp, even if protected",
+      junk: "Punk",
     },
     "Argo Yesky": {
+      abilities: ["Deal 1 damage to an unprotected enemy card (1💧)"],
       trait:
         "All your people gain 'Damage (1💧)' ability. When this enters play, gain a Punk",
+      junk: "Punk",
     },
   },
 
-  // CAMP CARDS - Traits
   camps: {
-    Railgun: { trait: null },
-    "Atomic Garden": { trait: null },
-    Cannon: { trait: "This card starts the game damaged" },
-    Pillbox: { trait: "Ability costs 1 less per destroyed camp you have" },
-    "Scud Launcher": {
-      trait: "Opponent chooses which of their cards takes damage",
+    Railgun: {
+      abilities: ["Deal 1 damage to an unprotected enemy card (2💧)"],
+      trait: null,
     },
-    "Victory Totem": { trait: null },
-    Catapult: { trait: "Must destroy one of your people to use" },
-    "Nest of Spies": { trait: "Requires 2+ people played this turn" },
-    "Command Post": { trait: "Ability costs 1 less per Punk (minimum 0)" },
-    Obelisk: { trait: "When the last card is drawn from deck, you win" },
-    "Mercenary Camp": { trait: "Requires 4+ people to use" },
-    Reactor: { trait: "Destroys this card AND all people in play" },
+    "Atomic Garden": {
+      abilities: [
+        "Remove all damage from a damaged person and make them ready (2💧)",
+      ],
+      trait: null,
+    },
+    Cannon: {
+      abilities: ["If this card is undamaged, deal 1 damage (2💧)"],
+      trait: "This card starts the game damaged",
+    },
+    Pillbox: {
+      abilities: [
+        "Deal 1 damage. Costs 1 less per destroyed camp you have (3💧)",
+      ],
+      trait: null,
+    },
+    "Scud Launcher": {
+      abilities: ["Damage one of opponent's cards of their choice (1💧)"],
+      trait: null,
+    },
+    "Victory Totem": {
+      abilities: [
+        "Deal 1 damage to an unprotected enemy card (2💧)",
+        "Take 1 water from opponent (2💧)",
+      ],
+      trait: null,
+    },
+    Catapult: {
+      abilities: ["Damage any card, then destroy one of your people (2💧)"],
+      trait: null,
+    },
+    "Nest of Spies": {
+      abilities: ["If you played 2+ people this turn, deal 1 damage (1💧)"],
+      trait: null,
+    },
+    "Command Post": {
+      abilities: ["Deal 1 damage. Costs 1 less per Punk (minimum 0) (3💧)"],
+      trait: null,
+    },
+    Obelisk: {
+      abilities: [],
+      trait: "When the last card is drawn from deck, you win",
+    },
+    "Mercenary Camp": {
+      abilities: ["Damage any camp if you have 4+ people (2💧)"],
+      trait: null,
+    },
+    Reactor: {
+      abilities: ["Destroy this card and all people in play (2💧)"],
+      trait: null,
+    },
     "The Octagon": {
-      trait:
-        "If you destroy one of your people, opponent must destroy one of theirs",
+      abilities: [
+        "Destroy one of your people. If you do, opponent destroys one of theirs (1💧)",
+      ],
+      trait: null,
     },
     Juggernaut: {
-      trait:
-        "Moves forward each use. On 3rd move, return to start and opponent destroys a camp. People behind Juggernaut are protected",
+      abilities: [
+        "Move this card forward one space. On 3rd move, return to start and opponent destroys a camp (1💧)",
+      ],
+      trait: "People behind Juggernaut are protected",
     },
     "Scavenger Camp": {
-      trait: "Choose to gain Punk OR extra water after discarding",
+      abilities: [
+        "Discard a card (not Water Silo), then gain a Punk or extra water (0💧)",
+      ],
+      trait: null,
     },
-    Outpost: { trait: null },
+    Outpost: {
+      abilities: [
+        "Take 1 water from opponent (2💧)",
+        "Remove all damage from a damaged card (2💧)",
+      ],
+      trait: null,
+    },
     "Transplant Lab": {
-      trait: "Requires 2+ people played this turn. Cannot restore itself",
+      abilities: ["If you played 2+ people this turn, restore a card (1💧)"],
+      trait: "Cannot restore itself",
     },
-    Resonator: { trait: "Must be the ONLY ability you use this turn" },
-    Bonfire: { trait: "This card cannot be restored" },
-    Cache: { trait: "Does both Raid and Gain Punk" },
+    Resonator: {
+      abilities: [
+        "Deal 1 damage. Must be the only ability you use this turn (1💧)",
+      ],
+      trait: null,
+    },
+    Bonfire: {
+      abilities: ["Damage this card, then restore any number of cards (0💧)"],
+      trait: "This card cannot be restored",
+    },
+    Cache: {
+      abilities: ["Take 1 water from opponent and gain a Punk (2💧)"],
+      trait: null,
+    },
     Watchtower: {
-      trait: "Requires an event resolved this turn (including Raiders)",
+      abilities: ["If any event resolved this turn, deal 1 damage (1💧)"],
+      trait: null,
     },
     "Construction Yard": {
-      trait: "Can move people to any position on your side",
+      abilities: [
+        "Move any person to any place on your side (1💧)",
+        "Take 1 water from opponent (2💧)",
+      ],
+      trait: null,
     },
-    "Adrenaline Lab": { trait: "Can use damaged people who entered this turn" },
-    Mulcher: { trait: "Requires a person to use" },
-    "Blood Bank": { trait: "Requires a person to use" },
-    Arcade: { trait: "Requires 0 or 1 people (Punks count)" },
-    "Training Camp": { trait: "Requires 2 people in this column" },
-    "Supply Depot": { trait: "Must discard one of the 2 drawn cards" },
+    "Adrenaline Lab": {
+      abilities: [
+        "Use ability of any damaged person (pay cost), then destroy it (0💧)",
+      ],
+      trait: null,
+    },
+    Mulcher: {
+      abilities: ["Destroy one of your people, then draw 1 card (0💧)"],
+      trait: null,
+    },
+    "Blood Bank": {
+      abilities: ["Destroy one of your people, then gain extra water (0💧)"],
+      trait: null,
+    },
+    Arcade: {
+      abilities: ["If you have 0-1 people, gain a Punk (1💧)"],
+      trait: null,
+    },
+    "Training Camp": {
+      abilities: ["If you have 2 people in this column, deal 1 damage (2💧)"],
+      trait: null,
+    },
+    "Supply Depot": {
+      abilities: ["Draw 2 cards, then discard one of them (2💧)"],
+      trait: null,
+    },
     "Omen Clock": {
-      trait:
-        "Can advance opponent's events. Can only advance if space available",
+      abilities: ["Advance any event by 1 queue position (1💧)"],
+      trait: null,
     },
-    Warehouse: { trait: "Requires opponent to have an unprotected camp" },
-    Garage: { trait: null },
+    Warehouse: {
+      abilities: ["If opponent has an unprotected camp, restore a card (1💧)"],
+      trait: null,
+    },
+    Garage: {
+      abilities: ["Take 1 water from opponent (1💧)"],
+      trait: null,
+    },
     Oasis: {
+      abilities: [],
       trait: "If this column has no people, people cost 1 less to play here",
     },
     "Parachute Base": {
-      trait: "Must pay for both playing the person and using their ability",
+      abilities: [
+        "Play a person and use their ability (pay both costs), then damage them (0💧)",
+      ],
+      trait: null,
     },
-    "Labor Camp": { trait: "Requires a person to use. Cannot restore itself" },
+    "Labor Camp": {
+      abilities: ["Destroy one of your people, then restore a card (0💧)"],
+      trait: "Cannot restore itself",
+    },
   },
 
-  // EVENT CARDS
   events: {
     Interrogate: {
       effect: "Draw 4 cards, then discard 3 of them",
-      queue: 0,
+      junk: "Water",
     },
     Truce: {
       effect:
         "Return all people to their owners' hands (Punks count as people)",
-      queue: 0,
+      junk: "Injure",
     },
     Uprising: {
       effect:
         "Gain 3 Punks (if this would exceed 6 people, you don't gain extras)",
-      queue: 2,
+      junk: "Injure",
     },
     Radiation: {
       effect: "Injure all people in play (including your own)",
-      queue: 1,
+      junk: "Raid",
     },
     Famine: {
       effect:
         "Each player destroys all but one of their people (you choose first)",
-      queue: 1,
+      junk: "Injure",
     },
     Napalm: {
       effect: "Destroy all enemies in one column",
-      queue: 1,
+      junk: "Restore",
     },
     Strafe: {
       effect: "Injure all unprotected enemies",
-      queue: 0,
+      junk: "Card",
     },
     Bombardment: {
       effect:
         "Damage all opponent's camps, then draw 1 card per destroyed camp they have",
-      queue: 3,
+      junk: "Restore",
     },
     "High Ground": {
       effect:
         "Rearrange your people. This turn, all opponent's cards are unprotected",
-      queue: 1,
+      junk: "Water",
     },
     Banish: {
       effect: "Destroy any enemy card",
-      queue: 1,
+      junk: "Raid",
     },
+  },
+
+  junkEffects: {
+    water: "Water",
+    injure: "Injure",
+    restore: "Restore",
+    raid: "Raid",
+    card: "Card",
+    punk: "Punk",
   },
 };

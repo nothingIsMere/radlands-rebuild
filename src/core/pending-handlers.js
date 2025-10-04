@@ -1136,8 +1136,9 @@ class CatapultDamageHandler extends PendingHandler {
 
     const { targetPlayer, targetColumn, targetPosition } = payload;
 
-    // Store values before clearing
+    // Store values before clearing - INCLUDING sourceCard
     const sourcePlayerId = this.state.pending.sourcePlayerId;
+    const sourceCard = this.state.pending.sourceCard;
 
     // Clear pending first
     this.state.pending = null;
@@ -1210,9 +1211,16 @@ class CatapultDamageHandler extends PendingHandler {
       this.state.pending = {
         type: "catapult_select_destroy",
         sourcePlayerId: sourcePlayerId,
+        sourceCard: sourceCard,
         validTargets: validPeople,
       };
       console.log("Catapult: Now select one of your people to destroy");
+    } else {
+      // No people to destroy, mark camp as not ready now
+      if (sourceCard) {
+        sourceCard.isReady = false;
+        console.log("Catapult marked as not ready (no people to destroy)");
+      }
     }
 
     if (this.commandSystem.activeAbilityContext) {
@@ -1239,6 +1247,9 @@ class CatapultSelectDestroyHandler extends PendingHandler {
       console.log("Must select a person to destroy");
       return false;
     }
+
+    // Store the source card BEFORE clearing pending
+    const sourceCard = this.state.pending.sourceCard;
 
     // Clear pending
     this.state.pending = null;
@@ -1270,6 +1281,12 @@ class CatapultSelectDestroyHandler extends PendingHandler {
         column.setCard(1, cardInFront);
         column.setCard(2, null);
       }
+    }
+
+    // NOW mark Catapult as not ready
+    if (sourceCard) {
+      sourceCard.isReady = false;
+      console.log("Catapult marked as not ready after sacrifice");
     }
 
     return true;

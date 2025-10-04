@@ -3117,6 +3117,10 @@ export class UIRenderer {
       cardText.textContent = `${card.name} (${card.cost}💧)`;
       cardDiv.appendChild(cardText);
 
+      // HOVER PREVIEW
+      const preview = this.createCardPreview(card);
+      cardDiv.appendChild(preview);
+
       // Junk effect indicator
       if (card.junkEffect) {
         const junk = this.createElement("span", "junk-label");
@@ -3160,6 +3164,92 @@ export class UIRenderer {
     });
 
     return hand;
+  }
+
+  createCardPreview(card) {
+    const preview = this.createElement("div", "card-preview");
+
+    // Card name header
+    const name = this.createElement("div", "preview-name");
+    name.textContent = card.name;
+    preview.appendChild(name);
+
+    // Card type and cost
+    const info = this.createElement("div", "preview-info");
+    info.textContent = `${card.type.toUpperCase()} • ${card.cost}💧`;
+    preview.appendChild(info);
+
+    // Abilities (for person cards)
+    if (card.abilities && card.abilities.length > 0) {
+      const abilitiesSection = this.createElement("div", "preview-abilities");
+      const abilitiesTitle = this.createElement("div", "preview-section-title");
+      abilitiesTitle.textContent = "ABILITIES";
+      abilitiesSection.appendChild(abilitiesTitle);
+
+      card.abilities.forEach((ability) => {
+        const abilityDiv = this.createElement("div", "preview-ability");
+        abilityDiv.textContent = `${ability.effect} (${ability.cost}💧)`;
+        abilitiesSection.appendChild(abilityDiv);
+      });
+
+      preview.appendChild(abilitiesSection);
+    }
+
+    // Entry trait
+    if (card.entryTrait) {
+      const traitSection = this.createElement("div", "preview-trait");
+      const traitTitle = this.createElement("div", "preview-section-title");
+      traitTitle.textContent = "ENTRY TRAIT";
+      traitSection.appendChild(traitTitle);
+
+      const traitText = this.createElement("div", "preview-trait-text");
+      traitText.textContent = this.getTraitDescription(card);
+      traitSection.appendChild(traitText);
+
+      preview.appendChild(traitSection);
+    }
+
+    // Junk effect
+    if (card.junkEffect) {
+      const junkSection = this.createElement("div", "preview-junk");
+      const junkTitle = this.createElement("div", "preview-section-title");
+      junkTitle.textContent = "JUNK";
+      junkSection.appendChild(junkTitle);
+
+      const junkText = this.createElement("div", "preview-junk-text");
+      junkText.textContent = this.getJunkDescription(card.junkEffect);
+      junkSection.appendChild(junkText);
+
+      preview.appendChild(junkSection);
+    }
+
+    return preview;
+  }
+
+  getTraitDescription(card) {
+    // Map card names to their trait descriptions
+    const traits = {
+      "Repair Bot": "When played: Restore a damaged card",
+      Vigilante: "When played: Injure an opponent's person",
+      "Vera Vosh": "First ability use each turn stays ready",
+      "Karli Blaze": "All people you play enter ready",
+      "Argo Yesky": "All your people gain 'Damage (1💧)'",
+      // ... add more as needed
+    };
+
+    return traits[card.name] || card.entryTrait || "Special effect on entry";
+  }
+
+  getJunkDescription(junkEffect) {
+    const descriptions = {
+      restore: "Restore a damaged card",
+      injure: "Injure an opponent's person",
+      damage: "Damage a card",
+      punk: "Gain a punk",
+      // ... add more as needed
+    };
+
+    return descriptions[junkEffect] || junkEffect;
   }
 
   renderCentralArea() {

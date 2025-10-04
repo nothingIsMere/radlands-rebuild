@@ -3442,6 +3442,14 @@ export class CommandSystem {
       }
     }
 
+    // Ready ALL camps (even damaged ones) for the CURRENT player
+    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
+      const card = currentPlayer.columns[col].getCard(0); // Camps are always at position 0
+      if (card && card.type === "camp" && !card.isDestroyed) {
+        card.isReady = true;
+      }
+    }
+
     // Reset turn events
     this.state.turnEvents = {
       eventsPlayed: 0,

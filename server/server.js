@@ -414,6 +414,32 @@ function createFullDeck() {
   return deck;
 }
 
+// Add this function near your other game functions
+function regenerateCamps() {
+  console.log("Regenerating camp offers...");
+
+  // Create a fresh camp deck
+  gameState.campDeck = createCampDeck();
+
+  // Generate new camp offers from the fresh deck
+  gameState.campOffers = {
+    left: gameState.campDeck.splice(0, 6),
+    right: gameState.campDeck.splice(0, 6),
+  };
+
+  // Clear any existing selections
+  gameState.campSelections = { left: null, right: null };
+
+  console.log("New left camps:", gameState.campOffers.left);
+  console.log("New right camps:", gameState.campOffers.right);
+
+  // Broadcast updated state to both players
+  broadcast({
+    type: "STATE_SYNC",
+    state: gameState,
+  });
+}
+
 function createCampDeck() {
   const camps = [
     "Railgun",
@@ -589,6 +615,10 @@ wss.on("connection", (ws) => {
       } else {
         console.log("Command failed validation");
       }
+    } else if (message.type === "REGENERATE_CAMPS") {
+      // Add this new handler
+      console.log("Regenerating camps requested");
+      regenerateCamps();
     }
   });
 

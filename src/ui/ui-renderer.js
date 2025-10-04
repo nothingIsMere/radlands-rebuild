@@ -54,6 +54,42 @@ export class UIRenderer {
     title.textContent = "Select 3 Camps";
     selectionDiv.appendChild(title);
 
+    // Add the "New Camps" button
+    const resetBtn = this.createElement("button");
+    resetBtn.textContent = "New Camps";
+    resetBtn.style.cssText = `
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      padding: 10px 20px;
+      background: #4444ff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 1000;
+    `;
+    resetBtn.addEventListener("click", () => {
+      if (window.networkClient && window.networkClient.ws) {
+        window.networkClient.ws.send(
+          JSON.stringify({
+            type: "REGENERATE_CAMPS",
+          })
+        );
+        console.log("Requested new camps from server");
+      }
+    });
+    resetBtn.addEventListener("mouseenter", () => {
+      resetBtn.style.background = "#3333dd";
+    });
+    resetBtn.addEventListener("mouseleave", () => {
+      resetBtn.style.background = "#4444ff";
+    });
+    selectionDiv.appendChild(resetBtn);
+
     const myPlayerId = window.networkClient?.myPlayerId;
     const myCamps = this.state.campOffers?.[myPlayerId] || [];
 
@@ -162,9 +198,15 @@ export class UIRenderer {
     const confirmBtn = this.createElement("button");
     confirmBtn.textContent = "Confirm Selection";
     confirmBtn.disabled = true;
-    confirmBtn.style.marginTop = "20px";
-    confirmBtn.style.padding = "15px 30px";
-    confirmBtn.style.fontSize = "18px";
+    confirmBtn.style.cssText = `
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 30px;
+  font-size: 18px;
+  z-index: 1000;
+`;
 
     confirmBtn.addEventListener("click", () => {
       this.commands.execute({
@@ -288,33 +330,6 @@ export class UIRenderer {
     };
 
     return CAMP_CARDS[campName];
-  }
-
-  renderEventQueue(playerId) {
-    const player = this.state.players[playerId];
-    const queueContainer = this.createElement("div", "event-queue");
-
-    for (let i = 0; i < 3; i++) {
-      const slot = this.createElement("div", "event-slot");
-      const slotNumber = this.createElement("div", "event-slot-number");
-      slotNumber.textContent = i + 1;
-      slot.appendChild(slotNumber);
-
-      if (player.eventQueue[i]) {
-        const eventCard = this.createElement("div", "event-card");
-        eventCard.textContent = player.eventQueue[i].name;
-
-        // Add event preview
-        const eventPreview = this.createEventPreview(player.eventQueue[i]);
-        eventCard.appendChild(eventPreview);
-
-        slot.appendChild(eventCard);
-      }
-
-      queueContainer.appendChild(slot);
-    }
-
-    return queueContainer;
   }
 
   getCampTrait(campName) {
@@ -617,28 +632,54 @@ export class UIRenderer {
     return gameArea;
   }
 
-  renderEventQueue(playerId) {
-    const player = this.state.players[playerId];
-    const queueContainer = this.createElement("div", "event-queue");
-    queueContainer.classList.add(`event-queue-${playerId}`);
+  renderEventQueue(player, playerId) {
+    const queue = this.createElement("div", "event-queue");
 
-    // Render slots 3, 2, 1 from bottom to top
-    for (let i = 2; i >= 0; i--) {
+    // Check if player has an event card selected
+    const hasEventSelected =
+      this.selectedCard?.cardType === "event" &&
+      this.selectedCard?.playerId === playerId &&
+      this.state.currentPlayer === playerId &&
+      this.state.phase === "actions" &&
+      !this.state.pending;
+
+    const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
+
+    slotOrder.forEach((i) => {
       const slot = this.createElement("div", "event-slot");
+
+      // Make slot clickable if event selected
+      if (hasEventSelected) {
+        slot.classList.add("event-slot-clickable");
+        slot.style.cursor = "pointer";
+        slot.title = "Click to play event here";
+        slot.addEventListener("click", (e) => {
+          if (this.state.phase === "game_over") return;
+          e.stopPropagation();
+          this.handleEventPlacement(playerId, i);
+        });
+      }
+
       const slotNumber = this.createElement("div", "event-slot-number");
       slotNumber.textContent = i + 1;
       slot.appendChild(slotNumber);
 
-      if (player.eventQueue[i]) {
+      const event = player.eventQueue[i];
+      if (event) {
         const eventCard = this.createElement("div", "event-card");
-        eventCard.textContent = player.eventQueue[i].name;
+        eventCard.textContent = event.name;
+
+        // Add event preview
+        const eventPreview = this.createEventPreview(event);
+        eventCard.appendChild(eventPreview);
+
         slot.appendChild(eventCard);
       }
 
-      queueContainer.appendChild(slot);
-    }
+      queue.appendChild(slot);
+    });
 
-    return queueContainer;
+    return queue;
   }
 
   renderPlayerBoard(playerId) {
@@ -739,59 +780,6 @@ export class UIRenderer {
     board.appendChild(this.renderHand(player, playerId));
 
     return board;
-  }
-
-  renderEventQueue(player, playerId) {
-    const queue = this.createElement("div", "event-queue");
-
-    console.log(`Rendering ${playerId} event queue:`, player.eventQueue);
-
-    // Check if player has an event card selected
-    const hasEventSelected =
-      this.selectedCard?.cardType === "event" &&
-      this.selectedCard?.playerId === playerId &&
-      this.state.currentPlayer === playerId &&
-      this.state.phase === "actions" &&
-      !this.state.pending;
-
-    console.log("Has event selected?", hasEventSelected);
-    console.log("Selected card details:", this.selectedCard);
-
-    const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
-
-    slotOrder.forEach((i) => {
-      const slot = this.createElement("div", "event-slot");
-
-      // Make slot clickable if event selected
-      if (hasEventSelected) {
-        slot.classList.add("event-slot-clickable");
-        slot.style.cursor = "pointer"; // Make it visually obvious
-        slot.title = "Click to play event here";
-
-        slot.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          console.log("Event slot clicked!", i);
-          this.handleEventPlacement(playerId, i);
-        });
-      }
-
-      // Rest of the slot rendering...
-      const slotNumber = this.createElement("div", "event-slot-number");
-      slotNumber.textContent = i + 1;
-      slot.appendChild(slotNumber);
-
-      const event = player.eventQueue[i];
-      if (event) {
-        const eventCard = this.createElement("div", "event-card");
-        eventCard.textContent = event.name;
-        slot.appendChild(eventCard);
-      }
-
-      queue.appendChild(slot);
-    });
-
-    return queue;
   }
 
   renderSpecialCards(player, playerId) {
@@ -3266,6 +3254,12 @@ export class UIRenderer {
   }
 
   createEventPreview(event) {
+    console.log("createEventPreview called with:", event);
+    console.log(
+      "CARD_DESCRIPTIONS available?",
+      typeof CARD_DESCRIPTIONS !== "undefined"
+    );
+
     const preview = this.createElement("div", "card-preview event-preview");
 
     const name = this.createElement("div", "preview-name");
@@ -3275,31 +3269,33 @@ export class UIRenderer {
     const eventData = CARD_DESCRIPTIONS.events[event.name];
 
     const info = this.createElement("div", "preview-info");
-    const queueNum = eventData?.queue ?? "?";
-    info.textContent = `EVENT • Queue: ${queueNum}`;
+    info.textContent = `EVENT • ${event.cost || 0}💧`;
     preview.appendChild(info);
 
-    const effectSection = this.createElement("div", "preview-trait");
-    const effectTitle = this.createElement("div", "preview-section-title");
-    effectTitle.textContent = "EFFECT";
-    effectSection.appendChild(effectTitle);
+    if (eventData?.effect) {
+      const effectSection = this.createElement("div", "preview-trait");
+      const effectTitle = this.createElement("div", "preview-section-title");
+      effectTitle.textContent = "EFFECT";
+      effectSection.appendChild(effectTitle);
 
-    const effectText = this.createElement("div", "preview-trait-text");
-    effectText.textContent = eventData?.effect || event.name;
-    effectSection.appendChild(effectText);
+      const effectText = this.createElement("div", "preview-trait-text");
+      effectText.textContent = eventData.effect;
+      effectSection.appendChild(effectText);
 
-    preview.appendChild(effectSection);
+      preview.appendChild(effectSection);
+    }
 
-    // Add junk effect if present
-    if (event.junkEffect) {
+    // Add junk effect
+    if (event.junkEffect || eventData?.junk) {
       const junkSection = this.createElement("div", "preview-junk");
       const junkTitle = this.createElement("div", "preview-section-title");
       junkTitle.textContent = "JUNK";
       junkSection.appendChild(junkTitle);
 
       const junkText = this.createElement("div", "preview-junk-text");
-      junkText.textContent =
-        CARD_DESCRIPTIONS.junkEffects[event.junkEffect] || event.junkEffect;
+      const junkName = eventData?.junk || event.junkEffect;
+      const junkDesc = CARD_DESCRIPTIONS.junkEffects[junkName.toLowerCase()];
+      junkText.textContent = junkDesc || junkName;
       junkSection.appendChild(junkText);
 
       preview.appendChild(junkSection);

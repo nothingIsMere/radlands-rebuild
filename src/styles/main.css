@@ -252,8 +252,8 @@ h1 {
 }
 
 .event-slot {
-  width: var(--card-width);
-  height: var(--card-height);
+  width: var(--card-width); /* Already correct - 140px */
+  height: var(--card-height); /* Already correct - 196px */
   border: 2px dashed var(--neon-pink);
   border-radius: var(--radius);
   display: flex;
@@ -262,6 +262,26 @@ h1 {
   justify-content: center;
   position: relative;
   background: var(--bg-medium);
+}
+
+.event-card {
+  background: var(--neon-pink);
+  color: #ffffff;
+  padding: 8px;
+  border-radius: 5px;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-wrap: break-word;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
+  position: relative;
+  z-index: 1;
 }
 
 .event-slot-number {
@@ -282,25 +302,11 @@ h1 {
   box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
 }
 
-.event-card {
-  background: var(--neon-pink);
-  color: #ffffff;
-  padding: 8px 12px;
-  border-radius: 5px;
-  font-size: 13px;
-  text-align: center;
-  cursor: pointer;
-  max-width: 120px;
-  word-wrap: break-word;
-  font-weight: bold;
-  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
-  position: relative;
-}
-
 .event-card:hover {
   background: #ff006e;
   transform: scale(1.05);
   box-shadow: 0 0 15px rgba(255, 0, 110, 0.7);
+  z-index: 1000;
 }
 
 .special-cards {
@@ -2165,32 +2171,35 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   position: relative;
 }
 
+/* Event card previews - position to the side */
 .event-preview {
   position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-10px);
-  min-width: 220px;
+  bottom: auto;
+  top: 50%;
+  left: 100%; /* Default: appear to the right */
+  transform: translateY(-50%) translateX(10px);
+  min-width: 320px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s, transform 0.2s;
-}
-
-.event-card:hover .event-preview {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-15px);
   z-index: 2000;
 }
 
-/* For right-side event queue, show preview below */
+.event-card:hover .event-preview {
+  opacity: 1 !important;
+  transform: translateY(-50%) translateX(15px);
+  z-index: 9999 !important;
+}
+
+/* For right-side event queue, show preview to the left */
 .side-column:last-child .event-preview {
-  bottom: auto;
-  top: 100%;
-  transform: translateX(-50%) translateY(10px);
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%) translateX(-10px);
 }
 
 .side-column:last-child .event-card:hover .event-preview {
-  transform: translateX(-50%) translateY(15px);
+  transform: translateY(-50%) translateX(-15px);
 }
 
 /* Force previews to always be visible on hover, regardless of pending state */

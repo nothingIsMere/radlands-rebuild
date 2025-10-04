@@ -114,6 +114,19 @@ class PlacePunkHandler extends PendingHandler {
     const parachuteShouldStayReady =
       this.state.pending?.parachuteShouldStayReady;
 
+    // Check if position 0 is actually occupied before rejecting
+    if (targetPosition === 0) {
+      const existingCard =
+        this.state.players[sourcePlayerId].columns[targetColumn].getCard(0);
+
+      if (existingCard && !existingCard.isDestroyed) {
+        console.log("Cannot place punk in occupied camp slot");
+        return false;
+      }
+      // Position 0 is empty (Juggernaut moved away) - allow placement
+      console.log("Position 0 is empty, allowing punk placement");
+    }
+
     // Resolve the punk placement
     const result = this.commandSystem.resolvePlacePunk(
       targetColumn,
@@ -631,15 +644,12 @@ class RaidersSelectCampHandler extends PendingHandler {
       return false;
     }
 
-    // Verify it's a camp (position 0)
-    if (targetPosition !== 0) {
-      console.log("Must select a camp");
-      return false;
-    }
+    // Get the card at the selected position
+    const camp = this.state.getCard(targetPlayer, targetColumn, targetPosition);
 
-    const camp = this.state.getCard(targetPlayer, targetColumn, 0);
+    // Verify it's a camp (could be at any position due to Juggernaut)
     if (!camp || camp.type !== "camp" || camp.isDestroyed) {
-      console.log("Invalid camp selection");
+      console.log("Invalid camp selection - must select an undestroyed camp");
       return false;
     }
 

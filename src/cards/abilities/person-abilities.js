@@ -671,7 +671,7 @@ export const personAbilities = {
   },
 
   sniper: {
-    damage: {
+    damageany: {
       cost: 2,
       handler: (state, context) => {
         // Find ALL enemy cards (ignores protection, includes camps)

@@ -558,33 +558,41 @@ export class UIRenderer {
     if (this.state.pending) {
       const overlay = this.createElement("div", "pending-overlay");
       const message = this.createElement("div", "pending-message-banner");
-
-      // ... all your existing switch cases stay the same ...
-
+      // ... existing pending message logic ...
       if (message.textContent) {
         overlay.appendChild(message);
         gameArea.appendChild(overlay);
       }
     }
 
-    // Render left player's event queue
-    gameArea.appendChild(
+    // Left side column: event queue + special cards
+    const leftSide = this.createElement("div", "side-column");
+    leftSide.appendChild(
       this.renderEventQueue(this.state.players.left, "left")
+    ); // Pass player object
+    leftSide.appendChild(
+      this.renderSpecialCards(this.state.players.left, "left")
     );
+    gameArea.appendChild(leftSide);
 
-    // Render left player's board
+    // Left player's board
     gameArea.appendChild(this.renderPlayerBoard("left"));
 
-    // Render central deck area
+    // Central deck area
     gameArea.appendChild(this.renderCentralArea());
 
-    // Render right player's board
+    // Right player's board
     gameArea.appendChild(this.renderPlayerBoard("right"));
 
-    // Render right player's event queue
-    gameArea.appendChild(
+    // Right side column: event queue + special cards
+    const rightSide = this.createElement("div", "side-column");
+    rightSide.appendChild(
       this.renderEventQueue(this.state.players.right, "right")
+    ); // Pass player object
+    rightSide.appendChild(
+      this.renderSpecialCards(this.state.players.right, "right")
     );
+    gameArea.appendChild(rightSide);
 
     return gameArea;
   }
@@ -621,21 +629,88 @@ export class UIRenderer {
       board.classList.add("active");
     }
 
-    // Player header
+    // Player header with controls if it's their turn
     const header = this.createElement("div", "player-header");
 
     const name = this.createElement("div", "player-name");
     name.textContent = playerId.toUpperCase();
     header.appendChild(name);
 
+    // Add ALL turn controls if it's this player's turn
+    if (this.state.currentPlayer === playerId && this.isMyTurn()) {
+      const turnControls = this.createElement("div", "turn-controls");
+
+      // Draw Card button (only in actions phase, no pending)
+      if (this.state.phase === "actions" && !this.state.pending) {
+        const drawCardBtn = this.createElement("button", "inline-control-btn");
+        drawCardBtn.textContent = `Draw (2💧)`;
+        drawCardBtn.disabled = player.water < 2;
+
+        drawCardBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          this.commands.execute({
+            type: "DRAW_CARD",
+            playerId: this.state.currentPlayer,
+          });
+        });
+
+        turnControls.appendChild(drawCardBtn);
+      }
+
+      // End Turn button (only in actions phase, no pending)
+      if (this.state.phase === "actions" && !this.state.pending) {
+        const endTurnBtn = this.createElement(
+          "button",
+          "inline-control-btn end-turn-btn"
+        );
+        endTurnBtn.textContent = "End Turn";
+
+        endTurnBtn.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          this.commands.execute({
+            type: "END_TURN",
+            playerId: this.state.currentPlayer,
+          });
+        });
+
+        turnControls.appendChild(endTurnBtn);
+      }
+
+      // Cancel button (only when there's a pending action)
+      if (this.state.pending) {
+        const cancel = this.createElement(
+          "button",
+          "inline-control-btn cancel-btn"
+        );
+
+        if (this.state.pending?.isEntryTrait) {
+          cancel.textContent = "Skip";
+        } else {
+          cancel.textContent = "Cancel";
+        }
+
+        cancel.addEventListener("click", () => {
+          if (this.state.phase === "game_over") return;
+          this.commands.execute({
+            type: "CANCEL_ACTION",
+            playerId: this.state.currentPlayer,
+          });
+        });
+
+        turnControls.appendChild(cancel);
+      }
+
+      // Only append if there are controls to show
+      if (turnControls.children.length > 0) {
+        header.appendChild(turnControls);
+      }
+    }
+
     const water = this.createElement("div", "water");
     water.textContent = `Water: ${player.water}`;
     header.appendChild(water);
 
     board.appendChild(header);
-
-    // Special cards (Raiders & Water Silo)
-    board.appendChild(this.renderSpecialCards(player, playerId));
 
     // Camps and columns
     board.appendChild(this.renderColumns(player, playerId));
@@ -662,7 +737,7 @@ export class UIRenderer {
     console.log("Has event selected?", hasEventSelected);
     console.log("Selected card details:", this.selectedCard);
 
-    const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
+    const slotOrder = playerId === "left" ? [0, 1, 2] : [0, 1, 2];
 
     slotOrder.forEach((i) => {
       const slot = this.createElement("div", "event-slot");
@@ -1225,7 +1300,6 @@ export class UIRenderer {
       // Highlight camps that belong to the target player
       if (
         playerId === this.state.pending.targetPlayerId &&
-        position === 0 &&
         card?.type === "camp" &&
         !card.isDestroyed
       ) {
@@ -3091,7 +3165,7 @@ export class UIRenderer {
   renderCentralArea() {
     const central = this.createElement("div", "central-column");
 
-    // Draw deck - compact version
+    // Draw deck
     const deckArea = this.createElement("div", "deck-area");
     const deckLabel = this.createElement("div", "deck-label");
     deckLabel.textContent = "DECK";
@@ -3111,7 +3185,7 @@ export class UIRenderer {
     deckArea.appendChild(drawCount);
     central.appendChild(deckArea);
 
-    // Discard pile - compact version
+    // Discard pile
     const discardArea = this.createElement("div", "deck-area");
     const discardLabel = this.createElement("div", "deck-label");
     discardLabel.textContent = "DISCARD";
@@ -3126,100 +3200,8 @@ export class UIRenderer {
   }
 
   renderControls() {
+    // All controls now appear in the active player's header
     const controls = this.createElement("div", "controls");
-
-    // Draw Card button (only during actions phase)
-    if (this.state.phase === "actions" && !this.state.pending) {
-      const drawCardBtn = this.createElement("button");
-      drawCardBtn.textContent = `Draw Card (2💧)`;
-
-      const currentPlayer = this.state.players[this.state.currentPlayer];
-      drawCardBtn.disabled =
-        currentPlayer.water < CONSTANTS.DRAW_COST || !this.isMyTurn();
-
-      drawCardBtn.addEventListener("click", () => {
-        if (this.state.phase === "game_over") return;
-        this.commands.execute({
-          type: "DRAW_CARD",
-          playerId: this.state.currentPlayer,
-        });
-      });
-
-      if (currentPlayer.water < CONSTANTS.DRAW_COST) {
-        drawCardBtn.title = "Not enough water";
-      }
-
-      controls.appendChild(drawCardBtn);
-    }
-
-    // Finish button for Bonfire multiple restoration
-    if (this.state.pending?.type === "bonfire_restore_multiple") {
-      const finishBtn = this.createElement("button");
-      const restoredCount = this.state.pending.restoredCards?.length || 0;
-
-      if (restoredCount === 0) {
-        finishBtn.textContent = "Skip Restoration";
-      } else {
-        finishBtn.textContent = `Finish Restoring (${restoredCount} restored)`;
-      }
-
-      finishBtn.addEventListener("click", () => {
-        if (this.state.phase === "game_over") return;
-        this.commands.execute({
-          type: "SELECT_TARGET",
-          finish: true,
-        });
-      });
-
-      controls.appendChild(finishBtn);
-    }
-
-    // End Turn button
-    const endTurn = this.createElement("button");
-    endTurn.textContent = "End Turn";
-    endTurn.disabled =
-      this.state.phase !== "actions" ||
-      this.state.pending !== null ||
-      !this.isMyTurn();
-
-    endTurn.addEventListener("click", () => {
-      if (this.state.phase === "game_over") return;
-      this.commands.execute({
-        type: "END_TURN",
-        playerId: this.state.currentPlayer,
-      });
-    });
-
-    controls.appendChild(endTurn);
-
-    // Cancel button (for pending actions)
-    if (
-      this.state.pending &&
-      this.state.pending.type !== "bonfire_restore_multiple"
-    ) {
-      const cancel = this.createElement("button");
-
-      if (this.state.pending?.isEntryTrait) {
-        cancel.textContent = "Skip";
-      } else {
-        cancel.textContent = "Cancel";
-      }
-
-      // Disable if not your turn
-      cancel.disabled = !this.isMyTurn();
-
-      cancel.addEventListener("click", () => {
-        if (this.state.phase === "game_over") return;
-
-        this.commands.execute({
-          type: "CANCEL_ACTION",
-          playerId: this.state.currentPlayer,
-        });
-      });
-
-      controls.appendChild(cancel);
-    }
-
     return controls;
   }
 

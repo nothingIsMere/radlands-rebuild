@@ -1651,8 +1651,8 @@ export class CommandSystem {
     // Calculate cost once at the beginning
     const cost = this.getAdjustedCost(card, columnIndex, playerId);
 
-    // Use our validation function
-    const validation = canPlayPerson(player, card, cost, position);
+    // Use validation function with column parameter
+    const validation = canPlayPerson(player, card, cost, position, column);
     if (!validation.valid) {
       console.log(validation.reason);
       return false;

@@ -1,62 +1,75 @@
 :root {
-  --card-width: 120px;
-  --card-height: 168px; /* 1.4:1 realistic aspect ratio */
-  --spacing: 8px;
+  --card-width: 140px; /* Increased from 120px for better readability */
+  --card-height: 196px; /* 1.4:1 aspect ratio */
+  --spacing: 6px; /* Reduced from 8px */
   --radius: 8px;
 }
+
 body {
   font-family: Arial, sans-serif;
   background: #f0f0f0;
   margin: 0;
-  padding: 20px;
+  padding: 10px; /* Reduced from 20px */
 }
+
 .container {
   max-width: 1600px;
   margin: 0 auto;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 15px; /* Reduced from 20px */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
+
 h1 {
   color: #333;
   border-bottom: 2px solid #4caf50;
-  padding-bottom: 10px;
+  padding-bottom: 8px; /* Reduced from 10px */
+  margin: 0 0 10px 0; /* Reduced margin */
 }
+
 .game-info {
   background: #f9f9f9;
-  padding: 15px;
+  padding: 10px 15px; /* Reduced from 15px */
   border-radius: 5px;
-  margin-bottom: 20px;
+  margin-bottom: 10px; /* Reduced from 20px */
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 .info-item {
   font-size: 18px;
 }
+
 .current-turn {
   font-weight: bold;
   color: #4caf50;
 }
 
-/* Main game area with 3 columns */
+/* Main game area with side columns */
 .game-area {
   display: grid;
-  grid-template-columns: 100px 1fr 150px 1fr 100px;
-  gap: 10px;
-  margin-bottom: 20px;
+  grid-template-columns: 150px 1fr 120px 1fr 150px; /* Wider side columns */
+  gap: 8px;
+  margin-bottom: 10px;
   position: relative;
 }
 
-/* Central deck area */
-/* Compact central info strip */
+/* Side columns for events + special cards */
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Central deck area - NOW VERTICAL */
 .central-column {
   display: flex;
-  flex-direction: row;
-  justify-content: space-around;
+  flex-direction: column; /* Changed from row */
+  justify-content: center;
   align-items: center;
-  gap: 20px;
+  gap: 20px; /* Vertical gap between deck and discard */
   padding: 10px;
   background: #e0e0e0;
   border-radius: 8px;
@@ -64,21 +77,28 @@ h1 {
 
 .deck-area {
   text-align: center;
-  min-width: 80px;
+  width: 100%; /* Full width of column */
 }
 
 .deck-label {
   font-weight: bold;
   margin-bottom: 5px;
   color: #555;
-  font-size: 12px;
+  font-size: 14px; /* Slightly larger for visibility */
 }
 
 .deck-count {
-  font-size: 32px;
+  font-size: 36px; /* Slightly larger */
   font-weight: bold;
   color: #333;
   line-height: 1;
+  cursor: pointer;
+}
+
+.deck-count:hover {
+  color: #667eea;
+  transform: scale(1.1);
+  transition: all 0.2s;
 }
 
 .draw-deck .deck-count {
@@ -92,24 +112,31 @@ h1 {
 .player-board {
   border: 2px solid #ddd;
   border-radius: 8px;
-  padding: 15px;
+  padding: 10px; /* Reduced from 15px */
   background: #fafafa;
 }
+
 .player-board.active {
   border-color: #4caf50;
   background: #f0fff0;
 }
+
 .player-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
   border-bottom: 1px solid #ddd;
+  gap: 8px;
+  flex-wrap: wrap;
 }
+
 .player-name {
   font-size: 20px;
   font-weight: bold;
 }
+
 .water {
   background: #2196f3;
   color: white;
@@ -117,22 +144,67 @@ h1 {
   border-radius: 20px;
 }
 
-/* Event Queue Styles */
+.inline-control-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.inline-control-btn:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.inline-control-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.inline-control-btn.end-turn-btn {
+  background: #2196f3;
+  font-weight: bold;
+}
+
+.inline-control-btn.end-turn-btn:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.inline-control-btn.cancel-btn {
+  background: #f44336;
+}
+
+.inline-control-btn.cancel-btn:hover:not(:disabled) {
+  background: #d32f2f;
+}
+
+.turn-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* Event Queue - more compact, in side columns */
 .event-queue {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   background: #fff3e0;
   border-radius: 5px;
   height: fit-content;
 }
 
 .event-slot {
-  width: 84px;
-  height: 50px;
+  width: var(--card-width); /* 140px - same as cards */
+  height: var(--card-height); /* 196px - same as cards */
   border: 2px dashed #ff9800;
-  border-radius: 5px;
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -141,79 +213,110 @@ h1 {
   background: white;
 }
 
-.event-card {
-  background: #ff9800;
-  color: white;
-  padding: 4px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  text-align: center;
-  cursor: pointer;
-  max-width: 70px;
-  word-wrap: break-word;
-}
-.event-card:hover {
-  background: #f57c00;
-}
-
-/* Special Cards */
-.special-cards {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-.special-card {
-  padding: 8px 12px;
-  border: 2px solid #673ab7;
-  border-radius: 5px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.special-card:hover {
-  background: #673ab7;
-  color: white;
-}
-.special-card.used {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-/* Update the camps grid to reverse the visual order */
-.camps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 15px;
-}
-
-.camp-column {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column-reverse; /* This flips it so position 0 is at bottom */
-}
-
-/* Remove the old ::before rule and add this instead
-.slot-badge {
+.event-slot-number {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  background: red;
-  color: white;
+  top: 4px;
+  left: 4px;
+  font-size: 14px;
+  color: #ff9800;
   font-weight: bold;
-  font-size: 16px;
+  background: white;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
-} */
+  border: 2px solid #ff9800;
+}
 
+.event-card {
+  background: #ff9800;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 13px; /* Match card font size */
+  text-align: center;
+  cursor: pointer;
+  max-width: 120px;
+  word-wrap: break-word;
+  font-weight: bold;
+}
+
+.event-card:hover {
+  background: #f57c00;
+  transform: scale(1.05);
+}
+
+/* Special Cards - under event queue in side columns */
+.special-cards {
+  display: flex;
+  flex-direction: column; /* Vertical stack */
+  gap: 6px;
+  padding: 6px;
+  background: #f5f5f5;
+  border-radius: 5px;
+}
+
+.special-card {
+  padding: 6px 8px; /* More compact */
+  border: 2px solid #673ab7;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 11px; /* Smaller text */
+  text-align: center;
+}
+
+.special-card:hover {
+  background: #673ab7;
+  color: white;
+}
+
+.special-card.used {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.special-card.in-hand {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  color: #1976d2;
+}
+
+.special-card.in-queue {
+  background: #ff9800;
+  color: white;
+  border-color: #f57c00;
+}
+
+.special-card.available {
+  background: white;
+}
+
+.special-card.clickable {
+  cursor: pointer;
+}
+
+/* Camps grid - tighter spacing */
+.camps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px; /* Reduced from 10px */
+  margin-bottom: 10px; /* Reduced from 15px */
+}
+
+.camp-column {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 6px; /* Reduced from 8px */
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+/* Cards - LARGER and proper aspect ratio */
 .card {
   width: var(--card-width);
   height: var(--card-height);
@@ -221,12 +324,12 @@ h1 {
   border: 2px solid #333;
   border-radius: var(--radius);
   padding: 8px;
-  margin: 5px 0;
+  margin: 4px 0; /* Reduced from 5px */
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  font-size: 12px;
+  font-size: 13px; /* Slightly larger */
   min-height: 60px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -236,11 +339,17 @@ h1 {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
 }
+
 .card.camp {
   background: #8bc34a;
   color: white;
   font-weight: bold;
 }
+
+.card.person {
+  background: #fff;
+}
+
 .card.damaged {
   border: 3px solid #f44336 !important;
   box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
@@ -250,11 +359,13 @@ h1 {
   background: #333;
   color: white;
   text-decoration: line-through;
-  opacity: 0.7; /* Only destroyed cards should be grayed out */
+  opacity: 0.7;
 }
+
 .card.not-ready {
   opacity: 0.5;
 }
+
 .card.not-ready::after {
   content: "⏳";
   position: absolute;
@@ -262,55 +373,117 @@ h1 {
   right: 2px;
   font-size: 16px;
 }
+
 .card.empty {
   border: 2px dashed #ccc;
   background: #f5f5f5;
   color: #999;
 }
+
+.card.punk {
+  background: #424242;
+  color: white;
+  border: 2px solid #9c27b0;
+  font-style: italic;
+}
+
+.card-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+/* Hand - more compact */
 .hand {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  padding: 10px;
+  gap: 8px; /* Reduced from 10px */
+  padding: 8px; /* Reduced from 10px */
   background: #e8f5e9;
   border-radius: 5px;
-  min-height: 60px;
+  min-height: 50px; /* Reduced from 60px */
 }
+
 .hand-card {
   background: white;
   border: 2px solid #4caf50;
-  padding: 8px 12px;
+  padding: 6px 10px; /* Slightly reduced */
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
 }
+
 .hand-card:hover {
   background: #4caf50;
   color: white;
 }
+
 .hand-card.selected {
   background: #2196f3;
   color: white;
 }
-.controls {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 20px;
+
+.hand-card.water-silo-card {
+  background: #2196f3;
+  color: white;
+  border-color: #1976d2;
 }
+
+.hand-card.water-silo-card:hover {
+  background: #1976d2;
+}
+
+.hand-card.parachute-target {
+  border: 2px solid #9c27b0;
+  background: #f3e5f5;
+  cursor: pointer;
+  animation: pulse-purple 1s infinite;
+}
+
+.hand-card.selected[data-card-type="event"] {
+  background: #ff9800;
+  color: white;
+  border-color: #f57c00;
+}
+
+.hand-card {
+  user-select: none;
+}
+
+.hand-card:active:not(:hover) {
+  transform: scale(0.95);
+}
+
+.hidden-card {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  background: #555;
+  color: #999;
+}
+
+.card-text {
+  font-size: 12px;
+}
+
+/* Controls - more compact */
+.controls {
+  display: none;
+}
+
 button {
   background: #4caf50;
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 10px 20px; /* Slightly reduced */
   border-radius: 5px;
-  font-size: 16px;
+  font-size: 15px; /* Slightly reduced */
   cursor: pointer;
   transition: background 0.2s;
 }
+
 button:hover {
   background: #45a049;
 }
+
 button:disabled {
   background: #ccc;
   cursor: not-allowed;
@@ -340,22 +513,6 @@ button:disabled {
   color: white;
 }
 
-.special-card.in-hand {
-  background: #e3f2fd;
-  border-color: #2196f3;
-  color: #1976d2;
-}
-
-.hand-card.water-silo-card {
-  background: #2196f3;
-  color: white;
-  border-color: #1976d2;
-}
-
-.hand-card.water-silo-card:hover {
-  background: #1976d2;
-}
-
 .phase-draw {
   background: #9e9e9e;
   color: white;
@@ -363,19 +520,17 @@ button:disabled {
 }
 
 @keyframes pulse {
-  0% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
     opacity: 0.7;
   }
-  100% {
-    opacity: 1;
-  }
 }
 
 .junk-label {
-  color: #9b59b6; /* Purple color */
+  color: #9b59b6;
   font-weight: 500;
   margin-left: 4px;
 }
@@ -386,130 +541,13 @@ button:disabled {
   text-decoration: underline;
 }
 
-/* Visual feedback for right-click */
-.hand-card {
-  user-select: none;
+.junk-effect {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 2px;
 }
 
-.hand-card:active:not(:hover) {
-  transform: scale(0.95);
-}
-
-/* Restore targeting */
-.card.restore-target {
-  animation: pulse-green 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
-}
-
-@keyframes pulse-green {
-  0% {
-    box-shadow: 0 0 5px #4caf50;
-  }
-  50% {
-    box-shadow: 0 0 20px #4caf50, 0 0 30px #4caf50;
-  }
-  100% {
-    box-shadow: 0 0 5px #4caf50;
-  }
-}
-
-.card.restore-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px #4caf50;
-}
-
-.card.punk {
-  background: #424242;
-  color: white;
-  border: 2px solid #9c27b0;
-  font-style: italic;
-}
-
-.card.punk-target {
-  animation: pulse-purple 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #9c27b0;
-  border-color: #9c27b0;
-  border-style: dashed;
-}
-
-@keyframes pulse-purple {
-  0% {
-    box-shadow: 0 0 5px #9c27b0;
-  }
-  50% {
-    box-shadow: 0 0 20px #9c27b0, 0 0 30px #9c27b0;
-  }
-  100% {
-    box-shadow: 0 0 5px #9c27b0;
-  }
-}
-
-.special-card.in-queue {
-  background: #ff9800;
-  color: white;
-  border-color: #f57c00;
-}
-
-/* Injure targeting */
-.card.injure-target {
-  animation: pulse-red 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
-}
-
-@keyframes pulse-red {
-  0% {
-    box-shadow: 0 0 5px #f44336;
-  }
-  50% {
-    box-shadow: 0 0 20px #f44336, 0 0 30px #f44336;
-  }
-  100% {
-    box-shadow: 0 0 5px #f44336;
-  }
-}
-
-.card.injure-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px #f44336;
-}
-
-/* Protection indicator */
-.protected-indicator {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* Raiders targeting */
-.card.raiders-target {
-  animation: pulse-orange 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #ff9800;
-  border-color: #ff9800;
-}
-
-@keyframes pulse-orange {
-  0% {
-    box-shadow: 0 0 5px #ff9800;
-  }
-  50% {
-    box-shadow: 0 0 20px #ff9800, 0 0 30px #ff9800;
-  }
-  100% {
-    box-shadow: 0 0 5px #ff9800;
-  }
-}
-
-.card.raiders-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px #ff9800;
-}
-
+/* Ability styling */
 .ability-info {
   margin-top: 4px;
   padding-top: 4px;
@@ -534,24 +572,19 @@ button:disabled {
   background: #45a049;
 }
 
+.ability-btn.argo-granted {
+  background: linear-gradient(45deg, #9c27b0, #673ab7);
+}
+
+.ability-btn.argo-granted:hover {
+  background: linear-gradient(45deg, #7b1fa2, #512da8);
+}
+
 .ability-text {
   display: block;
   color: #666;
   font-size: 10px;
   padding: 2px 0;
-}
-
-/* Damage targeting (for Sniper's ability) */
-.card.damage-target {
-  animation: pulse-red 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
-  border-color: #f44336;
-}
-
-.card.damage-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 25px #f44336;
 }
 
 .ability-text-used {
@@ -576,22 +609,184 @@ button:disabled {
   font-style: italic;
 }
 
-.hand-card.parachute-target {
-  border: 2px solid #9c27b0;
-  background: #f3e5f5;
-  cursor: pointer;
+.ability-text-disabled.argo-granted {
+  color: #9c27b0;
+  font-style: italic;
+}
+
+/* Trait indicators */
+.karli-trait-active {
+  background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 4px;
+  animation: pulse-gold 1s infinite;
+}
+
+@keyframes pulse-gold {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.argo-trait-active {
+  background: linear-gradient(45deg, #9c27b0, #673ab7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 4px;
   animation: pulse-purple 1s infinite;
+}
+
+.vera-trait-active {
+  background: linear-gradient(45deg, #2196f3, #00bcd4);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 4px;
+  animation: pulse-blue 1s infinite;
+}
+
+.vera-used {
+  color: #2196f3;
+  font-size: 10px;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.highground-active {
+  background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+  color: #000;
+  padding: 8px 16px;
+  font-weight: bold;
+  text-align: center;
+  animation: pulse 1s infinite;
+}
+
+/* Protection indicator */
+.protected-indicator {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* Targeting animations */
+.card.restore-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+}
+
+@keyframes pulse-green {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #4caf50;
+  }
+  50% {
+    box-shadow: 0 0 20px #4caf50, 0 0 30px #4caf50;
+  }
+}
+
+.card.restore-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #4caf50;
+}
+
+.card.damage-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #f44336;
+  border-color: #f44336;
+}
+
+@keyframes pulse-red {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #f44336;
+  }
+  50% {
+    box-shadow: 0 0 20px #f44336, 0 0 30px #f44336;
+  }
+}
+
+.card.damage-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #f44336;
+}
+
+.card.injure-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #f44336;
+}
+
+.card.injure-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #f44336;
+}
+
+.card.punk-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #9c27b0;
+  border-color: #9c27b0;
+  border-style: dashed;
+}
+
+@keyframes pulse-purple {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #9c27b0;
+  }
+  50% {
+    box-shadow: 0 0 20px #9c27b0, 0 0 30px #9c27b0;
+  }
+}
+
+.card.raiders-target {
+  animation: pulse-orange 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #ff9800;
+  border-color: #ff9800;
+}
+
+@keyframes pulse-orange {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #ff9800;
+  }
+  50% {
+    box-shadow: 0 0 20px #ff9800, 0 0 30px #ff9800;
+  }
+}
+
+.card.raiders-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px #ff9800;
+}
+
+.card.raiders-target-camp {
+  box-shadow: 0 0 15px 3px red;
+  cursor: pointer;
+  animation: pulse-red 1.5s infinite;
 }
 
 .card.mimic-target {
   box-shadow: 0 0 10px 2px purple;
   cursor: pointer;
-}
-
-.junk-effect {
-  font-size: 0.8em;
-  color: #888;
-  margin-top: 2px;
 }
 
 .card.junk-injure-target {
@@ -602,247 +797,6 @@ button:disabled {
 .card.junk-restore-target {
   box-shadow: 0 0 10px 2px green;
   cursor: pointer;
-}
-
-/* Pending action overlay */
-.pending-overlay {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  pointer-events: none;
-}
-
-.pending-message-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 12px 24px;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-/* Specific styling for punk placement */
-.pending-overlay.punk-placement .pending-message-banner {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-/* Enhanced punk placement targets */
-.card.punk-placement-target {
-  position: relative;
-  animation: glow 1.5s infinite;
-  border: 3px dashed #ff69b4;
-  cursor: pointer;
-}
-
-@keyframes glow {
-  0%,
-  100% {
-    box-shadow: 0 0 5px 2px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px 5px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.5);
-  }
-}
-
-.card.punk-placement-target::after {
-  content: "PLACE PUNK HERE";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 105, 180, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
-  pointer-events: none;
-}
-
-/* Make the game area position relative for overlay */
-.game-area {
-  position: relative;
-}
-
-.card.raiders-target-camp {
-  box-shadow: 0 0 15px 3px red;
-  cursor: pointer;
-  animation: pulse-red 1.5s infinite;
-}
-
-@keyframes pulse-red {
-  0%,
-  100% {
-    box-shadow: 0 0 10px 2px red;
-  }
-  50% {
-    box-shadow: 0 0 20px 5px red;
-  }
-}
-
-.pending-overlay.raiders-attack-self .pending-message-banner {
-  background: linear-gradient(135deg, #ff0000 0%, #8b0000 100%);
-  animation: shake 0.5s infinite;
-}
-
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  25% {
-    transform: translateX(-52%) translateY(-2px);
-  }
-  75% {
-    transform: translateX(-48%) translateY(2px);
-  }
-}
-
-.pending-overlay.raiders-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
-/* When there's a pending action, dim non-relevant elements */
-body.has-pending .hand-card:not(.parachute-target),
-body.has-pending .ability-btn,
-body.has-pending .special-card:not(.clickable) {
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Ensure ALL valid targets stay interactive, including own cards when needed */
-body.has-pending .card.damage-target,
-body.has-pending .card.restore-target,
-body.has-pending .card.mimic-target,
-body.has-pending .card.punk-placement-target,
-body.has-pending .card.injure-target,
-body.has-pending .card.junk-injure-target,
-body.has-pending .card.junk-restore-target,
-body.has-pending .card.raiders-target-camp,
-body.has-pending .card.parachute-placement-target,
-body.has-pending .card.cultleader-destroy-target,
-body.has-pending .card.assassin-target,
-body.has-pending .card.sniper-target,
-body.has-pending .card.pyromaniac-target,
-body.has-pending .card.molgur-target,
-body.has-pending .card.mutant-restore-target,
-body.has-pending .card.mutant-damage-target,
-body.has-pending .card.uprising-placement-target,
-body.has-pending .card.mulcher-target,
-body.has-pending .card.constructionyard-moveable,
-body.has-pending .card.constructionyard-destination,
-body.has-pending .card.rabblerouser-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-body.has-pending .card.rabblerouser-target,
-body.has-pending .card.adrenalinelab-person-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  cursor: pointer !important;
-}
-
-/* Only dim ENEMY cards that aren't targets during targeting */
-body.has-pending
-  .player-board:not(.active)
-  .card:not(.damage-target):not(.injure-target):not(.mimic-target) {
-  opacity: 0.5;
-}
-
-/* Keep own cards visible but not clickable during pending */
-body.has-pending .player-board.active .card {
-  pointer-events: none;
-}
-
-/* But allow clicking on valid targets even in own board */
-body.has-pending .player-board.active .card.restore-target,
-body.has-pending .player-board.active .card.punk-placement-target,
-body.has-pending .player-board.active .card.parachute-placement-target {
-  pointer-events: auto !important;
-}
-/* Parachute Base placement phase */
-.pending-overlay.parachute-placement .pending-message-banner {
-  background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);
-  font-size: 20px;
-  animation: float 2s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.card.parachute-placement-target {
-  border: 3px dashed #4a90e2;
-  background: rgba(74, 144, 226, 0.1);
-  cursor: pointer;
-  animation: pulse-blue 1.5s infinite;
-}
-
-.card.parachute-placement-empty {
-  background: rgba(74, 144, 226, 0.2);
-  border-color: #7b68ee;
-  border-width: 3px;
-}
-
-.card.parachute-placement-target:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
-  background: rgba(74, 144, 226, 0.3);
-}
-
-@keyframes pulse-blue {
-  0%,
-  100% {
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
-  }
-}
-
-/* Add a helpful tooltip */
-.card.parachute-placement-target::after {
-  content: "CLICK TO PLACE HERE";
-  position: absolute;
-  bottom: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(74, 144, 226, 0.9);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: bold;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 100;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.card.parachute-placement-target:hover::after {
-  opacity: 1;
 }
 
 .card.assassin-target {
@@ -923,88 +877,6 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   animation: pulse 1s infinite;
 }
 
-.ability-selection-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-  position: relative;
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  max-width: 500px;
-  z-index: 1001;
-}
-
-.modal-title {
-  margin-top: 0;
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 20px;
-}
-
-.ability-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.ability-select-btn {
-  padding: 12px 20px;
-  font-size: 16px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.ability-select-btn:hover:not(:disabled) {
-  background: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.ability-select-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.cancel-btn {
-  padding: 12px 20px;
-  font-size: 16px;
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-.cancel-btn:hover {
-  background: #d32f2f;
-}
-
 .card.cultleader-destroy-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
@@ -1027,6 +899,12 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   pointer-events: none;
 }
 
+.card.mutant-restore-target,
+.card.mutant-damage-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+}
+
 .card.mutant-restore-target:hover,
 .card.mutant-damage-target:hover {
   transform: scale(1.05);
@@ -1040,22 +918,11 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   box-shadow: 0 0 10px #f44336;
 }
 
-body.has-pending .card.vanguard-target,
-body.has-pending .card.vanguard-counter-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
 .card.rescue-team-target {
   animation: pulse-blue 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 10px #2196f3;
   border: 2px solid #2196f3;
-}
-
-body.has-pending .card.rescue-team-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
 }
 
 .card.magnus-column-target {
@@ -1065,12 +932,6 @@ body.has-pending .card.rescue-team-target {
   border: 3px solid #ff0000;
 }
 
-body.has-pending .card.magnus-column-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-/* Highlight entire column */
 .magnus-column-target::after {
   content: "COLUMN DAMAGE";
   position: absolute;
@@ -1083,144 +944,6 @@ body.has-pending .card.magnus-column-target {
   border-radius: 3px;
   font-size: 10px;
   font-weight: bold;
-}
-
-.karli-trait-active {
-  background: linear-gradient(45deg, #ff6b6b, #ffd93d);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-  margin-top: 4px;
-  animation: pulse-gold 1s infinite;
-}
-
-@keyframes pulse-gold {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.ability-btn.argo-granted {
-  background: linear-gradient(45deg, #9c27b0, #673ab7);
-}
-
-.ability-btn.argo-granted:hover {
-  background: linear-gradient(45deg, #7b1fa2, #512da8);
-}
-
-.ability-text-disabled.argo-granted {
-  color: #9c27b0;
-  font-style: italic;
-}
-
-/* Visual indicator on Argo himself */
-.argo-trait-active {
-  background: linear-gradient(45deg, #9c27b0, #673ab7);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-  margin-top: 4px;
-  animation: pulse-purple 1s infinite;
-}
-
-.vera-trait-active {
-  background: linear-gradient(45deg, #2196f3, #00bcd4);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-  margin-top: 4px;
-  animation: pulse-blue 1s infinite;
-}
-
-.vera-used {
-  color: #2196f3;
-  font-size: 10px;
-  font-style: italic;
-  margin-top: 2px;
-}
-
-.card-selection-list {
-  max-height: 400px;
-  overflow-y: auto;
-  margin: 20px 0;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 10px;
-}
-
-.selectable-card {
-  padding: 10px;
-  margin: 5px 0;
-  background: white;
-  border: 2px solid #ddd;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.selectable-card:hover:not(.disabled) {
-  background: #f0f0f0;
-  border-color: #4caf50;
-}
-
-.selectable-card.selected {
-  background: #4caf50;
-  color: white;
-  border-color: #45a049;
-}
-
-.selectable-card.disabled {
-  background: #f5f5f5;
-  color: #999;
-  cursor: not-allowed;
-  font-style: italic;
-}
-
-.submit-discard-btn {
-  padding: 12px 24px;
-  font-size: 16px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.submit-discard-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.event-slot-clickable {
-  cursor: pointer;
-  border-color: #4caf50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
-  transition: all 0.2s;
-}
-
-.event-slot-clickable:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
-  background: rgba(76, 175, 80, 0.1);
-}
-
-/* Visual feedback when event is selected */
-.hand-card.selected[data-card-type="event"] {
-  background: #ff9800;
-  color: white;
-  border-color: #f57c00;
 }
 
 .card.banish-target {
@@ -1267,7 +990,6 @@ body.has-pending .card.magnus-column-target {
   font-weight: bold;
 }
 
-/* Famine selection */
 .card.famine-keep-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
@@ -1289,53 +1011,11 @@ body.has-pending .card.magnus-column-target {
   font-weight: bold;
 }
 
-.pending-overlay.famine-selection .pending-message-banner {
-  background: linear-gradient(135deg, #8b0000 0%, #000000 100%);
-  animation: pulse-urgent 0.5s infinite;
-}
-
-@keyframes pulse-urgent {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-body.has-pending .card.famine-keep-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
 .card.highground-placement-target {
   animation: pulse-blue 1s infinite;
   cursor: pointer;
   box-shadow: 0 0 10px #2196f3;
   border: 2px dashed #2196f3;
-}
-
-.pending-overlay.highground-rearrange .pending-message-banner {
-  background: linear-gradient(135deg, #2196f3 0%, #21cbf3 100%);
-}
-
-.highground-active {
-  background: linear-gradient(135deg, #ff6b6b, #ffd93d);
-  color: #000;
-  padding: 8px 16px;
-  font-weight: bold;
-  text-align: center;
-  animation: pulse 1s infinite;
-}
-
-body.has-pending .card.highground-placement-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.card.highground-placement-target {
-  cursor: pointer;
 }
 
 .card.highground-placement-empty {
@@ -1348,6 +1028,16 @@ body.has-pending .card.highground-placement-target {
   animation: pulse-yellow 1s infinite;
   box-shadow: 0 0 10px #ffc107;
   border: 2px dashed #ffc107;
+}
+
+@keyframes pulse-yellow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px #ffc107;
+  }
+  50% {
+    box-shadow: 0 0 20px #ffc107;
+  }
 }
 
 .card.highground-placement-pushable::after {
@@ -1366,33 +1056,6 @@ body.has-pending .card.highground-placement-target {
 .card.highground-placement-blocked {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.person-selection-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.person-select-btn {
-  padding: 15px;
-  font-size: 14px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.person-select-btn:hover {
-  background: #45a049;
-  transform: scale(1.05);
-}
-
-.person-select-btn.damaged {
-  background: #ff5722;
 }
 
 .card.mulcher-target {
@@ -1439,11 +1102,6 @@ body.has-pending .card.highground-placement-target {
   pointer-events: none;
 }
 
-body.has-pending .card.bloodbank-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
 .card.laborcamp-destroy-target {
   animation: pulse-orange 1s infinite;
   cursor: pointer;
@@ -1472,12 +1130,6 @@ body.has-pending .card.bloodbank-target {
   box-shadow: 0 0 10px #4caf50;
 }
 
-body.has-pending .card.laborcamp-destroy-target,
-body.has-pending .card.laborcamp-restore-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
 .card.scudlauncher-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
@@ -1497,20 +1149,6 @@ body.has-pending .card.laborcamp-restore-target {
   border-radius: 3px;
   font-size: 10px;
   font-weight: bold;
-}
-
-.pending-overlay.scudlauncher-self .pending-message-banner {
-  background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%);
-  animation: shake 0.5s infinite;
-}
-
-.pending-overlay.scudlauncher-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
-body.has-pending .card.scudlauncher-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
 }
 
 .card.catapult-target {
@@ -1551,10 +1189,508 @@ body.has-pending .card.scudlauncher-target {
   pointer-events: none;
 }
 
+.card.octagon-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 15px #ff0000;
+  border: 3px solid #ff0000;
+}
+
+.card.octagon-target::after {
+  content: "MUST DESTROY";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff0000;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.card.bonfire-restore-target {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+}
+
+.card.constructionyard-moveable {
+  animation: pulse-blue 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #2196f3;
+  border: 2px solid #2196f3;
+}
+
+.card.constructionyard-destination {
+  animation: pulse-green 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #4caf50;
+  border: 2px dashed #4caf50;
+}
+
+.card.adrenalinelab-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #9c27b0;
+  border: 2px solid #9c27b0;
+}
+
+.card.juggernaut-destroy-target {
+  animation: pulse-red 1.5s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 20px #ff0000;
+  border-color: #ff0000;
+}
+
+.card.mercenary-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+  box-shadow: 0 0 10px #f44336;
+}
+
+.card.uprising-placement-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+  border: 3px dashed #9c27b0;
+}
+
+.card.uprising-placement-empty {
+  background: rgba(156, 39, 176, 0.1);
+}
+
+.card.rabblerouser-target {
+  animation: pulse-red 1s infinite;
+  cursor: pointer;
+}
+
+.card.adrenalinelab-person-target {
+  animation: pulse-purple 1s infinite;
+  cursor: pointer;
+}
+
+/* Pending action overlay */
+.pending-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+}
+
+.pending-message-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+.pending-overlay.punk-placement .pending-message-banner {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.pending-overlay.raiders-attack-self .pending-message-banner {
+  background: linear-gradient(135deg, #ff0000 0%, #8b0000 100%);
+  animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  25% {
+    transform: translateX(-52%) translateY(-2px);
+  }
+  75% {
+    transform: translateX(-48%) translateY(2px);
+  }
+}
+
+.pending-overlay.raiders-waiting .pending-message-banner {
+  background: linear-gradient(135deg, #666 0%, #333 100%);
+}
+
+.pending-overlay.parachute-placement .pending-message-banner {
+  background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);
+  font-size: 20px;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.pending-overlay.famine-selection .pending-message-banner {
+  background: linear-gradient(135deg, #8b0000 0%, #000000 100%);
+  animation: pulse-urgent 0.5s infinite;
+}
+
+@keyframes pulse-urgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.pending-overlay.highground-rearrange .pending-message-banner {
+  background: linear-gradient(135deg, #2196f3 0%, #21cbf3 100%);
+}
+
+.pending-overlay.scudlauncher-self .pending-message-banner {
+  background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%);
+  animation: shake 0.5s infinite;
+}
+
+.pending-overlay.scudlauncher-waiting .pending-message-banner {
+  background: linear-gradient(135deg, #666 0%, #333 100%);
+}
+
+.pending-overlay.octagon-forced .pending-message-banner {
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  animation: shake 0.5s infinite;
+}
+
+.pending-overlay.octagon-waiting .pending-message-banner {
+  background: linear-gradient(135deg, #666 0%, #333 100%);
+}
+
+/* Parachute placement */
+.card.parachute-placement-target {
+  border: 3px dashed #4a90e2;
+  background: rgba(74, 144, 226, 0.1);
+  cursor: pointer;
+  animation: pulse-blue 1.5s infinite;
+}
+
+@keyframes pulse-blue {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
+  }
+}
+
+.card.parachute-placement-empty {
+  background: rgba(74, 144, 226, 0.2);
+  border-color: #7b68ee;
+  border-width: 3px;
+}
+
+.card.parachute-placement-target:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
+  background: rgba(74, 144, 226, 0.3);
+}
+
+.card.parachute-placement-target::after {
+  content: "CLICK TO PLACE HERE";
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(74, 144, 226, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card.parachute-placement-target:hover::after {
+  opacity: 1;
+}
+
+/* Punk placement */
+.card.punk-placement-target {
+  position: relative;
+  animation: glow 1.5s infinite;
+  border: 3px dashed #ff69b4;
+  cursor: pointer;
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px 2px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.5);
+  }
+}
+
+.card.punk-placement-target::after {
+  content: "PLACE PUNK HERE";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 105, 180, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+/* Event slot clickable */
+.event-slot-clickable {
+  cursor: pointer;
+  border-color: #4caf50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  transition: all 0.2s;
+}
+
+.event-slot-clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
+  background: rgba(76, 175, 80, 0.1);
+}
+
+/* Pending action dimming */
+body.has-pending .hand-card:not(.parachute-target),
+body.has-pending .ability-btn,
+body.has-pending .special-card:not(.clickable) {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+body.has-pending .card.damage-target,
+body.has-pending .card.restore-target,
+body.has-pending .card.mimic-target,
+body.has-pending .card.punk-placement-target,
+body.has-pending .card.injure-target,
+body.has-pending .card.junk-injure-target,
+body.has-pending .card.junk-restore-target,
+body.has-pending .card.raiders-target-camp,
+body.has-pending .card.parachute-placement-target,
+body.has-pending .card.cultleader-destroy-target,
+body.has-pending .card.assassin-target,
+body.has-pending .card.sniper-target,
+body.has-pending .card.pyromaniac-target,
+body.has-pending .card.molgur-target,
+body.has-pending .card.mutant-restore-target,
+body.has-pending .card.mutant-damage-target,
+body.has-pending .card.uprising-placement-target,
+body.has-pending .card.mulcher-target,
+body.has-pending .card.constructionyard-moveable,
+body.has-pending .card.constructionyard-destination,
+body.has-pending .card.rabblerouser-target,
+body.has-pending .card.vanguard-target,
+body.has-pending .card.vanguard-counter-target,
+body.has-pending .card.rescue-team-target,
+body.has-pending .card.magnus-column-target,
+body.has-pending .card.famine-keep-target,
+body.has-pending .card.highground-placement-target,
+body.has-pending .card.bloodbank-target,
+body.has-pending .card.laborcamp-destroy-target,
+body.has-pending .card.laborcamp-restore-target,
+body.has-pending .card.scudlauncher-target,
 body.has-pending .card.catapult-target,
-body.has-pending .card.catapult-sacrifice-target {
+body.has-pending .card.catapult-sacrifice-target,
+body.has-pending .card.octagon-target,
+body.has-pending .card.bonfire-restore-target,
+body.has-pending .card.adrenalinelab-target,
+body.has-pending .card.mercenary-target {
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+body.has-pending .card.rabblerouser-target,
+body.has-pending .card.adrenalinelab-person-target {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+body.has-pending
+  .player-board:not(.active)
+  .card:not(.damage-target):not(.injure-target):not(.mimic-target) {
+  opacity: 0.5;
+}
+
+body.has-pending .player-board.active .card {
+  pointer-events: none;
+}
+
+body.has-pending .player-board.active .card.restore-target,
+body.has-pending .player-board.active .card.punk-placement-target,
+body.has-pending .player-board.active .card.parachute-placement-target {
+  pointer-events: auto !important;
+}
+
+/* Modal styling */
+.ability-selection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  z-index: 1001;
+}
+
+.modal-title {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 20px;
+}
+
+.modal-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.ability-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ability-select-btn {
+  padding: 12px 20px;
+  font-size: 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ability-select-btn:hover:not(:disabled) {
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ability-select-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.ability-select-btn.disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel-btn {
+  padding: 12px 20px;
+  font-size: 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.cancel-btn:hover {
+  background: #d32f2f;
+}
+
+.card-selection-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin: 20px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+}
+
+.selectable-card {
+  padding: 10px;
+  margin: 5px 0;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.selectable-card:hover:not(.disabled) {
+  background: #f0f0f0;
+  border-color: #4caf50;
+}
+
+.selectable-card.selected {
+  background: #4caf50;
+  color: white;
+  border-color: #45a049;
+}
+
+.selectable-card.disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  font-style: italic;
+}
+
+.submit-discard-btn,
+.submit-keep-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.submit-discard-btn:disabled,
+.submit-keep-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .event-selection-grid {
@@ -1585,100 +1721,34 @@ body.has-pending .card.catapult-sacrifice-target {
   animation: pulse 1s infinite;
 }
 
-.card.octagon-target {
-  animation: pulse-red 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 15px #ff0000;
-  border: 3px solid #ff0000;
+.person-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.card.octagon-target::after {
-  content: "MUST DESTROY";
-  position: absolute;
-  top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ff0000;
+.person-select-btn {
+  padding: 15px;
+  font-size: 14px;
+  background: #4caf50;
   color: white;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: bold;
-}
-
-body.has-pending .card.octagon-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.pending-overlay.octagon-forced .pending-message-banner {
-  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
-  animation: shake 0.5s infinite;
-}
-
-.pending-overlay.octagon-waiting .pending-message-banner {
-  background: linear-gradient(135deg, #666 0%, #333 100%);
-}
-
-.card.bonfire-restore-target {
-  animation: pulse-green 1s infinite;
+  border: none;
+  border-radius: 5px;
   cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
+  transition: all 0.2s;
 }
 
-body.has-pending .card.bonfire-restore-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
+.person-select-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
 }
 
-.card.constructionyard-moveable {
-  animation: pulse-blue 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px solid #2196f3;
+.person-select-btn.damaged {
+  background: #ff5722;
 }
 
-.card.constructionyard-destination {
-  animation: pulse-green 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
-  border: 2px dashed #4caf50;
-}
-
-.card.adrenalinelab-target {
-  animation: pulse-purple 1s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 10px #9c27b0;
-  border: 2px solid #9c27b0;
-}
-
-body.has-pending .card.adrenalinelab-target {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.hidden-card {
-  filter: grayscale(100%);
-  opacity: 0.6;
-  background: #555;
-  color: #999;
-}
-
-.overlay.juggernaut-attack-self {
-  background: rgba(150, 0, 0, 0.9);
-}
-
-.overlay.juggernaut-waiting {
-  background: rgba(50, 50, 50, 0.8);
-}
-
-.card.juggernaut-destroy-target {
-  animation: pulse-red 1.5s infinite;
-  cursor: pointer;
-  box-shadow: 0 0 20px #ff0000;
-  border-color: #ff0000;
-}
-
+/* Camp selection screen */
 .camp-selection-screen {
   display: flex;
   flex-direction: column;
@@ -1697,14 +1767,13 @@ body.has-pending .card.adrenalinelab-target {
 .camp-card {
   width: 200px;
   height: 280px;
-  padding: 20px;
+  padding: 15px;
   border: 3px solid #ddd;
   border-radius: var(--radius);
   cursor: pointer;
   background: white;
   transition: all 0.2s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  min-height: auto; /* Override the 150px */
 }
 
 .camp-card:hover {
@@ -1718,11 +1787,6 @@ body.has-pending .card.adrenalinelab-target {
   border-color: #4caf50;
   transform: scale(1.05);
   box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-}
-
-.camp-card {
-  padding: 15px;
-  min-height: 150px;
 }
 
 .camp-card-name {
@@ -1758,4 +1822,27 @@ body.has-pending .card.adrenalinelab-target {
   padding: 4px;
   background: rgba(230, 126, 34, 0.1);
   border-radius: 3px;
+}
+
+/* Game over overlay */
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.game-over-modal {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+  max-width: 500px;
 }

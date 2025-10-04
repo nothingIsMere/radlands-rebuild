@@ -38,7 +38,6 @@ import {
   calculateWaterChange,
   canAffordAction,
   calculateTotalWaterIncome,
-  findWaterSources,
   findTargetsInColumn,
   findAllDamagedCards,
   countValidTargets,

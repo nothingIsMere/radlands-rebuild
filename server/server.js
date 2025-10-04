@@ -1,11 +1,27 @@
+import express from "express";
+import { createServer } from "http";
 import { WebSocketServer } from "ws";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import { GameState } from "../src/core/game-state.js";
 import { CommandSystem } from "../src/core/command-system.js";
 import { cardRegistry } from "../src/cards/card-registry.js";
 
 global.cardRegistry = cardRegistry;
 
-const wss = new WebSocketServer({ port: 8080 });
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Create Express app and HTTP server
+const app = express();
+const server = createServer(app);
+
+// Serve static files from parent directory (where index.html is)
+app.use(express.static(join(__dirname, "..")));
+
+// WebSocket server attached to HTTP server
+const wss = new WebSocketServer({ server });
+
 const clients = new Map();
 const players = { left: null, right: null };
 
@@ -176,11 +192,11 @@ const CAMP_CARDS = {
   },
   Cannon: {
     campDraw: 2,
-    abilities: [{ effect: "damage", cost: 2 }], // Uses conditional logic in handler
+    abilities: [{ effect: "damage", cost: 2 }],
   },
   Pillbox: {
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 3 }], // Discount handled in handler
+    abilities: [{ effect: "damage", cost: 3 }],
   },
   "Scud Launcher": {
     campDraw: 0,
@@ -203,7 +219,7 @@ const CAMP_CARDS = {
   },
   "Command Post": {
     campDraw: 1,
-    abilities: [{ effect: "damage", cost: 3 }], // Discount handled in handler
+    abilities: [{ effect: "damage", cost: 3 }],
   },
   Obelisk: {
     campDraw: 1,
@@ -301,7 +317,7 @@ const CAMP_CARDS = {
   },
   Oasis: {
     campDraw: 1,
-    abilities: [], // Passive trait only
+    abilities: [],
   },
   "Parachute Base": {
     campDraw: 1,
@@ -414,32 +430,6 @@ function createFullDeck() {
   return deck;
 }
 
-// Add this function near your other game functions
-function regenerateCamps() {
-  console.log("Regenerating camp offers...");
-
-  // Create a fresh camp deck
-  gameState.campDeck = createCampDeck();
-
-  // Generate new camp offers from the fresh deck
-  gameState.campOffers = {
-    left: gameState.campDeck.splice(0, 6),
-    right: gameState.campDeck.splice(0, 6),
-  };
-
-  // Clear any existing selections
-  gameState.campSelections = { left: null, right: null };
-
-  console.log("New left camps:", gameState.campOffers.left);
-  console.log("New right camps:", gameState.campOffers.right);
-
-  // Broadcast updated state to both players
-  broadcast({
-    type: "STATE_SYNC",
-    state: gameState,
-  });
-}
-
 function createCampDeck() {
   const camps = [
     "Railgun",
@@ -515,6 +505,31 @@ function broadcast(message) {
   const data = JSON.stringify(message);
   clients.forEach((playerId, ws) => {
     if (ws.readyState === 1) ws.send(data);
+  });
+}
+
+function regenerateCamps() {
+  console.log("Regenerating camp offers...");
+
+  // Create a fresh camp deck
+  gameState.campDeck = createCampDeck();
+
+  // Generate new camp offers from the fresh deck
+  gameState.campOffers = {
+    left: gameState.campDeck.splice(0, 6),
+    right: gameState.campDeck.splice(0, 6),
+  };
+
+  // Clear any existing selections
+  gameState.campSelections = { left: null, right: null };
+
+  console.log("New left camps:", gameState.campOffers.left);
+  console.log("New right camps:", gameState.campOffers.right);
+
+  // Broadcast updated state to both players
+  broadcast({
+    type: "STATE_SYNC",
+    state: gameState,
   });
 }
 
@@ -616,7 +631,6 @@ wss.on("connection", (ws) => {
         console.log("Command failed validation");
       }
     } else if (message.type === "REGENERATE_CAMPS") {
-      // Add this new handler
       console.log("Regenerating camps requested");
       regenerateCamps();
     }
@@ -633,5 +647,10 @@ wss.on("connection", (ws) => {
     console.error("WebSocket error:", error);
   });
 });
-console.log("Server running on ws://localhost:8080");
-console.log("Initial game state created");
+
+// Start the combined HTTP + WebSocket server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`WebSocket available at same port`);
+});

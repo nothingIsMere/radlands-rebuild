@@ -9,7 +9,9 @@ export class NetworkClient {
 
   connect() {
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket("ws://localhost:8080");
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${window.location.host}`;
+      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         this.connected = true;

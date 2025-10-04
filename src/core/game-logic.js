@@ -456,7 +456,7 @@ export function countPlayerPeople(player, includeDestroyed = false) {
   let count = 0;
 
   for (let col = 0; col < 3; col++) {
-    for (let pos = 1; pos <= 2; pos++) {
+    for (let pos = 0; pos <= 2; pos++) {
       // Only positions 1 and 2 for people
       const card = player.columns[col].getCard(pos);
       if (card && card.type === "person") {
@@ -474,14 +474,14 @@ export function countPlayerPeople(player, includeDestroyed = false) {
 
 export function countDestroyedCamps(player) {
   let count = 0;
-
   for (let col = 0; col < 3; col++) {
-    const camp = player.columns[col].getCard(0);
-    if (camp && camp.isDestroyed) {
-      count++;
+    for (let pos = 0; pos <= 2; pos++) {
+      const card = player.columns[col].getCard(pos);
+      if (card && card.type === "camp" && card.isDestroyed) {
+        count++;
+      }
     }
   }
-
   return count;
 }
 
@@ -684,58 +684,6 @@ export function calculateTotalWaterIncome(player) {
   // For example, if there were a "Water Plant" camp that gives +1 water
 
   return total;
-}
-
-export function findWaterSources(player) {
-  // Find all potential water sources for a player
-  const sources = [];
-
-  // Check for water silo
-  if (player.waterSilo === "in_hand") {
-    sources.push({
-      type: "water_silo",
-      amount: 1,
-      source: "hand",
-    });
-  }
-
-  // Check hand for junk effects
-  player.hand.forEach((card, index) => {
-    if (card.junkEffect === "water") {
-      sources.push({
-        type: "junk",
-        amount: 1,
-        source: "hand",
-        cardIndex: index,
-        cardName: card.name,
-      });
-    }
-  });
-
-  // Check for people with extra_water ability
-  for (let col = 0; col < 3; col++) {
-    for (let pos = 1; pos <= 2; pos++) {
-      const card = player.columns[col].getCard(pos);
-      if (card && !card.isDestroyed && !card.isDamaged && card.isReady) {
-        const waterAbility = card.abilities?.find(
-          (a) => a.effect === "extra_water"
-        );
-        if (waterAbility) {
-          sources.push({
-            type: "ability",
-            amount: 1,
-            cost: waterAbility.cost,
-            source: "tableau",
-            column: col,
-            position: pos,
-            cardName: card.name,
-          });
-        }
-      }
-    }
-  }
-
-  return sources;
 }
 
 export function findTargetsInColumn(player, columnIndex, targetType = "any") {

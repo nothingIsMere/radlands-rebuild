@@ -737,7 +737,7 @@ export class UIRenderer {
     console.log("Has event selected?", hasEventSelected);
     console.log("Selected card details:", this.selectedCard);
 
-    const slotOrder = playerId === "left" ? [0, 1, 2] : [0, 1, 2];
+    const slotOrder = playerId === "left" ? [2, 1, 0] : [0, 1, 2];
 
     slotOrder.forEach((i) => {
       const slot = this.createElement("div", "event-slot");

@@ -1,124 +1,152 @@
 :root {
-  --card-width: 140px; /* Increased from 120px for better readability */
-  --card-height: 196px; /* 1.4:1 aspect ratio */
-  --spacing: 6px; /* Reduced from 8px */
+  --card-width: 140px;
+  --card-height: 196px;
+  --spacing: 6px;
   --radius: 8px;
+  --neon-pink: #ee507f;
+  --neon-green: #0fd146;
+  --neon-blue: #00c3ff;
+  --neon-purple: #c77dff; /* NEW: vibrant purple */
+  --neon-red: #ff0000; /* NEW: bright red for damage */
+  --bg-dark: #1c1c1c;
+  --bg-medium: #2a2a2a;
+  --bg-light: #3a3a3a;
 }
 
 body {
   font-family: Arial, sans-serif;
-  background: #f0f0f0;
+  background: var(--bg-dark);
   margin: 0;
-  padding: 10px; /* Reduced from 20px */
+  padding: 10px;
 }
 
 .container {
   max-width: 1600px;
   margin: 0 auto;
-  background: white;
+  background: var(--bg-medium);
   border-radius: 8px;
-  padding: 15px; /* Reduced from 20px */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 h1 {
-  color: #333;
-  border-bottom: 2px solid #4caf50;
-  padding-bottom: 8px; /* Reduced from 10px */
-  margin: 0 0 10px 0; /* Reduced margin */
+  color: #ffffff;
+  border-bottom: 2px solid var(--neon-green);
+  padding-bottom: 8px;
+  margin: 0 0 10px 0;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
 }
 
 .game-info {
-  background: #f9f9f9;
-  padding: 10px 15px; /* Reduced from 15px */
+  background: var(--bg-dark);
+  padding: 10px 15px;
   border-radius: 5px;
-  margin-bottom: 10px; /* Reduced from 20px */
+  margin-bottom: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid var(--bg-light);
 }
 
 .info-item {
   font-size: 18px;
+  color: #e0e0e0;
 }
 
 .current-turn {
   font-weight: bold;
-  color: #4caf50;
+  color: var(--neon-green);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
 }
 
-/* Main game area with side columns */
 .game-area {
   display: grid;
-  grid-template-columns: 150px 1fr 120px 1fr 150px; /* Wider side columns */
+  grid-template-columns: 150px 1fr 120px 1fr 150px;
   gap: 8px;
   margin-bottom: 10px;
   position: relative;
 }
 
-/* Side columns for events + special cards */
 .side-column {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Central deck area - NOW VERTICAL */
 .central-column {
   display: flex;
-  flex-direction: column; /* Changed from row */
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 20px; /* Vertical gap between deck and discard */
+  gap: 20px;
   padding: 10px;
-  background: #e0e0e0;
+  background: var(--bg-dark);
   border-radius: 8px;
+  border: 1px solid var(--neon-purple); /* Purple border */
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.3);
 }
 
 .deck-area {
   text-align: center;
-  width: 100%; /* Full width of column */
+  width: 100%;
 }
 
 .deck-label {
   font-weight: bold;
   margin-bottom: 5px;
-  color: #555;
-  font-size: 14px; /* Slightly larger for visibility */
+  color: var(--neon-purple); /* Purple labels */
+  font-size: 14px;
+  text-shadow: 0 0 8px rgba(199, 125, 255, 0.4);
 }
 
 .deck-count {
-  font-size: 36px; /* Slightly larger */
+  font-size: 36px;
   font-weight: bold;
-  color: #333;
+  color: #ffffff;
   line-height: 1;
   cursor: pointer;
 }
 
 .deck-count:hover {
-  color: #667eea;
+  color: var(--neon-purple); /* Purple on hover */
   transform: scale(1.1);
   transition: all 0.2s;
+  text-shadow: 0 0 15px rgba(199, 125, 255, 0.6);
 }
 
 .draw-deck .deck-count {
-  color: #667eea;
+  color: var(--neon-blue);
 }
 
 .discard-pile .deck-count {
-  color: #f5576c;
+  color: var(--neon-pink);
 }
 
 .player-board {
-  border: 2px solid #ddd;
+  border: 2px solid var(--bg-light);
   border-radius: 8px;
-  padding: 10px; /* Reduced from 15px */
-  background: #fafafa;
+  padding: 10px;
+  background: var(--bg-dark);
 }
 
 .player-board.active {
-  border-color: #4caf50;
-  background: #f0fff0;
+  border: 2px solid var(--neon-pink);
+  background: var(--bg-dark);
+  box-shadow: 0 0 20px rgba(255, 0, 110, 0.4), 0 0 40px rgba(255, 0, 110, 0.2),
+    inset 0 0 20px rgba(255, 0, 110, 0.1);
+  animation: neon-glow 2s ease-in-out infinite;
+}
+
+@keyframes neon-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.4), 0 0 40px rgba(255, 0, 110, 0.2),
+      inset 0 0 20px rgba(255, 0, 110, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 0, 110, 0.6), 0 0 60px rgba(255, 0, 110, 0.3),
+      inset 0 0 30px rgba(255, 0, 110, 0.15);
+  }
 }
 
 .player-header {
@@ -127,7 +155,7 @@ h1 {
   align-items: center;
   margin-bottom: 10px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--bg-light);
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -135,52 +163,16 @@ h1 {
 .player-name {
   font-size: 20px;
   font-weight: bold;
+  color: #ffffff;
 }
 
 .water {
-  background: #2196f3;
-  color: white;
+  background: var(--neon-blue);
+  color: #000000;
   padding: 5px 15px;
   border-radius: 20px;
-}
-
-.inline-control-btn {
-  background: #4caf50;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-}
-
-.inline-control-btn:hover:not(:disabled) {
-  background: #45a049;
-}
-
-.inline-control-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.inline-control-btn.end-turn-btn {
-  background: #2196f3;
   font-weight: bold;
-}
-
-.inline-control-btn.end-turn-btn:hover:not(:disabled) {
-  background: #1976d2;
-}
-
-.inline-control-btn.cancel-btn {
-  background: #f44336;
-}
-
-.inline-control-btn.cancel-btn:hover:not(:disabled) {
-  background: #d32f2f;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
 }
 
 .turn-controls {
@@ -189,28 +181,81 @@ h1 {
   align-items: center;
 }
 
-/* Event Queue - more compact, in side columns */
+.inline-control-btn {
+  background: var(--neon-green);
+  color: #000000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
+}
+
+.inline-control-btn:hover:not(:disabled) {
+  background: #00ff41;
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
+  transform: translateY(-2px);
+}
+
+.inline-control-btn:disabled {
+  background: #555;
+  color: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.inline-control-btn.end-turn-btn {
+  background: var(--neon-purple); /* Purple End Turn button */
+  color: #ffffff;
+}
+
+.inline-control-btn.end-turn-btn:hover:not(:disabled) {
+  background: #b565ff;
+  box-shadow: 0 0 20px rgba(199, 125, 255, 0.6);
+}
+
+.inline-control-btn.cancel-btn {
+  background: var(--neon-pink);
+  color: #ffffff;
+}
+
+.inline-control-btn.cancel-btn:hover:not(:disabled) {
+  background: #ff006e;
+  box-shadow: 0 0 20px rgba(255, 0, 110, 0.6);
+}
+
 .event-queue {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 6px;
-  background: #fff3e0;
+  background: var(--bg-dark);
   border-radius: 5px;
   height: fit-content;
+  border: 2px solid var(--neon-pink);
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
+}
+
+.side-column:first-child .event-queue {
+  flex-direction: column-reverse;
 }
 
 .event-slot {
-  width: var(--card-width); /* 140px - same as cards */
-  height: var(--card-height); /* 196px - same as cards */
-  border: 2px dashed #ff9800;
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 2px dashed var(--neon-pink);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  background: white;
+  background: var(--bg-medium);
 }
 
 .event-slot-number {
@@ -218,118 +263,123 @@ h1 {
   top: 4px;
   left: 4px;
   font-size: 14px;
-  color: #ff9800;
+  color: var(--neon-pink);
   font-weight: bold;
-  background: white;
+  background: var(--bg-dark);
   width: 24px;
   height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #ff9800;
+  border: 2px solid var(--neon-pink);
+  box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
 }
 
 .event-card {
-  background: #ff9800;
-  color: white;
+  background: var(--neon-pink);
+  color: #ffffff;
   padding: 8px 12px;
   border-radius: 5px;
-  font-size: 13px; /* Match card font size */
+  font-size: 13px;
   text-align: center;
   cursor: pointer;
   max-width: 120px;
   word-wrap: break-word;
   font-weight: bold;
+  box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
 }
 
 .event-card:hover {
-  background: #f57c00;
+  background: #ff006e;
   transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 0, 110, 0.7);
 }
 
-/* Special Cards - under event queue in side columns */
 .special-cards {
   display: flex;
-  flex-direction: column; /* Vertical stack */
+  flex-direction: column;
   gap: 6px;
   padding: 6px;
-  background: #f5f5f5;
+  background: var(--bg-dark);
   border-radius: 5px;
+  border: 2px solid var(--neon-purple); /* Purple border for special cards */
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.3);
 }
 
 .special-card {
-  padding: 6px 8px; /* More compact */
-  border: 2px solid #673ab7;
+  padding: 6px 8px;
+  border: 2px solid var(--neon-purple); /* Purple borders */
   border-radius: 4px;
-  background: white;
+  background: var(--bg-medium);
+  color: #ffffff;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 11px; /* Smaller text */
+  font-size: 11px;
   text-align: center;
 }
 
 .special-card:hover {
-  background: #673ab7;
-  color: white;
+  background: var(--neon-purple); /* Purple on hover */
+  color: #000000;
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
 }
 
 .special-card.used {
   opacity: 0.3;
   cursor: not-allowed;
+  border-color: #555;
 }
 
 .special-card.in-hand {
-  background: #e3f2fd;
-  border-color: #2196f3;
-  color: #1976d2;
+  background: var(--bg-light);
+  border-color: var(--neon-green);
+  color: var(--neon-green);
 }
 
 .special-card.in-queue {
-  background: #ff9800;
-  color: white;
-  border-color: #f57c00;
+  background: var(--neon-pink);
+  color: #ffffff;
+  border-color: var(--neon-pink);
 }
 
 .special-card.available {
-  background: white;
+  background: var(--bg-medium);
 }
 
 .special-card.clickable {
   cursor: pointer;
 }
 
-/* Camps grid - tighter spacing */
 .camps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px; /* Reduced from 10px */
-  margin-bottom: 10px; /* Reduced from 15px */
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .camp-column {
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--bg-medium);
+  border: 1px solid var(--bg-light);
   border-radius: 5px;
-  padding: 6px; /* Reduced from 8px */
+  padding: 6px;
   display: flex;
   flex-direction: column-reverse;
 }
 
-/* Cards - LARGER and proper aspect ratio */
 .card {
   width: var(--card-width);
   height: var(--card-height);
-  background: #fff;
-  border: 2px solid #333;
+  background: #ffffff;
+  border: 2px solid #000;
   border-radius: var(--radius);
   padding: 8px;
-  margin: 4px 0; /* Reduced from 5px */
+  margin: 4px 0;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
   position: relative;
-  font-size: 13px; /* Slightly larger */
+  font-size: 13px;
   min-height: 60px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: hidden;
@@ -341,8 +391,8 @@ h1 {
 }
 
 .card.camp {
-  background: #8bc34a;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   font-weight: bold;
 }
 
@@ -351,13 +401,13 @@ h1 {
 }
 
 .card.damaged {
-  border: 3px solid #f44336 !important;
-  box-shadow: 0 0 5px rgba(244, 67, 54, 0.5);
+  border: 3px solid var(--neon-red) !important; /* Bright red for damage */
+  box-shadow: 0 0 15px rgba(255, 0, 64, 0.7);
 }
 
 .card.destroyed {
   background: #333;
-  color: white;
+  color: #888;
   text-decoration: line-through;
   opacity: 0.7;
 }
@@ -375,16 +425,17 @@ h1 {
 }
 
 .card.empty {
-  border: 2px dashed #ccc;
-  background: #f5f5f5;
-  color: #999;
+  border: 2px dashed #555;
+  background: var(--bg-light);
+  color: #888;
 }
 
 .card.punk {
-  background: #424242;
-  color: white;
-  border: 2px solid #9c27b0;
+  background: #000;
+  color: var(--neon-purple); /* Purple punks! */
+  border: 2px solid var(--neon-purple);
   font-style: italic;
+  box-shadow: 0 0 10px rgba(199, 125, 255, 0.5);
 }
 
 .card-name {
@@ -392,57 +443,62 @@ h1 {
   margin-bottom: 4px;
 }
 
-/* Hand - more compact */
 .hand {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px; /* Reduced from 10px */
-  padding: 8px; /* Reduced from 10px */
-  background: #e8f5e9;
+  gap: 8px;
+  padding: 8px;
+  background: var(--bg-dark);
   border-radius: 5px;
-  min-height: 50px; /* Reduced from 60px */
+  min-height: 50px;
+  border: 1px solid var(--bg-light);
 }
 
 .hand-card {
   background: white;
-  border: 2px solid #4caf50;
-  padding: 6px 10px; /* Slightly reduced */
+  border: 2px solid var(--neon-green);
+  padding: 6px 10px;
   border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
+  color: #000;
+  box-shadow: 0 0 5px rgba(0, 255, 65, 0.3);
 }
 
 .hand-card:hover {
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.6);
 }
 
 .hand-card.selected {
-  background: #2196f3;
-  color: white;
+  background: var(--neon-purple); /* Purple for selected cards */
+  color: #ffffff;
+  border-color: var(--neon-purple);
+  box-shadow: 0 0 15px rgba(199, 125, 255, 0.6);
 }
 
 .hand-card.water-silo-card {
-  background: #2196f3;
-  color: white;
-  border-color: #1976d2;
+  background: var(--neon-blue);
+  color: #000;
+  border-color: var(--neon-blue);
 }
 
 .hand-card.water-silo-card:hover {
-  background: #1976d2;
+  box-shadow: 0 0 15px rgba(0, 217, 255, 0.6);
 }
 
 .hand-card.parachute-target {
-  border: 2px solid #9c27b0;
-  background: #f3e5f5;
+  border: 2px solid var(--neon-purple); /* Purple for parachute targeting */
+  background: #e8d4ff;
   cursor: pointer;
   animation: pulse-purple 1s infinite;
 }
 
 .hand-card.selected[data-card-type="event"] {
-  background: #ff9800;
+  background: var(--neon-pink);
   color: white;
-  border-color: #f57c00;
+  border-color: var(--neon-pink);
 }
 
 .hand-card {
@@ -464,28 +520,29 @@ h1 {
   font-size: 12px;
 }
 
-/* Controls - more compact */
 .controls {
   display: none;
 }
 
 button {
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   border: none;
-  padding: 10px 20px; /* Slightly reduced */
+  padding: 10px 20px;
   border-radius: 5px;
-  font-size: 15px; /* Slightly reduced */
+  font-size: 15px;
+  font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
 }
 
 button:hover {
-  background: #45a049;
+  background: #00ff41;
 }
 
 button:disabled {
-  background: #ccc;
+  background: #555;
+  color: #888;
   cursor: not-allowed;
 }
 
@@ -499,22 +556,22 @@ button:disabled {
 }
 
 .phase-events {
-  background: #ff9800;
+  background: var(--neon-pink);
   color: white;
 }
 
 .phase-replenish {
-  background: #2196f3;
-  color: white;
+  background: var(--neon-blue);
+  color: #000;
 }
 
 .phase-actions {
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
 }
 
 .phase-draw {
-  background: #9e9e9e;
+  background: #666;
   color: white;
   animation: pulse 1s infinite;
 }
@@ -530,13 +587,13 @@ button:disabled {
 }
 
 .junk-label {
-  color: #9b59b6;
+  color: var(--neon-purple); /* Purple junk labels */
   font-weight: 500;
   margin-left: 4px;
 }
 
 .hand-card:hover .junk-label {
-  color: #e91000;
+  color: #b565ff;
   font-weight: bold;
   text-decoration: underline;
 }
@@ -547,7 +604,6 @@ button:disabled {
   margin-top: 2px;
 }
 
-/* Ability styling */
 .ability-info {
   margin-top: 4px;
   padding-top: 4px;
@@ -560,24 +616,26 @@ button:disabled {
   width: 100%;
   padding: 2px 4px;
   margin: 2px 0;
-  background: #4caf50;
-  color: white;
+  background: var(--neon-pink); /* Pink buttons with white text */
+  color: #ffffff;
   border: none;
   border-radius: 3px;
   font-size: 10px;
+  font-weight: bold;
   cursor: pointer;
 }
 
 .ability-btn:hover {
-  background: #45a049;
+  background: #ff006e;
 }
 
 .ability-btn.argo-granted {
-  background: linear-gradient(45deg, #9c27b0, #673ab7);
+  background: var(--neon-purple); /* Purple for Argo's granted abilities */
+  color: #ffffff;
 }
 
 .ability-btn.argo-granted:hover {
-  background: linear-gradient(45deg, #7b1fa2, #512da8);
+  background: #b565ff;
 }
 
 .ability-text {
@@ -610,13 +668,12 @@ button:disabled {
 }
 
 .ability-text-disabled.argo-granted {
-  color: #9c27b0;
+  color: var(--neon-purple);
   font-style: italic;
 }
 
-/* Trait indicators */
 .karli-trait-active {
-  background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+  background: linear-gradient(45deg, var(--neon-pink), var(--neon-green));
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -637,7 +694,7 @@ button:disabled {
 }
 
 .argo-trait-active {
-  background: linear-gradient(45deg, #9c27b0, #673ab7);
+  background: var(--neon-purple); /* Purple for Argo */
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -648,8 +705,8 @@ button:disabled {
 }
 
 .vera-trait-active {
-  background: linear-gradient(45deg, #2196f3, #00bcd4);
-  color: white;
+  background: var(--neon-blue);
+  color: #000;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 10px;
@@ -659,14 +716,14 @@ button:disabled {
 }
 
 .vera-used {
-  color: #2196f3;
+  color: var(--neon-blue);
   font-size: 10px;
   font-style: italic;
   margin-top: 2px;
 }
 
 .highground-active {
-  background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+  background: linear-gradient(135deg, var(--neon-pink), var(--neon-green));
   color: #000;
   padding: 8px 16px;
   font-weight: bold;
@@ -674,7 +731,6 @@ button:disabled {
   animation: pulse 1s infinite;
 }
 
-/* Protection indicator */
 .protected-indicator {
   position: absolute;
   top: 2px;
@@ -683,144 +739,143 @@ button:disabled {
   opacity: 0.7;
 }
 
-/* Targeting animations */
 .card.restore-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
+  box-shadow: 0 0 10px var(--neon-green);
 }
 
 @keyframes pulse-green {
   0%,
   100% {
-    box-shadow: 0 0 5px #4caf50;
+    box-shadow: 0 0 5px var(--neon-green);
   }
   50% {
-    box-shadow: 0 0 20px #4caf50, 0 0 30px #4caf50;
+    box-shadow: 0 0 20px var(--neon-green), 0 0 30px var(--neon-green);
   }
 }
 
 .card.restore-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 25px #4caf50;
+  box-shadow: 0 0 25px var(--neon-green);
 }
 
 .card.damage-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
-  border-color: #f44336;
+  box-shadow: 0 0 10px var(--neon-red); /* Red for damage targeting */
+  border-color: var(--neon-red);
 }
 
 @keyframes pulse-red {
   0%,
   100% {
-    box-shadow: 0 0 5px #f44336;
+    box-shadow: 0 0 5px var(--neon-red);
   }
   50% {
-    box-shadow: 0 0 20px #f44336, 0 0 30px #f44336;
+    box-shadow: 0 0 20px var(--neon-red), 0 0 30px var(--neon-red);
   }
 }
 
 .card.damage-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 25px #f44336;
+  box-shadow: 0 0 25px var(--neon-red);
 }
 
 .card.injure-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
+  box-shadow: 0 0 10px var(--neon-red);
 }
 
 .card.injure-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 25px #f44336;
+  box-shadow: 0 0 25px var(--neon-red);
 }
 
 .card.punk-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #9c27b0;
-  border-color: #9c27b0;
+  box-shadow: 0 0 10px var(--neon-purple); /* Purple for punk targeting */
+  border-color: var(--neon-purple);
   border-style: dashed;
 }
 
 @keyframes pulse-purple {
   0%,
   100% {
-    box-shadow: 0 0 5px #9c27b0;
+    box-shadow: 0 0 5px var(--neon-purple);
   }
   50% {
-    box-shadow: 0 0 20px #9c27b0, 0 0 30px #9c27b0;
+    box-shadow: 0 0 20px var(--neon-purple), 0 0 30px var(--neon-purple);
   }
 }
 
 .card.raiders-target {
   animation: pulse-orange 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #ff9800;
-  border-color: #ff9800;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border-color: var(--neon-blue);
 }
 
 @keyframes pulse-orange {
   0%,
   100% {
-    box-shadow: 0 0 5px #ff9800;
+    box-shadow: 0 0 5px var(--neon-blue);
   }
   50% {
-    box-shadow: 0 0 20px #ff9800, 0 0 30px #ff9800;
+    box-shadow: 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue);
   }
 }
 
 .card.raiders-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 25px #ff9800;
+  box-shadow: 0 0 25px var(--neon-blue);
 }
 
 .card.raiders-target-camp {
-  box-shadow: 0 0 15px 3px red;
+  box-shadow: 0 0 15px 3px var(--neon-red);
   cursor: pointer;
   animation: pulse-red 1.5s infinite;
 }
 
 .card.mimic-target {
-  box-shadow: 0 0 10px 2px purple;
+  box-shadow: 0 0 10px 2px var(--neon-purple); /* Purple for mimic */
   cursor: pointer;
 }
 
 .card.junk-injure-target {
-  box-shadow: 0 0 10px 2px orange;
+  box-shadow: 0 0 10px 2px var(--neon-blue);
   cursor: pointer;
 }
 
 .card.junk-restore-target {
-  box-shadow: 0 0 10px 2px green;
+  box-shadow: 0 0 10px 2px var(--neon-green);
   cursor: pointer;
 }
 
 .card.assassin-target {
   animation: pulse-dark 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #8b0000;
-  border-color: #8b0000;
+  box-shadow: 0 0 10px #000;
+  border-color: #000;
 }
 
 @keyframes pulse-dark {
   0%,
   100% {
-    box-shadow: 0 0 5px #8b0000;
+    box-shadow: 0 0 5px #000;
   }
   50% {
-    box-shadow: 0 0 20px #8b0000, 0 0 30px #8b0000;
+    box-shadow: 0 0 20px #000, 0 0 30px #000;
   }
 }
 
 .card.sniper-target {
   animation: pulse-red 1s infinite;
   cursor: crosshair;
-  box-shadow: 0 0 10px #ff0000;
-  border-color: #ff0000;
+  box-shadow: 0 0 10px var(--neon-red);
+  border-color: var(--neon-red);
 }
 
 .card.sniper-target::before {
@@ -835,34 +890,34 @@ button:disabled {
 .card.pyromaniac-target {
   animation: pulse-fire 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #ff4500;
-  border-color: #ff4500;
+  box-shadow: 0 0 15px var(--neon-red);
+  border-color: var(--neon-red);
 }
 
 @keyframes pulse-fire {
   0%,
   100% {
-    box-shadow: 0 0 10px #ff4500;
+    box-shadow: 0 0 10px var(--neon-red);
   }
   50% {
-    box-shadow: 0 0 25px #ff4500, 0 0 35px #ff8c00;
+    box-shadow: 0 0 25px var(--neon-red), 0 0 35px var(--neon-red);
   }
 }
 
 .card.molgur-target {
   animation: pulse-dark-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 20px #8b0000;
-  border: 3px solid #8b0000;
+  box-shadow: 0 0 20px #000;
+  border: 3px solid #000;
 }
 
 @keyframes pulse-dark-red {
   0%,
   100% {
-    box-shadow: 0 0 15px #8b0000;
+    box-shadow: 0 0 15px #000;
   }
   50% {
-    box-shadow: 0 0 30px #8b0000, 0 0 40px #ff0000;
+    box-shadow: 0 0 30px #000, 0 0 40px var(--neon-red);
   }
 }
 
@@ -880,8 +935,8 @@ button:disabled {
 .card.cultleader-destroy-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #9c27b0;
-  border: 2px dashed #9c27b0;
+  box-shadow: 0 0 10px var(--neon-purple);
+  border: 2px dashed var(--neon-purple);
 }
 
 .card.cultleader-destroy-target::after {
@@ -890,7 +945,7 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(156, 39, 176, 0.9);
+  background: var(--neon-purple);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -908,28 +963,28 @@ button:disabled {
 .card.mutant-restore-target:hover,
 .card.mutant-damage-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 25px #4caf50;
+  box-shadow: 0 0 25px var(--neon-green);
 }
 
 .card.vanguard-target,
 .card.vanguard-counter-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
+  box-shadow: 0 0 10px var(--neon-red);
 }
 
 .card.rescue-team-target {
   animation: pulse-blue 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px solid #2196f3;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px solid var(--neon-blue);
 }
 
 .card.magnus-column-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #ff0000;
-  border: 3px solid #ff0000;
+  box-shadow: 0 0 15px var(--neon-red);
+  border: 3px solid var(--neon-red);
 }
 
 .magnus-column-target::after {
@@ -938,7 +993,7 @@ button:disabled {
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ff0000;
+  background: var(--neon-red);
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -949,8 +1004,8 @@ button:disabled {
 .card.banish-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #8b008b;
-  border: 3px solid #8b008b;
+  box-shadow: 0 0 15px var(--neon-purple);
+  border: 3px solid var(--neon-purple);
 }
 
 .card.banish-target::after {
@@ -959,7 +1014,7 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(139, 0, 139, 0.9);
+  background: var(--neon-purple);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -972,8 +1027,8 @@ button:disabled {
 .card.napalm-column-target {
   animation: pulse-orange 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #ff4500;
-  border: 3px solid #ff4500;
+  box-shadow: 0 0 15px var(--neon-red);
+  border: 3px solid var(--neon-red);
 }
 
 .card.napalm-column-target::after {
@@ -982,7 +1037,7 @@ button:disabled {
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ff4500;
+  background: var(--neon-red);
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -993,8 +1048,8 @@ button:disabled {
 .card.famine-keep-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #4caf50;
-  border: 3px solid #4caf50;
+  box-shadow: 0 0 15px var(--neon-green);
+  border: 3px solid var(--neon-green);
 }
 
 .card.famine-keep-target::after {
@@ -1003,8 +1058,8 @@ button:disabled {
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 12px;
@@ -1014,29 +1069,29 @@ button:disabled {
 .card.highground-placement-target {
   animation: pulse-blue 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px dashed #2196f3;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px dashed var(--neon-blue);
 }
 
 .card.highground-placement-empty {
   animation: pulse-blue 1s infinite;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px dashed #2196f3;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px dashed var(--neon-blue);
 }
 
 .card.highground-placement-pushable {
   animation: pulse-yellow 1s infinite;
-  box-shadow: 0 0 10px #ffc107;
-  border: 2px dashed #ffc107;
+  box-shadow: 0 0 10px var(--neon-green);
+  border: 2px dashed var(--neon-green);
 }
 
 @keyframes pulse-yellow {
   0%,
   100% {
-    box-shadow: 0 0 5px #ffc107;
+    box-shadow: 0 0 5px var(--neon-green);
   }
   50% {
-    box-shadow: 0 0 20px #ffc107;
+    box-shadow: 0 0 20px var(--neon-green);
   }
 }
 
@@ -1045,7 +1100,7 @@ button:disabled {
   position: absolute;
   top: -15px;
   right: -5px;
-  background: #ffc107;
+  background: var(--neon-green);
   color: #000;
   padding: 2px 4px;
   border-radius: 3px;
@@ -1061,8 +1116,8 @@ button:disabled {
 .card.mulcher-target {
   animation: pulse-dark-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #8b0000;
-  border: 2px dashed #8b0000;
+  box-shadow: 0 0 10px #000;
+  border: 2px dashed #000;
 }
 
 .card.mulcher-target::after {
@@ -1071,7 +1126,7 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.9);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1083,8 +1138,8 @@ button:disabled {
 .card.bloodbank-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px dashed #2196f3;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px dashed var(--neon-blue);
 }
 
 .card.bloodbank-target::after {
@@ -1093,8 +1148,8 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(33, 150, 243, 0.9);
-  color: white;
+  background: var(--neon-blue);
+  color: #000;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1105,8 +1160,8 @@ button:disabled {
 .card.laborcamp-destroy-target {
   animation: pulse-orange 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #ff9800;
-  border: 2px dashed #ff9800;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px dashed var(--neon-blue);
 }
 
 .card.laborcamp-destroy-target::after {
@@ -1115,8 +1170,8 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(255, 152, 0, 0.9);
-  color: white;
+  background: var(--neon-blue);
+  color: #000;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
@@ -1127,14 +1182,14 @@ button:disabled {
 .card.laborcamp-restore-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
+  box-shadow: 0 0 10px var(--neon-green);
 }
 
 .card.scudlauncher-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #ff0000;
-  border: 3px solid #ff0000;
+  box-shadow: 0 0 15px var(--neon-red);
+  border: 3px solid var(--neon-red);
 }
 
 .card.scudlauncher-target::after {
@@ -1143,7 +1198,7 @@ button:disabled {
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ff0000;
+  background: var(--neon-red);
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -1154,8 +1209,8 @@ button:disabled {
 .card.catapult-target {
   animation: pulse-red 1s infinite;
   cursor: crosshair;
-  box-shadow: 0 0 15px #ff4500;
-  border: 3px solid #ff4500;
+  box-shadow: 0 0 15px var(--neon-red);
+  border: 3px solid var(--neon-red);
 }
 
 .card.catapult-target::after {
@@ -1170,8 +1225,8 @@ button:disabled {
 .card.catapult-sacrifice-target {
   animation: pulse-dark-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #8b0000;
-  border: 2px dashed #8b0000;
+  box-shadow: 0 0 10px #000;
+  border: 2px dashed #000;
 }
 
 .card.catapult-sacrifice-target::after {
@@ -1180,7 +1235,7 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.9);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1192,8 +1247,8 @@ button:disabled {
 .card.octagon-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 15px #ff0000;
-  border: 3px solid #ff0000;
+  box-shadow: 0 0 15px var(--neon-red);
+  border: 3px solid var(--neon-red);
 }
 
 .card.octagon-target::after {
@@ -1202,7 +1257,7 @@ button:disabled {
   top: -20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ff0000;
+  background: var(--neon-red);
   color: white;
   padding: 2px 6px;
   border-radius: 3px;
@@ -1213,51 +1268,51 @@ button:disabled {
 .card.bonfire-restore-target {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
+  box-shadow: 0 0 10px var(--neon-green);
 }
 
 .card.constructionyard-moveable {
   animation: pulse-blue 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #2196f3;
-  border: 2px solid #2196f3;
+  box-shadow: 0 0 10px var(--neon-blue);
+  border: 2px solid var(--neon-blue);
 }
 
 .card.constructionyard-destination {
   animation: pulse-green 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #4caf50;
-  border: 2px dashed #4caf50;
+  box-shadow: 0 0 10px var(--neon-green);
+  border: 2px dashed var(--neon-green);
 }
 
 .card.adrenalinelab-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #9c27b0;
-  border: 2px solid #9c27b0;
+  box-shadow: 0 0 10px var(--neon-purple);
+  border: 2px solid var(--neon-purple);
 }
 
 .card.juggernaut-destroy-target {
   animation: pulse-red 1.5s infinite;
   cursor: pointer;
-  box-shadow: 0 0 20px #ff0000;
-  border-color: #ff0000;
+  box-shadow: 0 0 20px var(--neon-red);
+  border-color: var(--neon-red);
 }
 
 .card.mercenary-target {
   animation: pulse-red 1s infinite;
   cursor: pointer;
-  box-shadow: 0 0 10px #f44336;
+  box-shadow: 0 0 10px var(--neon-red);
 }
 
 .card.uprising-placement-target {
   animation: pulse-purple 1s infinite;
   cursor: pointer;
-  border: 3px dashed #9c27b0;
+  border: 3px dashed var(--neon-purple);
 }
 
 .card.uprising-placement-empty {
-  background: rgba(156, 39, 176, 0.1);
+  background: rgba(199, 125, 255, 0.1);
 }
 
 .card.rabblerouser-target {
@@ -1270,7 +1325,6 @@ button:disabled {
   cursor: pointer;
 }
 
-/* Pending action overlay */
 .pending-overlay {
   position: absolute;
   top: 0;
@@ -1281,7 +1335,11 @@ button:disabled {
 }
 
 .pending-message-banner {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(
+    135deg,
+    var(--neon-purple) 0%,
+    var(--neon-pink) 100%
+  ); /* Purple-pink gradient */
   color: white;
   padding: 12px 24px;
   font-size: 18px;
@@ -1292,11 +1350,15 @@ button:disabled {
 }
 
 .pending-overlay.punk-placement .pending-message-banner {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(
+    135deg,
+    var(--neon-purple) 0%,
+    var(--neon-green) 100%
+  );
 }
 
 .pending-overlay.raiders-attack-self .pending-message-banner {
-  background: linear-gradient(135deg, #ff0000 0%, #8b0000 100%);
+  background: linear-gradient(135deg, var(--neon-red) 0%, #000 100%);
   animation: shake 0.5s infinite;
 }
 
@@ -1318,7 +1380,11 @@ button:disabled {
 }
 
 .pending-overlay.parachute-placement .pending-message-banner {
-  background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 100%);
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue) 0%,
+    var(--neon-purple) 100%
+  );
   font-size: 20px;
   animation: float 2s ease-in-out infinite;
 }
@@ -1334,7 +1400,7 @@ button:disabled {
 }
 
 .pending-overlay.famine-selection .pending-message-banner {
-  background: linear-gradient(135deg, #8b0000 0%, #000000 100%);
+  background: linear-gradient(135deg, #000 0%, var(--neon-red) 100%);
   animation: pulse-urgent 0.5s infinite;
 }
 
@@ -1349,11 +1415,19 @@ button:disabled {
 }
 
 .pending-overlay.highground-rearrange .pending-message-banner {
-  background: linear-gradient(135deg, #2196f3 0%, #21cbf3 100%);
+  background: linear-gradient(
+    135deg,
+    var(--neon-blue) 0%,
+    var(--neon-green) 100%
+  );
 }
 
 .pending-overlay.scudlauncher-self .pending-message-banner {
-  background: linear-gradient(135deg, #ff5722 0%, #ff9800 100%);
+  background: linear-gradient(
+    135deg,
+    var(--neon-red) 0%,
+    var(--neon-blue) 100%
+  );
   animation: shake 0.5s infinite;
 }
 
@@ -1362,7 +1436,7 @@ button:disabled {
 }
 
 .pending-overlay.octagon-forced .pending-message-banner {
-  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  background: linear-gradient(135deg, var(--neon-red) 0%, #000 100%);
   animation: shake 0.5s infinite;
 }
 
@@ -1370,10 +1444,9 @@ button:disabled {
   background: linear-gradient(135deg, #666 0%, #333 100%);
 }
 
-/* Parachute placement */
 .card.parachute-placement-target {
-  border: 3px dashed #4a90e2;
-  background: rgba(74, 144, 226, 0.1);
+  border: 3px dashed var(--neon-purple); /* Purple for parachute placement */
+  background: rgba(199, 125, 255, 0.1);
   cursor: pointer;
   animation: pulse-blue 1.5s infinite;
 }
@@ -1381,23 +1454,23 @@ button:disabled {
 @keyframes pulse-blue {
   0%,
   100% {
-    box-shadow: 0 0 5px rgba(74, 144, 226, 0.5);
+    box-shadow: 0 0 5px var(--neon-purple);
   }
   50% {
-    box-shadow: 0 0 20px rgba(74, 144, 226, 0.8);
+    box-shadow: 0 0 20px var(--neon-purple);
   }
 }
 
 .card.parachute-placement-empty {
-  background: rgba(74, 144, 226, 0.2);
-  border-color: #7b68ee;
+  background: rgba(199, 125, 255, 0.2);
+  border-color: var(--neon-purple);
   border-width: 3px;
 }
 
 .card.parachute-placement-target:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(74, 144, 226, 0.6);
-  background: rgba(74, 144, 226, 0.3);
+  box-shadow: 0 0 20px var(--neon-purple);
+  background: rgba(199, 125, 255, 0.3);
 }
 
 .card.parachute-placement-target::after {
@@ -1406,7 +1479,7 @@ button:disabled {
   bottom: -25px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(74, 144, 226, 0.9);
+  background: var(--neon-purple);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1423,21 +1496,22 @@ button:disabled {
   opacity: 1;
 }
 
-/* Punk placement */
 .card.punk-placement-target {
   position: relative;
   animation: glow 1.5s infinite;
-  border: 3px dashed #ff69b4;
+  border: 3px dashed var(--neon-purple); /* Purple for punk placement */
   cursor: pointer;
 }
 
 @keyframes glow {
   0%,
   100% {
-    box-shadow: 0 0 5px 2px #ff69b4, inset 0 0 10px rgba(255, 105, 180, 0.3);
+    box-shadow: 0 0 5px 2px var(--neon-purple),
+      inset 0 0 10px rgba(199, 125, 255, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px 5px #ff69b4, inset 0 0 20px rgba(255, 105, 180, 0.5);
+    box-shadow: 0 0 20px 5px var(--neon-purple),
+      inset 0 0 20px rgba(199, 125, 255, 0.5);
   }
 }
 
@@ -1447,7 +1521,7 @@ button:disabled {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(255, 105, 180, 0.9);
+  background: var(--neon-purple);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -1456,21 +1530,19 @@ button:disabled {
   pointer-events: none;
 }
 
-/* Event slot clickable */
 .event-slot-clickable {
   cursor: pointer;
-  border-color: #4caf50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  border-color: var(--neon-green);
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
   transition: all 0.2s;
 }
 
 .event-slot-clickable:hover {
   transform: scale(1.05);
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.8);
-  background: rgba(76, 175, 80, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.8);
+  background: rgba(0, 255, 65, 0.1);
 }
 
-/* Pending action dimming */
 body.has-pending .hand-card:not(.parachute-target),
 body.has-pending .ability-btn,
 body.has-pending .special-card:not(.clickable) {
@@ -1542,7 +1614,6 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   pointer-events: auto !important;
 }
 
-/* Modal styling */
 .ability-selection-modal {
   position: fixed;
   top: 0;
@@ -1561,29 +1632,30 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .modal-content {
   position: relative;
-  background: white;
+  background: var(--bg-medium);
   padding: 30px;
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   max-width: 500px;
   z-index: 1001;
+  border: 2px solid var(--neon-purple); /* Purple modal border */
 }
 
 .modal-title {
   margin-top: 0;
   margin-bottom: 20px;
-  color: #333;
+  color: white;
   font-size: 20px;
 }
 
 .modal-subtitle {
   font-size: 14px;
-  color: #666;
+  color: #ccc;
   margin-bottom: 10px;
 }
 
@@ -1596,28 +1668,31 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .ability-select-btn {
   padding: 12px 20px;
   font-size: 16px;
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   border: none;
   border-radius: 5px;
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .ability-select-btn:hover:not(:disabled) {
-  background: #45a049;
+  background: #00ff41;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 255, 65, 0.4);
 }
 
 .ability-select-btn:disabled {
-  background: #ccc;
+  background: #555;
+  color: #888;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .ability-select-btn.disabled {
-  background: #ccc;
+  background: #555;
+  color: #888;
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -1625,51 +1700,55 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .cancel-btn {
   padding: 12px 20px;
   font-size: 16px;
-  background: #f44336;
+  background: var(--neon-pink);
   color: white;
   border: none;
   border-radius: 5px;
+  font-weight: bold;
   cursor: pointer;
   margin-top: 10px;
 }
 
 .cancel-btn:hover {
-  background: #d32f2f;
+  background: #ff006e;
+  box-shadow: 0 4px 8px rgba(255, 0, 110, 0.4);
 }
 
 .card-selection-list {
   max-height: 400px;
   overflow-y: auto;
   margin: 20px 0;
-  border: 1px solid #ddd;
+  border: 1px solid var(--bg-light);
   border-radius: 5px;
   padding: 10px;
+  background: var(--bg-dark);
 }
 
 .selectable-card {
   padding: 10px;
   margin: 5px 0;
-  background: white;
-  border: 2px solid #ddd;
+  background: var(--bg-medium);
+  border: 2px solid var(--bg-light);
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s;
+  color: white;
 }
 
 .selectable-card:hover:not(.disabled) {
-  background: #f0f0f0;
-  border-color: #4caf50;
+  background: var(--bg-light);
+  border-color: var(--neon-purple); /* Purple on hover */
 }
 
 .selectable-card.selected {
-  background: #4caf50;
+  background: var(--neon-purple); /* Purple when selected */
   color: white;
-  border-color: #45a049;
+  border-color: var(--neon-purple);
 }
 
 .selectable-card.disabled {
-  background: #f5f5f5;
-  color: #999;
+  background: var(--bg-dark);
+  color: #666;
   cursor: not-allowed;
   font-style: italic;
 }
@@ -1678,18 +1757,20 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .submit-keep-btn {
   padding: 12px 24px;
   font-size: 16px;
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   width: 100%;
   margin-top: 10px;
+  font-weight: bold;
 }
 
 .submit-discard-btn:disabled,
 .submit-keep-btn:disabled {
-  background: #ccc;
+  background: #555;
+  color: #888;
   cursor: not-allowed;
 }
 
@@ -1703,21 +1784,22 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .event-select-btn {
   padding: 12px;
   font-size: 14px;
-  background: #ff9800;
+  background: var(--neon-pink);
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: bold;
 }
 
 .event-select-btn:hover {
-  background: #f57c00;
+  background: #ff006e;
   transform: scale(1.05);
 }
 
 .event-select-btn.will-resolve {
-  background: #f44336;
+  background: var(--neon-red); /* Red for urgent events */
   animation: pulse 1s infinite;
 }
 
@@ -1731,24 +1813,25 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 .person-select-btn {
   padding: 15px;
   font-size: 14px;
-  background: #4caf50;
-  color: white;
+  background: var(--neon-green);
+  color: #000;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: bold;
 }
 
 .person-select-btn:hover {
-  background: #45a049;
+  background: #00ff41;
   transform: scale(1.05);
 }
 
 .person-select-btn.damaged {
-  background: #ff5722;
+  background: var(--neon-red); /* Red for damaged */
+  color: white;
 }
 
-/* Camp selection screen */
 .camp-selection-screen {
   display: flex;
   flex-direction: column;
@@ -1768,35 +1851,37 @@ body.has-pending .player-board.active .card.parachute-placement-target {
   width: 200px;
   height: 280px;
   padding: 15px;
-  border: 3px solid #ddd;
+  border: 3px solid var(--bg-light);
   border-radius: var(--radius);
   cursor: pointer;
-  background: white;
+  background: var(--bg-medium);
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: white;
 }
 
 .camp-card:hover {
   transform: scale(1.05);
-  border-color: #667eea;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  border-color: var(--neon-purple); /* Purple on hover */
+  box-shadow: 0 4px 16px rgba(199, 125, 255, 0.4);
 }
 
 .camp-card.selected {
-  background: #e8f5e9;
-  border-color: #4caf50;
+  background: var(--bg-dark);
+  border-color: var(--neon-green);
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 255, 65, 0.4);
 }
 
 .camp-card-name {
   font-weight: bold;
   font-size: 16px;
   margin-bottom: 8px;
+  color: white;
 }
 
 .camp-card-draw {
-  color: #4a90e2;
+  color: var(--neon-blue);
   font-size: 14px;
   font-weight: bold;
   margin-bottom: 6px;
@@ -1807,31 +1892,31 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .camp-card-ability {
-  background: rgba(100, 100, 100, 0.1);
+  background: rgba(0, 255, 65, 0.2);
   padding: 4px 6px;
   margin: 3px 0;
   border-radius: 3px;
   font-size: 12px;
+  color: var(--neon-green);
 }
 
 .camp-card-trait {
-  color: #e67e22;
+  color: var(--neon-pink);
   font-style: italic;
   font-size: 11px;
   margin-top: 6px;
   padding: 4px;
-  background: rgba(230, 126, 34, 0.1);
+  background: rgba(255, 0, 110, 0.2);
   border-radius: 3px;
 }
 
-/* Game over overlay */
 .game-over-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1839,10 +1924,12 @@ body.has-pending .player-board.active .card.parachute-placement-target {
 }
 
 .game-over-modal {
-  background: white;
+  background: var(--bg-medium);
   padding: 40px;
   border-radius: 10px;
   text-align: center;
   box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
   max-width: 500px;
+  border: 3px solid var(--neon-purple); /* Purple game over border */
+  color: white;
 }

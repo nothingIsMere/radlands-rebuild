@@ -1412,7 +1412,7 @@ export const campAbilities = {
 
   commandpost: {
     damage: {
-      cost: 3, // Base cost, will be reduced by punks
+      cost: 3,
       handler: (state, context) => {
         const player = state.players[context.playerId];
 
@@ -1427,10 +1427,10 @@ export const campAbilities = {
           }
         }
 
-        // Calculate actual cost (can go to 0)
+        // Calculate actual cost
         const actualCost = Math.max(0, 3 - punkCount);
 
-        // Check if player can afford actual cost
+        // PAY the actual cost (not refund - we didn't pay anything yet!)
         if (player.water < actualCost) {
           console.log(
             `Command Post: Need ${actualCost} water (base 3 - ${punkCount} punks)`
@@ -1438,14 +1438,10 @@ export const campAbilities = {
           return false;
         }
 
-        // Refund difference if we already paid full cost
-        const refund = 3 - actualCost;
-        if (refund > 0) {
-          player.water += refund;
-          console.log(
-            `Command Post: Cost reduced by ${refund} for ${punkCount} punk(s)`
-          );
-        }
+        player.water -= actualCost; // PAY the cost
+        console.log(
+          `Command Post: Paid ${actualCost} water (base 3 - ${punkCount} punk(s))`
+        );
 
         // Find valid damage targets
         const validTargets = TargetValidator.findValidTargets(
@@ -1455,7 +1451,7 @@ export const campAbilities = {
         );
 
         if (validTargets.length === 0) {
-          player.water += actualCost; // Full refund since we can't use ability
+          player.water += actualCost; // Refund if no targets
           console.log("Command Post: No valid targets to damage");
           return false;
         }

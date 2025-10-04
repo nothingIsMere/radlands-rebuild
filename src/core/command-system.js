@@ -3426,6 +3426,22 @@ export class CommandSystem {
   }
 
   handleEndTurn() {
+    // Ready all undamaged person cards for the CURRENT player before ending turn
+    const currentPlayer = this.state.players[this.state.currentPlayer];
+    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
+      for (let pos = 0; pos < 3; pos++) {
+        const card = currentPlayer.columns[col].getCard(pos);
+        if (
+          card &&
+          card.type === "person" &&
+          !card.isDamaged &&
+          !card.isDestroyed
+        ) {
+          card.isReady = true;
+        }
+      }
+    }
+
     // Reset turn events
     this.state.turnEvents = {
       eventsPlayed: 0,
@@ -3445,12 +3461,10 @@ export class CommandSystem {
     // Determine next phase
     const transition = calculatePhaseTransition("actions", false);
     this.state.phase = transition.nextPhase;
-
     this.notifyUI("PHASE_CHANGE", this.state.phase);
 
     // Server doesn't need UI delays
     this.processEventsPhase();
-
     return true;
   }
 
@@ -3602,16 +3616,6 @@ export class CommandSystem {
 
     // Set water using pure function
     player.water = calculateReplenishWater(this.state.turnNumber);
-
-    // Ready all cards that should be ready
-    for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
-      for (let pos = 0; pos < 3; pos++) {
-        const card = player.columns[col].getCard(pos);
-        if (card && shouldCardBeReady(card)) {
-          card.isReady = true;
-        }
-      }
-    }
 
     // Move to actions phase immediately
     const transition = calculatePhaseTransition("replenish", false);

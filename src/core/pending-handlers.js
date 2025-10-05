@@ -904,6 +904,7 @@ class VanguardDamageHandler extends PendingHandler {
         this.state.pending = {
           type: "vanguard_counter",
           sourcePlayerId: targetPlayer, // Opponent becomes source
+          targetPlayerId: targetPlayer, // Tells UI only this player can interact
           originalSourcePlayerId: sourcePlayerId,
           vanguardCard: vanguardCard,
           validTargets: counterTargets,

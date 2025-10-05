@@ -1567,6 +1567,15 @@ export class UIRenderer {
 
         cardDiv.appendChild(img);
 
+        // Add destroyed overlay for camps
+        if (card.type === "camp" && card.isDestroyed) {
+          const destroyedOverlay = this.createElement(
+            "div",
+            "camp-destroyed-overlay"
+          );
+          destroyedOverlay.textContent = "DESTROYED";
+          cardDiv.appendChild(destroyedOverlay);
+        }
         // Optional: Add error handling for missing images
         img.onerror = () => {
           console.warn(`Image file not found: assets/cards/${fileName}.webp`);

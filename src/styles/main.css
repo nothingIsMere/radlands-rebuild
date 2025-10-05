@@ -379,6 +379,7 @@ h1 {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   overflow: visible;
   z-index: 1;
+  position: relative;
 }
 
 .card:hover {
@@ -421,6 +422,44 @@ h1 {
   color: #888;
   text-decoration: line-through;
   opacity: 0.7;
+  border: 2px solid #000 !important; /* Override the damaged border */
+  box-shadow: none !important; /* Remove the red glow */
+}
+
+.camp-destroyed-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg) scale(0.75);
+  background: linear-gradient(135deg, var(--neon-red) 0%, #ff006e 100%);
+  color: white;
+  font-weight: 900;
+  font-size: 20px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 12px 24px;
+  border-radius: 4px;
+  z-index: 5;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.8), 0 0 40px rgba(255, 0, 0, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.6);
+  border: 3px solid white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.5);
+  animation: destroyed-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes destroyed-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(-12deg) scale(0.75);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.8), 0 0 40px rgba(255, 0, 0, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    transform: translate(-50%, -50%) rotate(-12deg) scale(0.75);
+    box-shadow: 0 0 30px rgba(255, 0, 0, 1), 0 0 60px rgba(255, 0, 0, 0.6),
+      0 4px 8px rgba(0, 0, 0, 0.6);
+  }
 }
 
 .card.not-ready > *:not(.card-preview):not(.tableau-preview) {
@@ -509,9 +548,10 @@ h1 {
   pointer-events: none;
 }
 
-/* Hide all text content when card has an image */
-.card:has(.card-image-tableau) .card-name {
-  display: none;
+/* Ensure card container supports absolute positioning for overlays */
+.card:has(.card-image-tableau) {
+  position: relative;
+  overflow: visible; /* Ensure overlay doesn't bleed outside rounded corners */
 }
 
 .card:hover .ability-info {

@@ -1584,20 +1584,137 @@ export class UIRenderer {
 
         cardDiv.appendChild(img);
 
-        // Add ONLY the ability overlay
-        if (card.abilities && card.abilities.length > 0) {
+        // Check if Argo Yesky is giving this card an extra damage ability
+        let hasArgoBonus = false;
+        if (card.type === "person" || card.isPunk) {
+          for (let col = 0; col < 3; col++) {
+            for (let pos = 0; pos < 3; pos++) {
+              const checkCard =
+                this.state.players[playerId].columns[col].getCard(pos);
+              if (
+                checkCard &&
+                checkCard.name === "Argo Yesky" &&
+                !checkCard.isDamaged &&
+                !checkCard.isDestroyed &&
+                checkCard.id !== card.id
+              ) {
+                hasArgoBonus = true;
+                break;
+              }
+            }
+            if (hasArgoBonus) break;
+          }
+        }
+
+        // Add ability overlay if there are normal abilities OR Argo bonus
+        if ((card.abilities && card.abilities.length > 0) || hasArgoBonus) {
           const abilities = this.createElement("div", "ability-info");
 
-          card.abilities.forEach((ability, index) => {
-            let canUseAbility = false;
+          // Render normal abilities first
+          if (card.abilities && card.abilities.length > 0) {
+            card.abilities.forEach((ability, index) => {
+              let canUseAbility = false;
 
-            if (card.type === "camp") {
-              canUseAbility = card.isReady && !card.isDestroyed;
-            } else if (card.type === "person") {
-              canUseAbility =
-                card.isReady && !card.isDamaged && !card.isDestroyed;
-            }
+              if (card.type === "camp") {
+                canUseAbility = card.isReady && !card.isDestroyed;
+              } else if (card.type === "person") {
+                canUseAbility =
+                  card.isReady && !card.isDamaged && !card.isDestroyed;
+              }
 
+              const isYourTurn = this.isMyTurn();
+
+              if (
+                canUseAbility &&
+                playerId === this.state.currentPlayer &&
+                isYourTurn &&
+                !this.state.pending
+              ) {
+                const btn = this.createElement("button", "ability-btn");
+                btn.textContent = `Use Ability (${ability.cost}💧)`;
+
+                btn.addEventListener("click", (e) => {
+                  if (this.state.phase === "game_over") return;
+                  e.stopPropagation();
+
+                  if (this.state.pending) {
+                    console.log(
+                      "Action in progress - please complete it first"
+                    );
+                    return;
+                  }
+
+                  if (card.name === "Juggernaut") {
+                    this.commands.execute({
+                      type: "USE_CAMP_ABILITY",
+                      playerId: playerId,
+                      payload: {
+                        playerId: playerId,
+                        columnIndex: columnIndex,
+                        position: position,
+                        abilityIndex: index,
+                      },
+                    });
+                  } else if (card.type === "camp") {
+                    this.commands.execute({
+                      type: "USE_CAMP_ABILITY",
+                      playerId: playerId,
+                      payload: {
+                        playerId: playerId,
+                        columnIndex: columnIndex,
+                        position: 0,
+                        abilityIndex: index,
+                      },
+                    });
+                  } else {
+                    this.commands.execute({
+                      type: "USE_ABILITY",
+                      playerId: playerId,
+                      payload: {
+                        playerId: playerId,
+                        columnIndex: columnIndex,
+                        position: position,
+                        abilityIndex: index,
+                      },
+                    });
+                  }
+                });
+                abilities.appendChild(btn);
+              } else {
+                const text = this.createElement(
+                  "span",
+                  "ability-text-disabled"
+                );
+                if (card.abilities.length > 1) {
+                  const abilityIndex = card.abilities.indexOf(ability) + 1;
+                  text.textContent = `Ability ${abilityIndex} (${ability.cost}💧)`;
+                } else {
+                  text.textContent = `Use Ability (${ability.cost}💧)`;
+                }
+
+                const isYourTurn = this.isMyTurn();
+
+                if (!isYourTurn) {
+                  text.textContent += " [Not Your Turn]";
+                } else if (this.state.pending) {
+                  text.textContent += " [Action in Progress]";
+                } else if (card.type === "person") {
+                  if (!card.isReady) text.textContent += " [Not Ready]";
+                  if (card.isDamaged) text.textContent += " [Damaged]";
+                } else if (card.type === "camp") {
+                  if (!card.isReady) text.textContent += " [Used]";
+                  if (card.isDestroyed) text.textContent += " [Destroyed]";
+                }
+
+                abilities.appendChild(text);
+              }
+            });
+          }
+
+          // Add Argo's bonus damage ability if applicable
+          if (hasArgoBonus) {
+            const canUseAbility =
+              card.isReady && !card.isDamaged && !card.isDestroyed;
             const isYourTurn = this.isMyTurn();
 
             if (
@@ -1606,8 +1723,11 @@ export class UIRenderer {
               isYourTurn &&
               !this.state.pending
             ) {
-              const btn = this.createElement("button", "ability-btn");
-              btn.textContent = `Use Ability (${ability.cost}💧)`;
+              const btn = this.createElement(
+                "button",
+                "ability-btn argo-granted"
+              );
+              btn.textContent = `[Argo] Damage (1💧)`;
 
               btn.addEventListener("click", (e) => {
                 if (this.state.phase === "game_over") return;
@@ -1618,68 +1738,39 @@ export class UIRenderer {
                   return;
                 }
 
-                if (card.name === "Juggernaut") {
-                  this.commands.execute({
-                    type: "USE_CAMP_ABILITY",
+                this.commands.execute({
+                  type: "USE_ABILITY",
+                  playerId: playerId,
+                  payload: {
                     playerId: playerId,
-                    payload: {
-                      playerId: playerId,
-                      columnIndex: columnIndex,
-                      position: position,
-                      abilityIndex: index,
-                    },
-                  });
-                } else if (card.type === "camp") {
-                  this.commands.execute({
-                    type: "USE_CAMP_ABILITY",
-                    playerId: playerId,
-                    payload: {
-                      playerId: playerId,
-                      columnIndex: columnIndex,
-                      position: 0,
-                      abilityIndex: index,
-                    },
-                  });
-                } else {
-                  this.commands.execute({
-                    type: "USE_ABILITY",
-                    playerId: playerId,
-                    payload: {
-                      playerId: playerId,
-                      columnIndex: columnIndex,
-                      position: position,
-                      abilityIndex: index,
-                    },
-                  });
-                }
+                    columnIndex: columnIndex,
+                    position: position,
+                    abilityIndex: card.abilities ? card.abilities.length : 0,
+                    isArgoGranted: true,
+                  },
+                });
               });
               abilities.appendChild(btn);
             } else {
-              const text = this.createElement("span", "ability-text-disabled");
-              if (card.abilities.length > 1) {
-                const abilityIndex = card.abilities.indexOf(ability) + 1;
-                text.textContent = `Ability ${abilityIndex} (${ability.cost}💧)`;
-              } else {
-                text.textContent = `Use Ability (${ability.cost}💧)`;
-              }
-
-              const isYourTurn = this.isMyTurn();
+              const text = this.createElement(
+                "span",
+                "ability-text-disabled argo-granted"
+              );
+              text.textContent = `[Argo] Damage (1💧)`;
 
               if (!isYourTurn) {
                 text.textContent += " [Not Your Turn]";
               } else if (this.state.pending) {
                 text.textContent += " [Action in Progress]";
-              } else if (card.type === "person") {
-                if (!card.isReady) text.textContent += " [Not Ready]";
-                if (card.isDamaged) text.textContent += " [Damaged]";
-              } else if (card.type === "camp") {
-                if (!card.isReady) text.textContent += " [Used]";
-                if (card.isDestroyed) text.textContent += " [Destroyed]";
+              } else if (!card.isReady) {
+                text.textContent += " [Not Ready]";
+              } else if (card.isDamaged) {
+                text.textContent += " [Damaged]";
               }
 
               abilities.appendChild(text);
             }
-          });
+          }
 
           cardDiv.appendChild(abilities);
         }
@@ -1930,10 +2021,7 @@ export class UIRenderer {
 
       // Check if Argo Yesky is giving this card an extra damage ability
       let hasArgoBonus = false;
-      if (
-        (card.type === "person" || card.isPunk) &&
-        playerId === this.state.currentPlayer
-      ) {
+      if (card.type === "person" || card.isPunk) {
         for (let col = 0; col < 3; col++) {
           for (let pos = 0; pos < 3; pos++) {
             const checkCard =
@@ -1946,11 +2034,15 @@ export class UIRenderer {
               checkCard.id !== card.id
             ) {
               hasArgoBonus = true;
+              console.log(
+                `ARGO BONUS DETECTED for ${card.name} at ${playerId} ${columnIndex},${position}`
+              );
               break;
             }
           }
           if (hasArgoBonus) break;
         }
+        console.log(`Card: ${card.name}, hasArgoBonus: ${hasArgoBonus}`);
       }
 
       // Create abilities div if there are normal abilities OR if there's an Argo bonus

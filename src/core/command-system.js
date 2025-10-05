@@ -37,7 +37,6 @@ import {
   calculatePunkPlacementCost,
   calculateWaterChange,
   canAffordAction,
-  calculateTotalWaterIncome,
   findTargetsInColumn,
   findAllDamagedCards,
   countValidTargets,
@@ -2125,8 +2124,20 @@ export class CommandSystem {
 
   finalizeAbilityExecution(abilityContext) {
     if (!abilityContext || abilityContext.completed) return;
-
     abilityContext.completed = true;
+
+    // Mark source card not-ready (unless Vera's trait applies)
+    const shouldStayReady = this.state.pending?.shouldStayReady;
+    const sourceCard = this.state.pending?.sourceCard || abilityContext.source;
+
+    if (sourceCard && !shouldStayReady) {
+      sourceCard.isReady = false;
+      console.log(`${sourceCard.name} marked as not ready`);
+    } else if (sourceCard && shouldStayReady) {
+      console.log(`${sourceCard.name} stays ready (Vera Vosh trait)`);
+    }
+
+    this.state.turnEvents.abilityUsedThisTurn = true;
 
     // Check if there's pending Adrenaline Lab destruction info
     if (this.state.pending?.adrenalineLabDestroy) {

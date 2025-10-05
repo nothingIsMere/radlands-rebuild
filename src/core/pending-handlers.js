@@ -1092,11 +1092,19 @@ class MolgurDestroyCampHandler extends PendingHandler {
       return false;
     }
 
-    // Store values before clearing
+    // Store values before clearing - INCLUDING shouldStayReady
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const shouldStayReady = this.state.pending?.shouldStayReady;
 
-    // Clear pending FIRST so UI updates
+    // Finalize ability BEFORE clearing pending (so it can mark card not-ready)
+    if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    // Clear pending AFTER finalizing
     this.state.pending = null;
 
     // Destroy the camp immediately
@@ -1105,13 +1113,6 @@ class MolgurDestroyCampHandler extends PendingHandler {
 
     // Check for game end
     this.commandSystem.checkGameEnd();
-
-    // Finalize ability context if it exists
-    if (this.commandSystem.activeAbilityContext) {
-      this.commandSystem.finalizeAbilityExecution(
-        this.commandSystem.activeAbilityContext
-      );
-    }
 
     // Apply Parachute Base damage if present
     if (parachuteBaseDamage) {

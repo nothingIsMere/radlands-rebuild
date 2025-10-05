@@ -564,6 +564,21 @@ h1 {
   pointer-events: auto;
 }
 
+.card-preview-image {
+  width: 280px;
+  height: auto;
+  border-radius: var(--radius);
+  display: block;
+}
+
+/* Adjust the preview container for image previews */
+.card-preview:has(.card-preview-image) {
+  min-width: auto;
+  width: auto;
+  padding: 10px;
+  background: rgba(42, 42, 42, 0.98);
+}
+
 .ability-btn {
   display: block;
   width: 100%;

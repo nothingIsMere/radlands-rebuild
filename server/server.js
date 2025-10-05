@@ -526,10 +526,26 @@ function regenerateCamps() {
   console.log("New left camps:", gameState.campOffers.left);
   console.log("New right camps:", gameState.campOffers.right);
 
-  // Broadcast updated state to both players
+  const stateToSend = {
+    players: gameState.players,
+    currentPlayer: gameState.currentPlayer,
+    turnNumber: gameState.turnNumber,
+    phase: gameState.phase,
+    deck: gameState.deck,
+    discard: gameState.discard,
+    pending: gameState.pending, // CRITICAL - must be explicitly included
+    turnEvents: gameState.turnEvents,
+    deckExhaustedCount: gameState.deckExhaustedCount,
+    winner: gameState.winner,
+    winReason: gameState.winReason,
+    campOffers: gameState.campOffers,
+    campSelections: gameState.campSelections,
+    campDeck: gameState.campDeck,
+  };
+
   broadcast({
     type: "STATE_SYNC",
-    state: gameState,
+    state: stateToSend,
   });
 }
 
@@ -623,9 +639,27 @@ wss.on("connection", (ws) => {
 
       if (success) {
         console.log("Command executed successfully, broadcasting state");
+
+        const stateToSend = {
+          players: gameState.players,
+          currentPlayer: gameState.currentPlayer,
+          turnNumber: gameState.turnNumber,
+          phase: gameState.phase,
+          deck: gameState.deck,
+          discard: gameState.discard,
+          pending: gameState.pending,
+          turnEvents: gameState.turnEvents,
+          deckExhaustedCount: gameState.deckExhaustedCount,
+          winner: gameState.winner,
+          winReason: gameState.winReason,
+          campOffers: gameState.campOffers,
+          campSelections: gameState.campSelections,
+          campDeck: gameState.campDeck,
+        };
+
         broadcast({
           type: "STATE_SYNC",
-          state: gameState,
+          state: stateToSend,
         });
       } else {
         console.log("Command failed validation");

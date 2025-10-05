@@ -1687,6 +1687,43 @@ export class UIRenderer {
 
           if (e.defaultPrevented) return;
 
+          if (this.state.pending?.type === "magnus_select_column") {
+            console.log("Magnus handler triggered");
+            console.log("My player ID:", window.networkClient?.myPlayerId);
+            console.log("Source player ID:", this.state.pending.sourcePlayerId);
+            console.log("Clicked player ID:", playerId);
+            console.log("Target player ID:", this.state.pending.targetPlayerId);
+            console.log("Column:", columnIndex);
+
+            // Only the player who activated Magnus can select
+            if (
+              window.networkClient?.myPlayerId !==
+              this.state.pending.sourcePlayerId
+            ) {
+              console.log("Not your Magnus ability");
+              return;
+            }
+
+            // Must click on opponent's columns
+            if (playerId !== this.state.pending.targetPlayerId) {
+              console.log("Must select opponent's column, not your own");
+              return;
+            }
+
+            // Must be a valid column
+            if (!this.state.pending.validColumns.includes(columnIndex)) {
+              console.log("Not a valid column");
+              return;
+            }
+
+            console.log("All checks passed, sending command");
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetColumn: columnIndex,
+            });
+            return;
+          }
+
           if (this.state.pending && !this.canInteractWithPending()) {
             console.log("Not your turn to interact with this pending action");
             return;
@@ -2400,8 +2437,10 @@ export class UIRenderer {
 
         // Special text for conditional abilities
         let abilityText;
-        if (card.abilities.length > 1) {
-          const abilityIndex = card.abilities.indexOf(ability) + 1;
+        if (this.state.pending.selectedPerson.card.abilities.length > 1) {
+          const abilityIndex =
+            this.state.pending.selectedPerson.card.abilities.indexOf(ability) +
+            1;
           abilityText = `Ability ${abilityIndex} (${ability.cost}💧)`;
         } else {
           abilityText = `Use Ability (${ability.cost}💧)`;
@@ -3172,8 +3211,9 @@ export class UIRenderer {
 
         // Special text for conditional abilities
         let abilityText;
-        if (card.abilities.length > 1) {
-          const abilityIndex = card.abilities.indexOf(ability) + 1;
+        if (this.state.pending.person.abilities.length > 1) {
+          const abilityIndex =
+            this.state.pending.person.abilities.indexOf(ability) + 1;
           abilityText = `Ability ${abilityIndex} (${ability.cost}💧)`;
         } else {
           abilityText = `Use Ability (${ability.cost}💧)`;
@@ -3455,6 +3495,31 @@ export class UIRenderer {
   createCardPreview(card) {
     const preview = this.createElement("div", "card-preview");
 
+    // For cards with images, just show a larger version of the image
+    const cardData =
+      card.type === "person"
+        ? CARD_DESCRIPTIONS.people?.[card.name]
+        : card.type === "camp"
+        ? CARD_DESCRIPTIONS.camps?.[card.name]
+        : null;
+
+    if (cardData?.hasImage || card.isPunk) {
+      const img = this.createElement("img", "card-preview-image");
+
+      if (card.isPunk) {
+        img.src = `assets/cards/punk.webp`;
+        img.alt = "Punk (face-down card)";
+      } else {
+        const fileName = card.name.toLowerCase().replace(/\s+/g, "-");
+        img.src = `assets/cards/${fileName}.webp`;
+        img.alt = card.name;
+      }
+
+      preview.appendChild(img);
+      return preview;
+    }
+
+    // For cards without images, show the text-based preview
     // Card name
     const name = this.createElement("div", "preview-name");
     name.textContent = card.name;
@@ -3470,9 +3535,6 @@ export class UIRenderer {
       info.textContent = card.type.toUpperCase();
       preview.appendChild(info);
     }
-
-    const cardData =
-      CARD_DESCRIPTIONS.people[card.name] || CARD_DESCRIPTIONS.camps[card.name];
 
     // Abilities
     if (cardData?.abilities && cardData.abilities.length > 0) {

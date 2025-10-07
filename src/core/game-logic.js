@@ -84,8 +84,13 @@ export function calculateDamageResult(target, isAlreadyDamaged) {
     return { result: "invalid", reason: "No target" };
   }
 
-  // Punks or already damaged cards are destroyed
-  if (target.isPunk || isAlreadyDamaged) {
+  // Punks are ALWAYS destroyed on ANY damage, regardless of isDamaged status
+  if (target.isPunk) {
+    return { result: "destroy", wasDestroyed: true };
+  }
+
+  // Already damaged non-punk cards are destroyed
+  if (isAlreadyDamaged) {
     return { result: "destroy", wasDestroyed: true };
   }
 

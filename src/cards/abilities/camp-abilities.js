@@ -199,6 +199,7 @@ export const campAbilities = {
           sourceCard: context.campCard || context.source,
           sourcePlayerId: context.playerId,
           availablePeople: people,
+          validTargets: people, // ADD THIS - UI needs validTargets to show borders
           context,
         };
 
@@ -304,6 +305,7 @@ export const campAbilities = {
       },
     },
   },
+
   watchtower: {
     damage: {
       cost: 1,

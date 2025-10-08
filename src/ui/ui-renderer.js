@@ -916,50 +916,30 @@ export class UIRenderer {
       }
     }
 
-    // Add this with the other pending type checks in renderCard
     if (this.state.pending?.type === "constructionyard_select_person") {
-      // Highlight player's own people
-      if (
-        playerId === this.state.pending.sourcePlayerId &&
-        card &&
-        card.type === "person" &&
-        !card.isDestroyed
-      ) {
+      // Highlight ALL people (both players) - removed the playerId check
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
         cardDiv.classList.add("constructionyard-moveable");
-
-        // Make it clickable
-        cardDiv.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          this.commands.execute({
-            type: "SELECT_TARGET",
-            targetPlayer: playerId,
-            targetColumn: columnIndex,
-            targetPosition: position,
-          });
-        });
       }
     }
 
     if (this.state.pending?.type === "constructionyard_select_destination") {
-      // Highlight valid destination slots (positions 1 and 2)
+      // Highlight valid destination slots on the moving person's board
       if (
-        playerId === this.state.pending.sourcePlayerId &&
-        position > 0 // Not camp slot
+        playerId === this.state.pending.movingToPlayerId &&
+        position > 0 && // Not camp slot
+        !(
+          columnIndex === this.state.pending.movingFromColumn &&
+          position === this.state.pending.movingFromPosition
+        ) // Not the current position
       ) {
         cardDiv.classList.add("constructionyard-destination");
-
-        // Make slots clickable
-        cardDiv.addEventListener("click", (e) => {
-          if (this.state.phase === "game_over") return;
-          e.stopPropagation();
-          this.commands.execute({
-            type: "SELECT_TARGET",
-            targetPlayer: playerId,
-            targetColumn: columnIndex,
-            targetPosition: position,
-          });
-        });
       }
     }
 
@@ -1653,13 +1633,6 @@ export class UIRenderer {
           destroyedOverlay.textContent = "DESTROYED";
           cardDiv.appendChild(destroyedOverlay);
         }
-        // Optional: Add error handling for missing images
-        img.onerror = () => {
-          console.warn(`Image file not found: assets/cards/${fileName}.webp`);
-          // Image will show broken image icon, or you could add fallback logic here
-        };
-
-        cardDiv.appendChild(img);
 
         // Check if Argo Yesky is giving this card an extra damage ability
         let hasArgoBonus = false;
@@ -1912,16 +1885,7 @@ export class UIRenderer {
             return;
           }
 
-          if (!this.state.pending) {
-            if (playerId !== window.networkClient?.myPlayerId) {
-              console.log(
-                "Cannot interact with opponent's board when not targeting"
-              );
-              return;
-            }
-          }
-
-          // All the same click handling logic as before
+          // ALLOW CONSTRUCTION YARD PERSON SELECTION FOR BOTH PLAYERS' CARDS
           if (
             this.state.pending?.type === "constructionyard_select_person" &&
             card.type === "person" &&
@@ -1949,6 +1913,16 @@ export class UIRenderer {
               targetPosition: position,
             });
             return;
+          }
+
+          // Block opponent interaction for non-pending actions
+          if (!this.state.pending) {
+            if (playerId !== window.networkClient?.myPlayerId) {
+              console.log(
+                "Cannot interact with opponent's board when not targeting"
+              );
+              return;
+            }
           }
 
           if (this.state.pending?.type === "famine_select_keep") {
@@ -2346,18 +2320,7 @@ export class UIRenderer {
           return;
         }
 
-        // If there's a pending action, allow only targeting clicks
-        // Otherwise, block clicks on opponent's cards entirely
-        if (!this.state.pending) {
-          // No pending action - check if this is opponent's card
-          if (playerId !== window.networkClient?.myPlayerId) {
-            console.log(
-              "Cannot interact with opponent's board when not targeting"
-            );
-            return;
-          }
-        }
-
+        // ALLOW CONSTRUCTION YARD PERSON SELECTION FOR BOTH PLAYERS' CARDS
         if (
           this.state.pending?.type === "constructionyard_select_person" &&
           card.type === "person" &&
@@ -2384,6 +2347,17 @@ export class UIRenderer {
             targetPosition: position,
           });
           return;
+        }
+
+        // Block opponent interaction for non-pending actions
+        if (!this.state.pending) {
+          // No pending action - check if this is opponent's card
+          if (playerId !== window.networkClient?.myPlayerId) {
+            console.log(
+              "Cannot interact with opponent's board when not targeting"
+            );
+            return;
+          }
         }
 
         // Handle Famine selection

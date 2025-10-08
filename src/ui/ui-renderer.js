@@ -3548,7 +3548,7 @@ export class UIRenderer {
         cardDiv.classList.add("hidden-card");
         const cardText = document.createElement("div");
         cardText.className = "card-text";
-        cardText.textContent = "Hidden Card";
+        cardText.textContent = "Hidden card";
         cardDiv.appendChild(cardText);
         hand.appendChild(cardDiv);
         return; // Skip rest of rendering for hidden cards

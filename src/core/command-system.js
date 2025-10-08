@@ -416,6 +416,8 @@ export class CommandSystem {
           this.state.turnEvents.veraFirstUseCards.splice(index, 1);
         }
       }
+      // CRITICAL: Ensure camp stays ready since ability didn't execute
+      camp.isReady = true;
       return false;
     }
 

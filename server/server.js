@@ -575,36 +575,15 @@ wss.on("connection", (ws) => {
   );
 
   // Start camp selection when both players are connected
-  // if (players.left && players.right && gameState.phase === "waiting") {
-  //   console.log("Both players connected - starting camp selection");
-
-  //   gameState.deck = createFullDeck();
-  //   gameState.campDeck = createCampDeck();
-
-  //   gameState.campOffers = {
-  //     left: gameState.campDeck.splice(0, 6),
-  //     right: gameState.campDeck.splice(0, 6),
-  //   };
-  //THIS IS THE ACTUAL BLOCK TO USE
-
-  // THIS BLOCK GUARANTEES WATCHTOWER AND OMEN CLOCK TOGETHER FOR TESTING
   if (players.left && players.right && gameState.phase === "waiting") {
     console.log("Both players connected - starting camp selection");
 
     gameState.deck = createFullDeck();
     gameState.campDeck = createCampDeck();
 
-    // For testing: guarantee Watchtower and Omen Clock in both players' pools
-    const guaranteedCamps = ["Watchtower", "Omen Clock"];
-
-    // Remove guaranteed camps from the deck so we don't get duplicates
-    gameState.campDeck = gameState.campDeck.filter(
-      (camp) => !guaranteedCamps.includes(camp)
-    );
-
     gameState.campOffers = {
-      left: [...guaranteedCamps, ...gameState.campDeck.splice(0, 4)],
-      right: [...guaranteedCamps, ...gameState.campDeck.splice(0, 4)],
+      left: gameState.campDeck.splice(0, 6),
+      right: gameState.campDeck.splice(0, 6),
     };
 
     gameState.campSelections = { left: null, right: null };

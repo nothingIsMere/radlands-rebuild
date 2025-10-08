@@ -14,6 +14,7 @@ export class TargetValidator {
       requireCamp = false,
       requireDamaged = false,
       requireUndamaged = false,
+      excludeSource = null, // NEW: {playerId, columnIndex, position}
     } = options;
 
     const card = state.getCard(targetPlayer, targetColumn, targetPosition);
@@ -24,6 +25,17 @@ export class TargetValidator {
 
     if (requireDamaged && !card.isDamaged) return false;
     if (requireUndamaged && card.isDamaged) return false;
+
+    // NEW: Exclude the source card if specified
+    if (excludeSource) {
+      if (
+        targetPlayer === excludeSource.playerId &&
+        targetColumn === excludeSource.columnIndex &&
+        targetPosition === excludeSource.position
+      ) {
+        return false;
+      }
+    }
 
     if (!allowProtected) {
       if (state.turnEvents?.highGroundActive) {

@@ -654,39 +654,25 @@ export const campAbilities = {
           return false;
         }
 
-        // Find damaged cards to restore (your own)
+        // Find damaged cards to restore (your own), excluding Transplant Lab itself
         const validTargets = TargetValidator.findValidTargets(
           state,
           context.playerId,
           {
             allowOwn: true,
             requireDamaged: true,
-            allowProtected: true, // Protection irrelevant for restoration
+            allowProtected: true,
+            excludeSource: {
+              playerId: context.playerId,
+              columnIndex: context.columnIndex,
+              position: 0,
+            },
           }
         );
 
         if (validTargets.length === 0) {
-          console.log("Transplant Lab: No damaged cards to restore");
-          return false;
-        }
-
-        // Filter out Transplant Lab itself from targets
-        const filteredTargets = validTargets.filter((t) => {
-          // Exclude Transplant Lab from restoring itself
-          if (
-            t.card.type === "camp" &&
-            t.card.name === "Transplant Lab" &&
-            t.columnIndex === context.columnIndex &&
-            t.position === 0
-          ) {
-            return false;
-          }
-          return true;
-        });
-
-        if (filteredTargets.length === 0) {
           console.log(
-            "Transplant Lab: No valid targets (cannot restore itself)"
+            "Transplant Lab: No damaged cards to restore (excluding self)"
           );
           return false;
         }
@@ -696,12 +682,12 @@ export const campAbilities = {
           source: context.source,
           sourceCard: context.campCard || context.source,
           sourcePlayerId: context.playerId,
-          validTargets: filteredTargets,
+          validTargets: validTargets,
           context,
         };
 
         console.log(
-          `Transplant Lab: Select damaged card to restore (${filteredTargets.length} available, ${state.turnEvents.peoplePlayedThisTurn} people played)`
+          `Transplant Lab: Select damaged card to restore (${validTargets.length} available, ${state.turnEvents.peoplePlayedThisTurn} people played)`
         );
         return true;
       },
@@ -819,7 +805,6 @@ export const campAbilities = {
         for (let col = 0; col < 3; col++) {
           const camp = opponent.columns[col].getCard(0);
           if (camp && !camp.isDestroyed) {
-            // Check if this camp is unprotected
             if (!opponent.columns[col].isProtected(0)) {
               hasUnprotectedCamp = true;
               break;
@@ -834,19 +819,26 @@ export const campAbilities = {
           return false;
         }
 
-        // Find damaged cards to restore (your own)
+        // Find damaged cards to restore (your own), excluding Warehouse itself
         const validTargets = TargetValidator.findValidTargets(
           state,
           context.playerId,
           {
             allowOwn: true,
             requireDamaged: true,
-            allowProtected: true, // Protection irrelevant for restoration
+            allowProtected: true,
+            excludeSource: {
+              playerId: context.playerId,
+              columnIndex: context.columnIndex,
+              position: 0,
+            },
           }
         );
 
         if (validTargets.length === 0) {
-          console.log("Warehouse: No damaged cards to restore");
+          console.log(
+            "Warehouse: No damaged cards to restore (excluding self)"
+          );
           return false;
         }
 
@@ -1108,35 +1100,24 @@ export const campAbilities = {
         }
 
         // Check if there are any damaged cards to restore (excluding Labor Camp itself)
-        const validRestoreTargets = [];
-
-        for (let col = 0; col < 3; col++) {
-          for (let pos = 0; pos < 3; pos++) {
-            const card = player.columns[col].getCard(pos);
-            if (card && card.isDamaged && !card.isDestroyed) {
-              // Exclude Labor Camp itself from restoration targets
-              if (
-                !(
-                  card.type === "camp" &&
-                  card.name === "Labor Camp" &&
-                  col === context.columnIndex &&
-                  pos === 0
-                )
-              ) {
-                validRestoreTargets.push({
-                  playerId: context.playerId,
-                  columnIndex: col,
-                  position: pos,
-                  card,
-                });
-              }
-            }
+        const validRestoreTargets = TargetValidator.findValidTargets(
+          state,
+          context.playerId,
+          {
+            allowOwn: true,
+            requireDamaged: true,
+            allowProtected: true,
+            excludeSource: {
+              playerId: context.playerId,
+              columnIndex: context.columnIndex,
+              position: 0,
+            },
           }
-        }
+        );
 
         if (validRestoreTargets.length === 0) {
           console.log(
-            "Labor Camp: No damaged cards to restore (Labor Camp cannot restore itself)"
+            "Labor Camp: No damaged cards to restore (excluding self)"
           );
           return false;
         }
@@ -1657,19 +1638,24 @@ export const campAbilities = {
     restore: {
       cost: 2,
       handler: (state, context) => {
-        // Find damaged cards (your own)
+        // Find damaged cards (your own), excluding Outpost itself
         const validTargets = TargetValidator.findValidTargets(
           state,
           context.playerId,
           {
             allowOwn: true,
             requireDamaged: true,
-            allowProtected: true, // Protection irrelevant for restoration
+            allowProtected: true,
+            excludeSource: {
+              playerId: context.playerId,
+              columnIndex: context.columnIndex,
+              position: 0,
+            },
           }
         );
 
         if (validTargets.length === 0) {
-          console.log("Outpost: No damaged cards to restore");
+          console.log("Outpost: No damaged cards to restore (excluding self)");
           return false;
         }
 

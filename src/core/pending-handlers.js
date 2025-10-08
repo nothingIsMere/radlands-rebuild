@@ -307,31 +307,18 @@ class FamineSelectKeepHandler extends PendingHandler {
     const player = this.state.players[targetPlayer];
     let destroyedCount = 0;
 
+    // Process from back to front to avoid issues with shifting
     for (let col = 0; col < 3; col++) {
       for (let pos = 2; pos >= 1; pos--) {
-        // Process back to front
         const card = player.columns[col].getCard(pos);
 
-        console.log(`Famine scanning ${targetPlayer} col ${col} pos ${pos}:`, {
-          hasCard: !!card,
-          type: card?.type,
-          isPunk: card?.isPunk,
-          name: card?.name,
-          isDestroyed: card?.isDestroyed,
-        });
+        // Skip the selected card to keep
+        if (col === targetColumn && pos === targetPosition) {
+          console.log(`Famine: Keeping ${card.name} at ${col},${pos}`);
+          continue;
+        }
 
         if (card && card.type === "person" && !card.isDestroyed) {
-          // Skip the selected person
-          if (col === targetColumn && pos === targetPosition) {
-            continue;
-          }
-
-          console.log(
-            `Famine checking: ${
-              card.isPunk ? "PUNK" : card.name
-            } at ${col},${pos}`
-          );
-
           // Destroy this person
           card.isDestroyed = true;
 
@@ -341,23 +328,26 @@ class FamineSelectKeepHandler extends PendingHandler {
               name: card.originalName || "Unknown Card",
               type: "person",
               cost: card.cost || 0,
+              abilities: card.originalCard?.abilities || card.abilities || [],
+              junkEffect: card.originalCard?.junkEffect || card.junkEffect,
             };
             this.state.deck.unshift(returnCard);
-            console.log(`Famine destroyed punk`);
+            console.log(`Famine destroyed punk at ${col},${pos}`);
           } else {
             this.state.discard.push(card);
-            console.log(`Famine destroyed ${card.name}`);
+            console.log(`Famine destroyed ${card.name} at ${col},${pos}`);
           }
 
           // Remove from column
           player.columns[col].setCard(pos, null);
 
-          // Shift if needed
+          // Shift if needed (only if we destroyed position 1)
           if (pos === 1) {
             const cardInFront = player.columns[col].getCard(2);
             if (cardInFront) {
               player.columns[col].setCard(1, cardInFront);
               player.columns[col].setCard(2, null);
+              console.log(`Shifted ${cardInFront.name} from pos 2 to pos 1`);
             }
           }
 
@@ -367,13 +357,18 @@ class FamineSelectKeepHandler extends PendingHandler {
     }
 
     console.log(
-      `Famine: Destroyed ${destroyedCount} people for ${targetPlayer}`
+      `Famine: ${targetPlayer} destroyed ${destroyedCount} people, kept ${selectedPerson.name}`
     );
 
-    // Check if we need opponent to select now
-    if (!this.state.pending.activePlayerDone) {
-      // Active player just finished, now opponent's turn
-      const opponentId = targetPlayer === "left" ? "right" : "left";
+    // Check if we need the other player to select
+    if (
+      !this.state.pending.activePlayerDone &&
+      this.state.pending.currentSelectingPlayer ===
+        this.state.pending.activePlayerId
+    ) {
+      // Active player just finished, now check if opponent needs to select
+      const opponentId =
+        this.state.pending.activePlayerId === "left" ? "right" : "left";
       const opponent = this.state.players[opponentId];
       let opponentPeople = [];
 
@@ -392,14 +387,22 @@ class FamineSelectKeepHandler extends PendingHandler {
       }
 
       if (opponentPeople.length <= 1) {
-        console.log(
-          `Famine complete: ${opponentId} has ≤1 people, no selection needed`
-        );
+        console.log(`Famine: ${opponentId} has ≤1 people, no selection needed`);
+        // Done with Famine - discard event and continue phase
+        if (this.state.pending.eventCard) {
+          this.state.discard.push(this.state.pending.eventCard);
+          console.log("Famine: Discarded event card");
+        }
         this.state.pending = null;
+
+        // Continue event phase progression
+        if (this.state.phase === "events") {
+          this.commandSystem.continueToReplenishPhase();
+        }
         return true;
       }
 
-      // Set up opponent selection
+      // Opponent needs to select
       this.state.pending = {
         type: "famine_select_keep",
         currentSelectingPlayer: opponentId,
@@ -409,13 +412,26 @@ class FamineSelectKeepHandler extends PendingHandler {
         activePlayerDone: true,
       };
 
-      console.log(`Famine: ${opponentId} must now select one person to keep`);
+      console.log(
+        `Famine: Now ${opponentId} must select one person to keep (${opponentPeople.length} people)`
+      );
       return true;
     }
 
     // Both players done
-    console.log("Famine complete");
+    console.log("Famine: All selections complete");
+
+    if (this.state.pending.eventCard) {
+      this.state.discard.push(this.state.pending.eventCard);
+      console.log("Famine: Discarded event card");
+    }
     this.state.pending = null;
+
+    // Continue event phase progression
+    if (this.state.phase === "events") {
+      this.commandSystem.continueToReplenishPhase();
+    }
+
     return true;
   }
 }
@@ -2816,12 +2832,6 @@ class BonfireRestoreMultipleHandler extends PendingHandler {
 
     if (!target || !target.isDamaged) {
       console.log("Must target a damaged card");
-      return false;
-    }
-
-    // PREVENT BONFIRE FROM RESTORING ITSELF
-    if (target.type === "camp" && target.name === "Bonfire") {
-      console.log("Bonfire cannot restore itself");
       return false;
     }
 

@@ -3431,7 +3431,6 @@ export class CommandSystem {
     // Ready ALL camps (even damaged ones) for the CURRENT player
     for (let col = 0; col < CONSTANTS.MAX_COLUMNS; col++) {
       for (let pos = 0; pos < 3; pos++) {
-        // ← Check all positions
         const card = currentPlayer.columns[col].getCard(pos);
         if (card && card.type === "camp" && !card.isDestroyed) {
           card.isReady = true;
@@ -3439,7 +3438,11 @@ export class CommandSystem {
       }
     }
 
-    // Reset turn events
+    // Switch player using pure function
+    this.state.currentPlayer = calculateNextPlayer(this.state.currentPlayer);
+    this.state.turnNumber++;
+
+    // Reset turn events AFTER switching player, BEFORE processing events
     this.state.turnEvents = {
       eventsPlayed: 0,
       peoplePlayedThisTurn: 0,
@@ -3450,10 +3453,6 @@ export class CommandSystem {
       firstEventPlayedThisTurn: false,
       resonatorUsedThisTurn: false,
     };
-
-    // Switch player using pure function
-    this.state.currentPlayer = calculateNextPlayer(this.state.currentPlayer);
-    this.state.turnNumber++;
 
     // Determine next phase
     const transition = calculatePhaseTransition("actions", false);
@@ -3466,6 +3465,11 @@ export class CommandSystem {
   }
 
   processEventsPhase() {
+    console.log("=== START processEventsPhase ===");
+    console.log(
+      "turnEvents at start:",
+      JSON.stringify(this.state.turnEvents, null, 2)
+    );
     const player = this.state.players[this.state.currentPlayer];
 
     // Resolve event in slot 1 (index 0)
@@ -3596,6 +3600,11 @@ export class CommandSystem {
   }
 
   processReplenishPhase() {
+    console.log("=== START processEventsPhase ===");
+    console.log(
+      "turnEvents at start:",
+      JSON.stringify(this.state.turnEvents, null, 2)
+    );
     const player = this.state.players[this.state.currentPlayer];
 
     // Draw a card
@@ -3617,6 +3626,11 @@ export class CommandSystem {
     // Move to actions phase immediately
     const transition = calculatePhaseTransition("replenish", false);
     this.state.phase = transition.nextPhase;
+    console.log("=== MOVED TO ACTIONS PHASE ===");
+    console.log(
+      "turnEvents after moving to actions:",
+      JSON.stringify(this.state.turnEvents, null, 2)
+    );
     this.notifyUI("PHASE_CHANGE", this.state.phase);
   }
 }

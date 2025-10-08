@@ -310,6 +310,10 @@ export const campAbilities = {
     damage: {
       cost: 1,
       handler: (state, context) => {
+        console.log(
+          "DEBUG Watchtower - turnEvents:",
+          JSON.stringify(state.turnEvents, null, 2)
+        );
         // Check if any event resolved this turn (including Raiders and instant events)
         if (!state.turnEvents.eventResolvedThisTurn) {
           console.log(

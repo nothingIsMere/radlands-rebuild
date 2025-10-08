@@ -1480,13 +1480,11 @@ export const campAbilities = {
         const reactor = state.getCard(context.playerId, context.columnIndex, 0);
         if (reactor) {
           reactor.isDestroyed = true;
-          this.checkGameEnd();
           console.log("Reactor destroyed itself");
         }
 
         // Now destroy ALL people (both players)
         let destroyedCount = 0;
-
         for (const playerId of ["left", "right"]) {
           const player = state.players[playerId];
 
@@ -1494,7 +1492,6 @@ export const campAbilities = {
           for (let col = 0; col < 3; col++) {
             for (let pos = 2; pos >= 1; pos--) {
               const card = player.columns[col].getCard(pos);
-
               if (card && card.type === "person" && !card.isDestroyed) {
                 card.isDestroyed = true;
 
@@ -1536,17 +1533,20 @@ export const campAbilities = {
 
         console.log(`Reactor: Destroyed itself and ${destroyedCount} people`);
 
-        // Check for game end (in case Reactor was the third destroyed camp)
+        // Check for game end - count destroyed camps for the Reactor's owner
         let destroyedCamps = 0;
         const player = state.players[context.playerId];
         for (let col = 0; col < 3; col++) {
           const camp = player.columns[col].getCard(0);
-          if (camp?.isDestroyed) destroyedCamps++;
+          if (camp?.type === "camp" && camp.isDestroyed) {
+            destroyedCamps++;
+          }
         }
 
-        if (destroyedCamps === 3) {
+        if (destroyedCamps >= 3) {
           state.phase = "game_over";
           state.winner = context.playerId === "left" ? "right" : "left";
+          state.winReason = "camps_destroyed";
           console.log(`${state.winner} wins - Reactor caused self-defeat!`);
         }
 

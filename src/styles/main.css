@@ -1456,17 +1456,17 @@ h1 {
 .event-slot {
   width: var(--card-width);
   height: var(--card-height);
-  border: 2px dashed var(--neon-pink);
+  border: 2px var(--neon-pink);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  background: var(--bg-medium);
+  background: rgba(200, 17, 221, 0.15);
 }
 
-.event-slot-number {
+/* .event-slot-number {
   position: absolute;
   top: 4px;
   left: 4px;
@@ -1482,6 +1482,11 @@ h1 {
   justify-content: center;
   border: 2px solid var(--neon-pink);
   box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
+} */
+
+.event-slot-number {
+  position: relative;
+  z-index: 10;
 }
 
 .event-card {

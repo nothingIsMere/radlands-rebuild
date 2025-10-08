@@ -630,7 +630,27 @@ export class UIRenderer {
       }
 
       const slotNumber = this.createElement("div", "event-slot-number");
-      slotNumber.textContent = i + 1;
+      slotNumber.style.position = "relative";
+      slotNumber.style.display = "inline-block";
+      slotNumber.style.zIndex = "10"; // Ensure it's above the slot background
+      slotNumber.innerHTML = `
+  <span style="font-size: 2em;">💣</span>
+  <span style="
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1em;
+    font-weight: bold;
+    color: white;
+    text-shadow: 
+      -1px -1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      1px 1px 0 #000,
+      0 0 3px #000;
+  ">${i + 1}</span>
+`;
       slot.appendChild(slotNumber);
 
       const event = player.eventQueue[i];

@@ -340,11 +340,15 @@ export class CommandSystem {
     // Get player
     const player = this.state.players[playerId];
 
+    // For Command Post and Pillbox, skip the water validation since they calculate their own cost
+    const skipWaterCheck =
+      camp.name === "Command Post" || camp.name === "Pillbox";
+
     // Use validation function
     const validation = canUseCampAbility(
       camp,
       player,
-      baseCost,
+      skipWaterCheck ? 0 : baseCost, // Pass 0 cost for camps that handle their own
       this.state.turnEvents
     );
 

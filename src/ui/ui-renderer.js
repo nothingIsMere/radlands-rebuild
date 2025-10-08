@@ -3560,21 +3560,36 @@ export class UIRenderer {
   renderHand(player, playerId) {
     const hand = this.createElement("div", "hand");
 
+    // Check if this is the opponent's hand (all cards hidden)
+    const isOpponentHand = player.hand.length > 0 && player.hand[0]?.hidden;
+
+    if (isOpponentHand) {
+      // Show card count with punk card back image
+      const cardCount = this.createElement("div", "opponent-hand-count");
+
+      const countText = document.createElement("span");
+      countText.className = "opponent-card-number";
+      countText.textContent = player.hand.length;
+
+      const punkImg = document.createElement("img");
+      punkImg.src = "assets/cards/punk.png";
+      punkImg.alt = "cards";
+      punkImg.className = "opponent-punk-icon";
+      punkImg.onerror = () => {
+        punkImg.src = "assets/cards/punk.webp";
+        punkImg.onerror = null;
+      };
+
+      cardCount.appendChild(countText);
+      cardCount.appendChild(punkImg);
+      hand.appendChild(cardCount);
+      return hand;
+    }
+
     player.hand.forEach((card, index) => {
       const cardDiv = this.createElement("div", "hand-card");
 
-      // Handle hidden opponent cards
-      if (card.hidden) {
-        cardDiv.classList.add("hidden-card");
-        const cardText = document.createElement("div");
-        cardText.className = "card-text";
-        cardText.textContent = "Hidden card";
-        cardDiv.appendChild(cardText);
-        hand.appendChild(cardDiv);
-        return; // Skip rest of rendering for hidden cards
-      }
-
-      // Only set attributes ONCE, after the hidden check
+      // Only set attributes ONCE
       cardDiv.setAttribute("data-card-type", card.type);
 
       if (
@@ -3614,6 +3629,7 @@ export class UIRenderer {
                 card,
                 cardId: card.id,
                 cardType: card.type,
+                index,
               };
             }
             this.render();
@@ -3621,19 +3637,53 @@ export class UIRenderer {
         });
       }
 
-      // Card name, cost, and junk effect
-      const cardText = document.createElement("div");
-      cardText.className = "card-text";
-      cardText.textContent = `${card.name} (${card.cost}💧)`;
-      cardDiv.appendChild(cardText);
+      // Simple hover effect (no rotation)
+      cardDiv.addEventListener("mouseenter", () => {
+        cardDiv.style.transform = `translateY(-10px) scale(1.05)`;
+        cardDiv.style.zIndex = "1000";
+      });
+
+      cardDiv.addEventListener("mouseleave", () => {
+        cardDiv.style.transform = ``;
+        cardDiv.style.zIndex = "";
+      });
+
+      // Card name with styled layout
+      const cardHeader = document.createElement("div");
+      cardHeader.className = "card-header";
+
+      const cardName = document.createElement("div");
+      cardName.className = "card-name";
+      cardName.textContent = card.name;
+
+      const cardCost = document.createElement("div");
+      cardCost.className = "card-cost";
+      cardCost.textContent = `${card.cost}💧`;
+
+      cardHeader.appendChild(cardName);
+      cardHeader.appendChild(cardCost);
+      cardDiv.appendChild(cardHeader);
 
       // Junk effect indicator
       if (card.junkEffect) {
-        const junk = this.createElement("span", "junk-label");
+        const junkContainer = document.createElement("div");
+        junkContainer.className = "junk-container";
+
+        const junkLabel = document.createElement("span");
+        junkLabel.className = "junk-label-text";
+        junkLabel.textContent = "JUNK:";
+
+        const junkEffect = document.createElement("span");
+        junkEffect.className = "junk-effect";
+
         const effectName =
           card.junkEffect.charAt(0).toUpperCase() + card.junkEffect.slice(1);
-        junk.textContent = ` [Junk: ${effectName}]`;
-        cardDiv.appendChild(junk);
+
+        junkEffect.textContent = ` ${effectName}`;
+
+        junkContainer.appendChild(junkLabel);
+        junkContainer.appendChild(junkEffect);
+        cardDiv.appendChild(junkContainer);
       }
 
       // Check if selected
@@ -3664,12 +3714,12 @@ export class UIRenderer {
         }
       });
 
-      // HOVER PREVIEW - ADD IT HERE, INSIDE THE LOOP, AT THE END
+      // Hover preview
       const preview = this.createCardPreview(card);
       cardDiv.appendChild(preview);
 
       hand.appendChild(cardDiv);
-    }); // <-- forEach loop ends here
+    });
 
     return hand;
   }

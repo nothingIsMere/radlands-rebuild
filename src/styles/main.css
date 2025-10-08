@@ -414,7 +414,7 @@ h1 {
 }
 
 .card.empty {
-  border: 2px dashed #555;
+  border: 2px #555;
   background: var(--bg-light);
   color: #888;
 }
@@ -1445,7 +1445,7 @@ h1 {
   background: var(--bg-dark);
   border-radius: 5px;
   height: fit-content;
-  border: 2px solid var(--neon-pink);
+
   box-shadow: 0 0 10px rgba(255, 0, 110, 0.3);
 }
 
@@ -1456,8 +1456,8 @@ h1 {
 .event-slot {
   width: var(--card-width);
   height: var(--card-height);
-  border: 2px var(--neon-pink);
-  border-radius: var(--radius);
+  border: 2px solid #c811dd; /* Add border to individual slots */
+  border-radius: 8px; /* Optional: rounds the corners */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1466,27 +1466,13 @@ h1 {
   background: rgba(200, 17, 221, 0.15);
 }
 
-/* .event-slot-number {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  font-size: 14px;
-  color: var(--neon-pink);
-  font-weight: bold;
-  background: var(--bg-dark);
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--neon-pink);
-  box-shadow: 0 0 8px rgba(255, 0, 110, 0.4);
-} */
-
 .event-slot-number {
-  position: relative;
-  z-index: 10;
+  position: absolute; /* Change from relative to absolute */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1; /* Lower z-index so cards go on top */
+  pointer-events: none; /* Prevents blocking clicks on event cards */
 }
 
 .event-card {
@@ -1505,8 +1491,10 @@ h1 {
   word-wrap: break-word;
   font-weight: bold;
   box-shadow: 0 0 10px rgba(255, 0, 110, 0.5);
-  position: relative;
-  z-index: 1;
+  position: absolute; /* Change to absolute */
+  top: 0;
+  left: 0;
+  z-index: 10; /* Higher z-index than the bomb */
 }
 
 .event-card:hover {
@@ -1521,6 +1509,7 @@ h1 {
   height: 100%;
   object-fit: cover;
   border-radius: var(--radius);
+  z-index: 20;
 }
 
 .event-card:has(.event-card-image) {
@@ -2294,4 +2283,115 @@ body.has-pending .player-board.active .card.parachute-placement-target {
     box-shadow: 0 0 20px 5px var(--neon-purple),
       inset 0 0 20px rgba(199, 125, 255, 0.5);
   }
+}
+
+.hand {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px;
+}
+
+.hand-card {
+  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+  border: 2px solid #444;
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 120px;
+  max-width: 140px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  position: relative;
+}
+
+.hand-card:hover {
+  border-color: #c811dd;
+  box-shadow: 0 0 15px rgba(200, 17, 221, 0.5), 0 6px 12px rgba(0, 0, 0, 0.6);
+}
+
+.hand-card[data-card-type="event"] {
+  background: linear-gradient(145deg, #3a1a3f, #2a1a2f);
+  border-color: rgba(200, 17, 221, 0.4);
+}
+
+.hand-card.selected {
+  border-color: #c811dd;
+  box-shadow: 0 0 20px rgba(200, 17, 221, 0.8);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.card-name {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #fff;
+  flex: 1;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.card-cost {
+  font-weight: bold;
+  font-size: 1em;
+  color: #4dd0e1;
+  text-shadow: 0 0 4px rgba(77, 208, 225, 0.6);
+  white-space: nowrap;
+}
+
+.junk-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.junk-label-text {
+  font-size: 0.65em;
+  color: #888;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
+
+.junk-effect {
+  font-size: 0.8em;
+  color: #ffd700;
+  font-weight: bold;
+  text-shadow: 0 0 3px rgba(255, 215, 0, 0.5);
+}
+
+.opponent-hand-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 2em;
+  font-weight: bold;
+  color: #fff;
+  /* Remove these lines: */
+  /* background: linear-gradient(145deg, #2a2a2a, #1a1a1a); */
+  /* border: 2px solid #444; */
+  /* border-radius: 8px; */
+  padding: 15px 25px;
+  /* box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.opponent-card-number {
+  font-size: 1.2em;
+}
+
+.opponent-punk-icon {
+  width: 60px;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }

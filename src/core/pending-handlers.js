@@ -874,11 +874,21 @@ class VanguardDamageHandler extends PendingHandler {
     const sourcePlayerId = this.state.pending.sourcePlayerId;
     const vanguardCard = this.state.pending.sourceCard;
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const adrenalineLabDestroy = this.state.pending?.adrenalineLabDestroy; // PRESERVE THIS
 
-    this.finalizeAbility();
+    // DON'T finalize yet - need to wait for counter-damage
+    // this.finalizeAbility(); // REMOVE THIS LINE
+
+    // Set up damage pending
+    this.state.pending = {
+      type: "damage",
+      source: vanguardCard,
+      sourcePlayerId: sourcePlayerId,
+      context: this.state.pending.context,
+    };
 
     // Resolve the damage
-    const damaged = this.resolveDamage(
+    const damaged = this.commandSystem.resolveDamage(
       targetPlayer,
       targetColumn,
       targetPosition
@@ -909,11 +919,12 @@ class VanguardDamageHandler extends PendingHandler {
           vanguardCard: vanguardCard,
           validTargets: counterTargets,
           parachuteBaseDamage: parachuteBaseDamage,
+          adrenalineLabDestroy: adrenalineLabDestroy, // PRESERVE THIS
         };
         console.log(
           `Opponent may counter-damage (${counterTargets.length} targets)`
         );
-        return damaged; // Return here - counter-damage will handle Parachute damage
+        return damaged;
       }
     }
 
@@ -927,6 +938,16 @@ class VanguardDamageHandler extends PendingHandler {
       );
     }
 
+    // NOW finalize since no counter-damage will happen
+    if (adrenalineLabDestroy) {
+      this.state.pending = { adrenalineLabDestroy };
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    } else {
+      this.finalizeAbility();
+    }
+
     return damaged;
   }
 }
@@ -935,6 +956,7 @@ class VanguardCounterHandler extends PendingHandler {
   handle(payload) {
     const { cancel } = payload;
     const parachuteBaseDamage = this.state.pending?.parachuteBaseDamage;
+    const adrenalineLabDestroy = this.state.pending?.adrenalineLabDestroy; // GET THIS
 
     if (cancel) {
       console.log("Opponent chose not to counter-damage");
@@ -947,6 +969,18 @@ class VanguardCounterHandler extends PendingHandler {
           parachuteBaseDamage.targetPlayer,
           parachuteBaseDamage.targetColumn,
           parachuteBaseDamage.targetPosition
+        );
+      }
+
+      // NOW finalize the ability (and Adrenaline Lab destruction if applicable)
+      if (adrenalineLabDestroy) {
+        this.state.pending = { adrenalineLabDestroy };
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
+        );
+      } else if (this.commandSystem.activeAbilityContext) {
+        this.commandSystem.finalizeAbilityExecution(
+          this.commandSystem.activeAbilityContext
         );
       }
 
@@ -1033,6 +1067,19 @@ class VanguardCounterHandler extends PendingHandler {
       );
     }
 
+    // NOW finalize the ability (and Adrenaline Lab destruction if applicable)
+    if (adrenalineLabDestroy) {
+      this.state.pending = { adrenalineLabDestroy };
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    } else if (this.commandSystem.activeAbilityContext) {
+      this.commandSystem.finalizeAbilityExecution(
+        this.commandSystem.activeAbilityContext
+      );
+    }
+
+    console.log("Vanguard counter-damage complete");
     return true;
   }
 }

@@ -1235,6 +1235,17 @@ export class UIRenderer {
       if (isValidTarget) {
         cardDiv.classList.add("sniper-target");
       }
+    } else if (this.state.pending?.type === "mercenary_camp_damage") {
+      // MERCENARY CAMP: Only highlight camps in validTargets
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("mercenary-target");
+      }
     } else if (this.state.pending?.type === "cultleader_select_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(
         (t) =>
@@ -1254,6 +1265,28 @@ export class UIRenderer {
       );
       if (isValidTarget) {
         cardDiv.classList.add("damage-target");
+      }
+    } else if (this.state.pending?.type === "octagon_choose_destroy") {
+      // THE OCTAGON: Highlight your own people that can be destroyed
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("octagon-target");
+      }
+    } else if (this.state.pending?.type === "octagon_opponent_destroy") {
+      // THE OCTAGON: Highlight opponent's people that must be destroyed
+      const isValidTarget = this.state.pending.validTargets?.some(
+        (t) =>
+          t.playerId === playerId &&
+          t.columnIndex === columnIndex &&
+          t.position === position
+      );
+      if (isValidTarget) {
+        cardDiv.classList.add("octagon-target");
       }
     } else if (this.state.pending?.type === "assassin_destroy") {
       const isValidTarget = this.state.pending.validTargets?.some(

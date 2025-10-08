@@ -3318,7 +3318,14 @@ class OmenclockSelectEventHandler extends PendingHandler {
 
       // Look up event definition for non-Raiders events
       const eventName = event.name.toLowerCase().replace(/\s+/g, "");
-      const eventDef = window.cardRegistry?.eventAbilities?.[eventName];
+      const cardRegistry =
+        typeof window !== "undefined"
+          ? window.cardRegistry
+          : typeof global !== "undefined"
+          ? global.cardRegistry
+          : null;
+
+      const eventDef = cardRegistry?.eventAbilities?.[eventName];
 
       if (eventDef?.effect?.handler) {
         console.log(`Omen Clock: Executing ${event.name} event effect`);

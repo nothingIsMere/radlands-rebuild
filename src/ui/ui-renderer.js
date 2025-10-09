@@ -1127,7 +1127,7 @@ export class UIRenderer {
     if (this.state.pending?.type === "napalm_select_column") {
       if (
         this.state.pending.validColumns.includes(columnIndex) &&
-        playerId === this.state.pending.targetPlayerId &&
+        playerId === this.state.pending.damagePlayerId &&
         card &&
         card.type === "person" &&
         !card.isDestroyed
@@ -1882,6 +1882,43 @@ export class UIRenderer {
 
             // Must click on opponent's columns
             if (playerId !== this.state.pending.targetPlayerId) {
+              console.log("Must select opponent's column, not your own");
+              return;
+            }
+
+            // Must be a valid column
+            if (!this.state.pending.validColumns.includes(columnIndex)) {
+              console.log("Not a valid column");
+              return;
+            }
+
+            console.log("All checks passed, sending command");
+            this.commands.execute({
+              type: "SELECT_TARGET",
+              targetColumn: columnIndex,
+            });
+            return;
+          }
+
+          if (this.state.pending?.type === "napalm_select_column") {
+            console.log("Napalm handler triggered");
+            console.log("My player ID:", window.networkClient?.myPlayerId);
+            console.log("Source player ID:", this.state.pending.sourcePlayerId);
+            console.log("Clicked player ID:", playerId);
+            console.log("Damage player ID:", this.state.pending.damagePlayerId);
+            console.log("Column:", columnIndex);
+
+            // Only the player who activated Napalm can select
+            if (
+              window.networkClient?.myPlayerId !==
+              this.state.pending.sourcePlayerId
+            ) {
+              console.log("Not your Napalm event");
+              return;
+            }
+
+            // Must click on opponent's columns (damagePlayerId)
+            if (playerId !== this.state.pending.damagePlayerId) {
               console.log("Must select opponent's column, not your own");
               return;
             }

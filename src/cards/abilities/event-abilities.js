@@ -342,7 +342,7 @@ export const eventAbilities = {
   },
   napalm: {
     cost: 2,
-    queueNumber: 1, // Goes to queue slot 1
+    queueNumber: 1,
     junkEffect: "restore",
     effect: {
       handler: (state, context) => {
@@ -369,23 +369,22 @@ export const eventAbilities = {
 
         if (validColumns.length === 0) {
           console.log("Napalm: No enemy columns with people");
-          // Still discard the event
-
           return true;
         }
 
-        // Set up column selection
+        // Set up column selection - ACTIVE PLAYER selects, not opponent
         state.pending = {
           type: "napalm_select_column",
           source: context.eventCard,
-          sourcePlayerId: context.playerId,
-          targetPlayerId: opponentId,
+          sourcePlayerId: context.playerId, // The player who played Napalm
+          targetPlayerId: context.playerId, // CHANGED: Active player selects, not opponent
+          damagePlayerId: opponentId, // Track whose column gets damaged
           validColumns: validColumns,
           eventCard: context.eventCard,
         };
 
         console.log(
-          `Napalm: Select enemy column to destroy (${validColumns.length} columns have people)`
+          `Napalm: ${context.playerId} select enemy column to destroy (${validColumns.length} columns have people)`
         );
         return true;
       },

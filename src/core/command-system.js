@@ -2889,8 +2889,8 @@ export class CommandSystem {
           return false;
         }
 
-        const opponent = this.state.players[this.state.pending.targetPlayerId];
-        const column = opponent.columns[targetCol];
+        const damagePlayerId = this.state.pending.damagePlayerId;
+        const opponent = this.state.players[damagePlayerId];
         let destroyedCount = 0;
 
         console.log(`Napalm: Destroying all enemies in column ${targetCol}`);

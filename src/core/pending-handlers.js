@@ -4135,6 +4135,87 @@ class MimicSelectAbilityHandler extends PendingHandler {
   }
 }
 
+class NapalmSelectColumnHandler extends PendingHandler {
+  handle(payload) {
+    const { targetColumn } = payload;
+
+    // Verify it's a valid column
+    if (!this.state.pending.validColumns.includes(targetColumn)) {
+      console.log("Not a valid column for Napalm");
+      return false;
+    }
+
+    const damagePlayerId = this.state.pending.damagePlayerId;
+    const opponent = this.state.players[damagePlayerId];
+    const column = opponent.columns[targetColumn];
+    let destroyedCount = 0;
+
+    console.log(`Napalm: Destroying all enemies in column ${targetColumn}`);
+
+    // Process from front to back to handle card movement
+    for (let pos = 2; pos >= 0; pos--) {
+      const card = column.getCard(pos);
+      if (card && card.type === "person" && !card.isDestroyed) {
+        // Destroy it
+        card.isDestroyed = true;
+
+        if (card.isPunk) {
+          const returnCard = {
+            id: card.id,
+            name: card.originalName || "Unknown Card",
+            type: "person",
+            cost: card.cost || 0,
+          };
+          this.state.deck.unshift(returnCard);
+          console.log(`Napalm destroyed punk`);
+        } else {
+          this.state.discard.push(card);
+          console.log(`Napalm destroyed ${card.name}`);
+        }
+
+        // Remove from column
+        column.setCard(pos, null);
+
+        // Move card behind forward
+        if (pos < 2) {
+          const cardInFront = column.getCard(pos + 1);
+          if (cardInFront) {
+            column.setCard(pos, cardInFront);
+            column.setCard(pos + 1, null);
+          }
+        }
+
+        destroyedCount++;
+      }
+    }
+
+    console.log(
+      `Napalm destroyed ${destroyedCount} enemies in column ${targetColumn}`
+    );
+
+    // Discard the event
+    if (this.state.pending.eventCard) {
+      this.state.discard.push(this.state.pending.eventCard);
+    }
+
+    // Clear pending
+    this.state.pending = null;
+
+    // If in events phase, continue to replenish
+    if (this.state.phase === "events") {
+      const player = this.state.players[this.state.currentPlayer];
+      for (let i = 0; i < 2; i++) {
+        player.eventQueue[i] = player.eventQueue[i + 1];
+      }
+      player.eventQueue[2] = null;
+
+      this.commandSystem.continueToReplenishPhase();
+    }
+
+    return true;
+  }
+}
+
 export const pendingHandlers = {
   damage: DamageHandler,
   place_punk: PlacePunkHandler,
@@ -4190,6 +4271,7 @@ export const pendingHandlers = {
   mimic_select_ability: MimicSelectAbilityHandler,
   juggernaut_select_camp: JuggernautSelectCampHandler,
   famine_select_keep: FamineSelectKeepHandler,
+  napalm_select_column: NapalmSelectColumnHandler,
 };
 
 // Export a function to get the right handler
